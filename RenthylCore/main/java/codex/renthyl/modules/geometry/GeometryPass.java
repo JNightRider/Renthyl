@@ -176,5 +176,13 @@ public class GeometryPass extends RenderPass {
     public boolean isPerspective() {
         return perspective;
     }
+
+    public TextureDef<Texture2D> getColorDef() {
+        return colorDef;
+    }
+
+    public TextureDef<Texture2D> getDepthDef() {
+        return depthDef;
+    }
     
 }

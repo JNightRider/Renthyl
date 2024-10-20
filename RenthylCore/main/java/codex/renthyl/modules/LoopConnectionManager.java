@@ -26,29 +26,21 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.asset;
-
-import codex.renthyl.export.ModuleGraphData;
-import com.jme3.asset.AssetKey;
-import com.jme3.asset.cache.AssetCache;
+package codex.renthyl.modules;
 
 /**
- * Asset key for loading {@link codex.renthyl.modules.RenderModule RenderModules}.
- * 
+ *
  * @author codex
+ * @param <T>
  */
-public class ModuleGraphKey extends AssetKey<ModuleGraphData> {
+public interface LoopConnectionManager <T extends RenderModule> {
     
-    public ModuleGraphKey(String name) {
-        super(name);
-    }
-    public ModuleGraphKey() {
-        super();
-    }
+    public T createIteration(int i);
     
-    @Override
-    public Class<? extends AssetCache> getCacheType() {
-        return null;
-    }
+    public void connectIterations(T prev, T next);
+    
+    public void enterIteration(Junction enter, T next);
+    
+    public void exitIteration(T prev, Junction exit);
     
 }

@@ -34,6 +34,8 @@ import codex.renthyl.debug.GraphEventCapture;
 import com.jme3.light.LightFilter;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector4f;
 import com.jme3.opencl.CommandQueue;
 import com.jme3.opencl.Context;
 import com.jme3.profile.AppProfiler;
@@ -47,12 +49,14 @@ import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
 import java.util.function.Predicate;
 import com.jme3.renderer.GeometryRenderHandler;
+import com.jme3.scene.Mesh;
+import com.jme3.scene.instancing.InstancedGeometry;
 
 /**
  * Context for FrameGraph rendering.
  * <p>
  * Provides RenderPasses with access to important objects such as the RenderManager,
- * ViewPort, profiler, and fullscreen quad. Utility methods are provided for
+ * ViewPort, profiler, and a fullscreen quad. Utility methods are provided for
  * fullscreen quad rendering and camera management.
  * <p>
  * Additionally, the following render settings are handled to ensure settings
@@ -66,6 +70,9 @@ import com.jme3.renderer.GeometryRenderHandler;
  * </ul>
  * After each pass execution on the main render thread, {@link #popRenderSettings()} is
  * called to reset these settings to what they were before rendering began.
+ * <p>
+ * FrameBuffers are <em>not</em> managed. Passes are expected to explicitely set
+ * the FrameBuffer they intend on rendering with.
  * 
  * @author codex
  */
@@ -83,15 +90,25 @@ public class FGRenderContext {
     private String forcedTechnique;
     private Material forcedMat;
     private FrameBuffer frameBuffer;
-    private GeometryRenderHandler geomRender;
     private Predicate<Geometry> geomFilter;
     private RenderState renderState;
     private LightFilter lightFilter;
+    private ColorRGBA background;
     private int camWidth, camHeight;
+    private final Vector4f camViewPort = new Vector4f(0, 1, 0, 1);
     
+    /**
+     * 
+     * @param frameGraph 
+     */
     public FGRenderContext(FrameGraph frameGraph) {
         this(frameGraph, null);
     }
+    /**
+     * 
+     * @param frameGraph
+     * @param clContext 
+     */
     public FGRenderContext(FrameGraph frameGraph, Context clContext) {
         this.frameGraph = frameGraph;
         this.clContext = clContext;
@@ -131,12 +148,17 @@ public class FGRenderContext {
         forcedTechnique = renderManager.getForcedTechnique();
         forcedMat = renderManager.getForcedMaterial();
         frameBuffer = renderManager.getRenderer().getCurrentFrameBuffer();
-        geomRender = renderManager.getGeometryRenderHandler();
         geomFilter = renderManager.getRenderFilter();
         renderState = renderManager.getForcedRenderState();
         lightFilter = renderManager.getLightFilter();
-        camWidth = viewPort.getCamera().getWidth();
-        camHeight = viewPort.getCamera().getHeight();
+        background = viewPort.getBackgroundColor();
+        Camera cam = viewPort.getCamera();
+        camWidth = cam.getWidth();
+        camHeight = cam.getHeight();
+        camViewPort.x = cam.getViewPortLeft();
+        camViewPort.y = cam.getViewPortRight();
+        camViewPort.z = cam.getViewPortBottom();
+        camViewPort.w = cam.getViewPortTop();
     }
     /**
      * Applies saved render settings, except the framebuffer.
@@ -145,12 +167,13 @@ public class FGRenderContext {
         renderManager.setForcedTechnique(forcedTechnique);
         renderManager.setForcedMaterial(forcedMat);
         renderManager.getRenderer().setFrameBuffer(frameBuffer);
-        renderManager.setGeometryRenderHandler(geomRender);
         renderManager.setRenderFilter(geomFilter);
         renderManager.setForcedRenderState(renderState);
         renderManager.getRenderer().setDepthRange(0, 1);
         renderManager.setLightFilter(lightFilter);
+        renderManager.getRenderer().setBackgroundColor(background);
         resizeCamera(camWidth, camHeight, true, false, false);
+        resizeCameraViewPort(camViewPort, false);
         if (renderManager.getCurrentCamera() != viewPort.getCamera()) {
             renderManager.setCamera(viewPort.getCamera(), false);
         }
@@ -208,6 +231,30 @@ public class FGRenderContext {
     }
     
     /**
+     * Renders the geometries mesh.
+     * 
+     * @param renderer
+     * @param geometry 
+     */
+    public static void renderMeshFromGeometry(Renderer renderer, Geometry geometry) {
+        /**
+         * Copyright (c) 2009-2024 jMonkeyEngine
+         * All rights reserved.
+         */
+        Mesh mesh = geometry.getMesh();
+        int lodLevel = geometry.getLodLevel();
+        if (geometry instanceof InstancedGeometry) {
+            InstancedGeometry instGeom = (InstancedGeometry) geometry;
+            int numVisibleInstances = instGeom.getNumVisibleInstances();
+            if (numVisibleInstances > 0) {
+                renderer.renderMesh(mesh, lodLevel, numVisibleInstances, instGeom.getAllInstanceData());
+            }
+        } else {
+            renderer.renderMesh(mesh, lodLevel, 1, null);
+        }
+    }
+    
+    /**
      * Resizes the camera to the width and height.
      * 
      * @param w new camera width
@@ -222,6 +269,29 @@ public class FGRenderContext {
             cam.resize(w, h, fixAspect);
             renderManager.setCamera(cam, ortho);
         }
+    }
+    /**
+     * 
+     * @param left
+     * @param right
+     * @param top
+     * @param bottom
+     * @param force 
+     */
+    public void resizeCameraViewPort(float left, float right, float top, float bottom, boolean force) {
+        Camera cam = viewPort.getCamera();
+        if (force || left != cam.getViewPortLeft() || right != cam.getViewPortRight()
+                || bottom != cam.getViewPortBottom() || top != cam.getViewPortTop()) {
+            cam.setViewPort(left, right, bottom, top);
+        }
+    }
+    /**
+     * 
+     * @param viewport
+     * @param force 
+     */
+    public void resizeCameraViewPort(Vector4f viewport, boolean force) {
+        resizeCameraViewPort(viewport.x, viewport.y, viewport.z, viewport.w, force);
     }
     
     public void setCamera(Camera cam, boolean ortho, boolean force) {

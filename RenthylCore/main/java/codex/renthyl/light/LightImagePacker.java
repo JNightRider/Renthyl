@@ -109,7 +109,7 @@ public class LightImagePacker {
      * @return number of directional, point, and spot lights
      */
     public int packLights(LightList lights, ColorRGBA ambient, List<LightProbe> probes, Camera cam,
-            TiledRenderGrid tileInfo, HashMap<Light, Integer> lightShadowIndexMap) {
+            TiledRenderGrid tileInfo, Light[] lightShadowIndexMap) {
         ambient.set(0, 0, 0, 0);
         probes.clear();
         if (lights.size() == 0) {
@@ -150,8 +150,8 @@ public class LightImagePacker {
                 if (id > 3) {
                     throw new IllegalStateException("Light type id is larger than two bits: cannot pack shadow indices.");
                 }
-                Integer shadowIndex = lightShadowIndexMap.get(l);
-                if (shadowIndex != null) {
+                int shadowIndex = indexOf(lightShadowIndexMap, l);
+                if (shadowIndex >= 0) {
                     // let zero represent no shadow data available for this light
                     id += (shadowIndex + 1) << 2;
                 }
@@ -290,6 +290,12 @@ public class LightImagePacker {
         color.g = vec.y;
         color.b = vec.z;
         return color;
+    }
+    private <T> int indexOf(T[] array, T obj) {
+        for (int i = 0; i < array.length; i++) {
+            if (array[i] == obj) return i;
+        }
+        return -1;
     }
     
 }

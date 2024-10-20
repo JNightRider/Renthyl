@@ -38,7 +38,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Manages creation, reallocation, and disposal of {@link RenderObject}s.
+ * Manages creation, reallocation, and disposal of {@link RenderObject RenderObjects}
+ * globally across all {@link codex.renthyl.FrameGraph FrameGraphs}.
  * 
  * @author codex
  */
@@ -61,9 +62,8 @@ public class RenderObjectMap {
     /**
      * 
      * @param context
-     * @param async 
      */
-    public RenderObjectMap(FGPipelineContext context, boolean async) {
+    public RenderObjectMap(FGPipelineContext context) {
         this.context = context;
     }
     
@@ -108,15 +108,20 @@ public class RenderObjectMap {
      * @param key
      * @return true if allocation successful
      */
-    public <T> boolean allocateFromCache(Map<String, RenderObject> cache, ResourceView<T> resource, String key) {
-        RenderObject obj = cache.remove(key);
+    public <T> boolean allocateFromCache(ResourceCache cache, ResourceView<T> resource, String key) {
+        RenderObject obj = cache.fetch(key);
         if (obj == null) {
             return false;
         }
-        // Since this isn't a true reallocation, don't ask the resource definition
-        // for permission. The user should be aware of the types, and the system
-        // will fail gracefully if not.
-        resource.setObject(obj);
+        ResourceDef<T> def = resource.getDefinition();
+        T r = def.applyDirectResource(obj.getObject());
+        if (r == null) {
+            r = def.applyIndirectResource(resource);
+            if (r == null) {
+                throw new NullPointerException("Allocation from cache denied by resource definition.");
+            }
+        }
+        resource.setObject(obj, r);
         objectMap.put(obj.getId(), obj);
         return true;
     }
@@ -259,7 +264,7 @@ public class RenderObjectMap {
                                 indirectRes = def.applyIndirectResource(obj.getObject());
                                 if (indirectRes != null) {
                                     indirectObj = obj;
-                                    // make sure no other thread attempts to apply this indirectly at the same time
+                                    // make sure no other threads attempt to apply this indirectly at the same time
                                     obj.setPrioritized(true);
                                     obj.endInspect();
                                     continue;
@@ -380,10 +385,10 @@ public class RenderObjectMap {
      * @param key 
      * @return  
      */
-    public boolean cache(Map<String, RenderObject> cache, long objectId, String key) {
+    public boolean cache(ResourceCache cache, long objectId, String key) {
         RenderObject obj = objectMap.remove(objectId);
         if (obj != null) {
-            cache.put(key, obj);
+            cache.add(key, obj);
             // the object can no longer be reserved, so clear reservations now
             obj.clearReservations();
             return true;
@@ -436,7 +441,7 @@ public class RenderObjectMap {
      * 
      * @param cache 
      */
-    public void flushCache(Map<String, RenderObject> cache) {
+    public void flushCache(ResourceCache cache) {
         flushCollection(cache.values(), context.getEventCapture());
     }
     /**

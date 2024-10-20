@@ -43,6 +43,7 @@ import com.jme3.export.Savable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -59,6 +60,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     protected final LinkedList<ResourceTicket> inputs = new LinkedList<>();
     protected final LinkedList<ResourceTicket> outputs = new LinkedList<>();
     protected final HashMap<String, TicketGroup> groups = new HashMap<>();
+    private BiConsumer<RenderContainer, RenderModule> connector;
     private int refs = 0;
     private int id = -1;
     
@@ -188,7 +190,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      */
     public <T> ResourceTicket<T>[] addInputGroup(String name, int length) {
         ResourceTicket.validateUserTicketName(name);
-        TicketGroup group = new TicketGroup(name, length);
+        TicketGroup group = new TicketGroup(this, name, true, length);
         for (int i = 0; i < length; i++) {
             group.getArray()[i] = addInput(group.create(i));
         }
@@ -209,12 +211,11 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      */
     public <T> ResourceTicket<T>[] addOutputGroup(String name, int length) {
         ResourceTicket.validateUserTicketName(name);
-        TicketGroup group = new TicketGroup(name, length);
+        TicketGroup group = new TicketGroup(this, name, false, length);
         for (int i = 0; i < length; i++) {
             group.getArray()[i] = addOutput(group.create(i));
         }
         groups.put(name, group);
-        System.out.println("create group \""+name+"\" of size "+group.getArray().length);
         return group.getArray();
     }
     /**
@@ -231,7 +232,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      */
     public void addInputList(String name) {
         ResourceTicket.validateUserTicketName(name);
-        groups.put(name, new TicketGroup(name));
+        groups.put(name, new TicketGroup(this, name));
     }
     
     private static ResourceTicket getTicketFromStream(Stream<ResourceTicket> stream, String name) {
@@ -249,6 +250,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      */
     public void initializeModule(FrameGraph frameGraph) {
         if (this.frameGraph != null) {
+            System.out.println(getClass());
             throw new IllegalStateException("Module already initialized.");
         }
         if (name == null) {
@@ -259,6 +261,15 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
         id = this.frameGraph.getNextId();
         initModule(this.frameGraph);
     }
+    /**
+     * Updates the module before any rendering-related operations occur.
+     * <p>
+     * This gives modules a chance to determine if the layout needs changes.
+     * 
+     * @param context
+     * @param tpf 
+     */
+    public void updateModule(FGRenderContext context, float tpf) {}
     /**
      * Updates this module's index from the supplier.
      * 
@@ -294,6 +305,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     public void cleanupModule() {
         id = -1;
         if (frameGraph != null) {
+            frameGraph.setLayoutUpdateNeeded();
             cleanupModule(frameGraph);
             for (ResourceTicket t : inputs) {
                 t.setSource(null);
@@ -301,7 +313,6 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
             for (ResourceTicket t : outputs) {
                 t.clearAllTargets();
             }
-            frameGraph.setLayoutUpdateNeeded();
             frameGraph = null;
         }
     }
@@ -361,6 +372,16 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     public abstract void traverse(Consumer<RenderModule> traverser);
     
     /**
+     * 
+     * @param container 
+     */
+    public void applyConnector(RenderContainer container) {
+        if (connector != null) {
+            connector.accept(container, this);
+        }
+    }
+    
+    /**
      * Sets the name of this module.
      * 
      * @param name 
@@ -411,6 +432,13 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
         }
     }
     /**
+     * 
+     * @param connector 
+     */
+    public void setConnector(BiConsumer<RenderContainer, RenderModule> connector) {
+        this.connector = connector;
+    }
+    /**
      * Sets the parent of this module.
      * 
      * @param parent
@@ -447,6 +475,13 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      */
     public RenderContainer getParent() {
         return parent;
+    }
+    /**
+     * 
+     * @return 
+     */
+    public BiConsumer<RenderContainer, RenderModule> getConnector() {
+        return connector;
     }
     /**
      * Returns true if this module is assigned to a FrameGraph.

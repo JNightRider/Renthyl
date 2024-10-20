@@ -39,7 +39,7 @@ import com.jme3.export.OutputCapsule;
 import java.io.IOException;
 
 /**
- * Executes child modules on particular thread.
+ * Defines thich worker thread descendents will be executed on.
  * 
  * @author codex
  */

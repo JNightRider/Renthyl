@@ -53,7 +53,7 @@ public class FGPipelineContext implements PipelineContext {
     private GraphEventCapture eventCapture;
     
     public FGPipelineContext(RenderManager rm) {
-        renderObjects = new RenderObjectMap(this, true);
+        renderObjects = new RenderObjectMap(this);
     }
 
     @Override

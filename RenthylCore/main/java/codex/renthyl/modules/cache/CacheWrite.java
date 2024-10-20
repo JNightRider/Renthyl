@@ -15,8 +15,13 @@ import com.jme3.export.OutputCapsule;
 import java.io.IOException;
 
 /**
- *
+ * Writes a resource to the cache.
+ * <p>
+ * Cached objects are removed from normal resource management, and cannot
+ * reallocated while in the cache.
+ * 
  * @author codex
+ * @see CacheRead
  */
 public class CacheWrite extends RenderPass {
     

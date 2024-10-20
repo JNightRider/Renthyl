@@ -53,8 +53,6 @@ import java.io.IOException;
  */
 public class Junction <T> extends RenderPass {
     
-    private static final int EXTRA_INPUTS = 0;
-    
     private int length;
     private int groupSize;
     private ResourceTicket<T> output;
@@ -66,7 +64,7 @@ public class Junction <T> extends RenderPass {
         this(2);
     }
     public Junction(int length) {
-        setLength(length);
+        this(length, 1);
     }
     public Junction(int length, int groupSize) {
         setLength(length);
@@ -77,23 +75,24 @@ public class Junction <T> extends RenderPass {
     protected void initialize(FrameGraph frameGraph) {
         if (groupSize == 1) {
             addInputGroup(getInput(), length);
-        } else for (int i = 0; i < length; i++) {
-            addInputGroup(getInput(i), groupSize);
-        }
-        if (groupSize > 1) {
-            addOutputGroup(getOutput(), groupSize);
-        } else {
             output = addOutput(getOutput());
+        } else {
+            for (int i = 0; i < length; i++) {
+                addInputGroup(getInput(i), groupSize);
+            }
+            addOutputGroup(getOutput(), groupSize);
         }
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    public void updateModule(FGRenderContext context, float tpf) {
         if (source != null) {
             connect(source.getGraphValue(frameGraph, context.getViewPort()));
         } else {
             connect(defaultIndex);
         }
     }
+    @Override
+    protected void prepare(FGRenderContext context) {}
     @Override
     protected void execute(FGRenderContext context) {}
     @Override

@@ -36,7 +36,11 @@ import java.util.function.Function;
  * 
  * @author codex
  * @param <T>
+ * @deprecated Use
+ * {@link codex.renthyl.resources.ResourceList#declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) primitive resources}
+ * instead.
  */
+@Deprecated
 public class ValueDef <T> extends AbstractResourceDef<T> {
 
     private final Class<T> type;

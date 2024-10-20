@@ -26,29 +26,33 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.asset;
+package codex.renthyl.resources;
 
-import codex.renthyl.export.ModuleGraphData;
-import com.jme3.asset.AssetKey;
-import com.jme3.asset.cache.AssetCache;
+import java.util.Collection;
+import java.util.HashMap;
 
 /**
- * Asset key for loading {@link codex.renthyl.modules.RenderModule RenderModules}.
- * 
+ *
  * @author codex
  */
-public class ModuleGraphKey extends AssetKey<ModuleGraphData> {
+public class ResourceCache {
     
-    public ModuleGraphKey(String name) {
-        super(name);
-    }
-    public ModuleGraphKey() {
-        super();
+    private final HashMap<String, RenderObject> cache = new HashMap<>();
+    
+    public void add(String name, RenderObject object) {
+        cache.put(name, object);
     }
     
-    @Override
-    public Class<? extends AssetCache> getCacheType() {
-        return null;
+    public RenderObject fetch(String name) {
+        return cache.remove(name);
+    }
+    
+    public Collection<RenderObject> values() {
+        return cache.values();
+    }
+    
+    public int size() {
+        return cache.size();
     }
     
 }

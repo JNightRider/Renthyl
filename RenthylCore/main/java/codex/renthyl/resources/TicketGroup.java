@@ -28,7 +28,7 @@
  */
 package codex.renthyl.resources;
 
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.Connectable;
 
 /**
  *
@@ -42,17 +42,23 @@ public class TicketGroup <T> {
      */
     public static final String LIST = "#list:";
     
+    private final Connectable user;
     private final String name;
+    private final boolean input;
     private ResourceTicket<T>[] array;
     private boolean list = false;
 
-    public TicketGroup(String name) {
+    public TicketGroup(Connectable user, String name) {
+        this.user = user;
         this.name = name;
         this.array = new ResourceTicket[0];
         this.list = true;
+        this.input = true;
     }
-    public TicketGroup(String name, int length) {
+    public TicketGroup(Connectable user, String name, boolean input, int length) {
+        this.user = user;
         this.name = name;
+        this.input = input;
         this.array = new ResourceTicket[length];
     }
     
@@ -83,10 +89,8 @@ public class TicketGroup <T> {
         ResourceTicket[] temp = new ResourceTicket[array.length+1];
         System.arraycopy(array, 0, temp, 0, array.length);
         array = temp;
-        if (list) {
-            System.out.println("tickets in list: "+array.length);
-        }
-        return (array[array.length-1] = create(array.length-1));
+        ResourceTicket t = array[array.length-1] = create(array.length-1);
+        return t;
     }
     
     /**

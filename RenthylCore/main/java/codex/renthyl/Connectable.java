@@ -32,8 +32,8 @@ import codex.renthyl.resources.TicketGroup;
 import codex.renthyl.resources.ResourceTicket;
 
 /**
- * Able to recieve inputs via input tickets and broadcast outputs
- * via output tickets.
+ * Able to recieve inputs through input tickets and broadcast outputs
+ * through output tickets.
  * 
  * @author codex
  */
@@ -155,12 +155,12 @@ public interface Connectable {
      * <p>
      * Length is clamped to the minimum of the ticket groups' sizes minus their corresponding start position.
      * 
-     * @param source
-     * @param sourceGroup
-     * @param targetGroup
-     * @param sourceStart
-     * @param targetStart
-     * @param length 
+     * @param source source connectable
+     * @param sourceGroup name of the source group
+     * @param targetGroup name of the target group
+     * @param sourceStart starting index of the source group
+     * @param targetStart starting index of the target group
+     * @param length number of tickets to connect (clamped to group sizes)
      */
     public default void makeGroupInput(Connectable source, String sourceGroup, String targetGroup, int sourceStart, int targetStart, int length) {
         ResourceTicket[] sourceArray = source.getGroup(sourceGroup, true).getArray();
@@ -204,13 +204,13 @@ public interface Connectable {
     }
     
     /**
+     * Connects the named source group (output) to the named target list (input).
      * 
-     * 
-     * @param source
-     * @param sourceGroup
-     * @param targetGroup
-     * @param start
-     * @param length 
+     * @param source source Connectable
+     * @param sourceGroup name of the source group
+     * @param targetGroup name of the target group
+     * @param start starting index within the source group
+     * @param length number of tickets to connect from the source group
      */
     public default void makeGroupInputToList(Connectable source, String sourceGroup, String targetGroup, int start, int length) {
         ResourceTicket[] srcGroupArray = source.getGroup(sourceGroup, true).getArray();
@@ -222,10 +222,11 @@ public interface Connectable {
     }
     
     /**
+     * Connects the named source group (output) to the named target list (input).
      * 
-     * @param source
-     * @param sourceGroup
-     * @param targetGroup 
+     * @param source source Connectable
+     * @param sourceGroup name of the source group
+     * @param targetGroup name of the target group
      */
     public default void makeGroupInputToList(Connectable source, String sourceGroup, String targetGroup) {
         makeGroupInputToList(source, sourceGroup, targetGroup, 0, Integer.MAX_VALUE);
@@ -250,11 +251,13 @@ public interface Connectable {
     }
     
     /**
+     * Disconnects the named source ticket (output) from the target group (input)
+     * so that the source ticket is guaranteed not to be connected to any ticket
+     * in the target group.
      * 
-     * 
-     * @param source
-     * @param sourceTicket
-     * @param targetGroup 
+     * @param source source Connectable
+     * @param sourceTicket name of the source ticket
+     * @param targetGroup name of the target ticket
      */
     public default void disconnectFromGroup(Connectable source, String sourceTicket, String targetGroup) {
         getGroup(targetGroup, true).removeSource(source.getOutput(sourceTicket, true));

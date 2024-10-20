@@ -28,9 +28,12 @@
  */
 package codex.renthyl.modules;
 
+import codex.renthyl.Connectable;
 import codex.renthyl.ExecutionQueueList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
+import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.TicketGroup;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -38,6 +41,7 @@ import com.jme3.export.OutputCapsule;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -51,6 +55,12 @@ import java.util.function.Function;
 public class RenderContainer <R extends RenderModule> extends RenderModule implements Iterable<R> {
 
     protected final ArrayList<R> queue = new ArrayList<>();
+    protected Consumer<R> moduleInitializer;
+    
+    public RenderContainer() {}
+    public RenderContainer(String name) {
+        setName(name);
+    }
     
     @Override
     public void initModule(FrameGraph frameGraph) {
@@ -65,11 +75,13 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
         }
     }
     @Override
+    public void updateModule(FGRenderContext context, float tpf) {
+        for (R m : queue) {
+            m.updateModule(context, tpf);
+        }
+    }
+    @Override
     public void queueModule(FGRenderContext context, ExecutionQueueList queues, int parentThread) {
-        //supplier.getNextInQueue(index);
-        //for (RenderModule m : queue) {
-        //    m.updateModuleIndex(context, supplier);
-        //}
         index.set(queues.add(this, parentThread));
         for (RenderModule m : queue) {
             m.queueModule(context, queues, parentThread);
@@ -150,8 +162,10 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @return 
      */
     public <T extends R> T add(T module, int index) {
-        assert module != null : "Cannot add null module.";
-        assert this != module : "Cannot add container to itself.";
+        Objects.requireNonNull(module, "Cannot add null module.");
+        if (this == module) {
+            throw new IllegalArgumentException("Cannot add container to itself.");
+        }
         if (module.getParent() != null) {
             module.getParent().remove(module);
         }
@@ -163,9 +177,13 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
             if (isAssigned()) {
                 module.initializeModule(frameGraph);
             }
+            if (moduleInitializer != null) {
+                moduleInitializer.accept(module);
+            }
+            module.applyConnector(this);
             return module;
         }
-        throw new IllegalArgumentException(module+" cannot be added to "+this+".");
+        throw new IllegalArgumentException(module + " cannot be added to " + this + ".");
     }
     
     /**
@@ -318,6 +336,16 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     
     /**
+     * Returns the index of the module in this container.
+     * 
+     * @param module
+     * @return index, or -1 if module does not belong to this container
+     */
+    public int indexOf(R module) {
+        return queue.indexOf(module);
+    }
+    
+    /**
      * Clears all child modules from this container.
      */
     public void clear() {
@@ -334,6 +362,61 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      */
     public int size() {
         return queue.size();
+    }
+    
+    /**
+     * Connects the named source (input) ticket from this container to the named
+     * target (input) ticket from the target child Connectable.
+     * 
+     * @param sourceTicket
+     * @param targetTicket
+     * @param target 
+     */
+    public void makeInternalInput(String sourceTicket, String targetTicket, Connectable target) {
+        ResourceTicket in = getInput(sourceTicket, true);
+        if (TicketGroup.isListTicket(targetTicket)) {
+            ResourceTicket t = target.addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
+            t.setSource(in);
+        } else {
+            ResourceTicket t = target.getInput(targetTicket, true);
+            t.setSource(in);
+        }
+    }
+    
+    /**
+     * Connects the named source (output) ticket from the source connectable
+     * to the named target (output) ticket from this container.
+     * 
+     * @param source
+     * @param sourceTicket
+     * @param targetTicket 
+     */
+    public void makeInternalOutput(Connectable source, String sourceTicket, String targetTicket) {
+        ResourceTicket out = source.getOutput(sourceTicket, true);
+        if (TicketGroup.isListTicket(targetTicket)) {
+            ResourceTicket t = addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
+            t.setSource(out);
+            throw new UnsupportedOperationException("Internal connection to an output ticket list is not yet supported.");
+        } else {
+            ResourceTicket target = getOutput(targetTicket, true);
+            target.setSource(out);
+        }
+    }
+    
+    /**
+     * 
+     * @param moduleInitializer 
+     */
+    public void setModuleInitializer(Consumer<R> moduleInitializer) {
+        this.moduleInitializer = moduleInitializer;
+    }
+    
+    /**
+     * 
+     * @return 
+     */
+    public Consumer<R> getModuleInitializer() {
+        return moduleInitializer;
     }
     
 }

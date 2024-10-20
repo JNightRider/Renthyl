@@ -38,7 +38,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Manages threads for rendering.
+ * Manages rendering threads.
  * 
  * @author codex
  */
@@ -69,6 +69,15 @@ public class ExecutionThreadManager {
         threads = new ArrayList<>(threadsArrayLength);
     }
     
+    /**
+     * Starts running the execution queues.
+     * <p>
+     * If there are more queues than threads, additional threads
+     * are spawned.
+     * 
+     * @param context
+     * @param queues 
+     */
     public void start(FGRenderContext context, ExecutionQueueList queues) {
         this.context = context;
         while (threads.size() < queues.size()) {

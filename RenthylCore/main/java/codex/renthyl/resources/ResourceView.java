@@ -29,7 +29,6 @@
 package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
-import codex.renthyl.resources.RenderObject;
 import codex.renthyl.definitions.ResourceDef;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -151,6 +150,9 @@ public class ResourceView <T> {
      * @param resource 
      */
     public void setPrimitive(T resource) {
+        if (!isPrimitive()) {
+            throw new IllegalStateException("Resource unexpectedly assigned primitively.");
+        }
         if (undefined) {
             throw new IllegalStateException("Resource is already marked as undefined.");
         }
@@ -261,7 +263,7 @@ public class ResourceView <T> {
      * @return 
      */
     public boolean isPrimitive() {
-        return resource != null && object == null;
+        return def == null;
     }
     /**
      * Returns true if this resource is referenced by users other than the

@@ -33,7 +33,8 @@ import com.jme3.asset.AssetKey;
 import com.jme3.asset.cache.AssetCache;
 
 /**
- *
+ * Asset key for loading {@link codex.renthyl.FrameGraph FrameGraphs}.
+ * 
  * @author codex
  */
 public class FrameGraphKey extends AssetKey<FrameGraphData> {

@@ -28,11 +28,17 @@
  */
 package codex.renthyl.definitions;
 
+import com.jme3.export.InputCapsule;
+import com.jme3.export.JmeExporter;
+import com.jme3.export.JmeImporter;
+import com.jme3.export.OutputCapsule;
+import com.jme3.export.Savable;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 import com.jme3.texture.Texture3D;
 import com.jme3.texture.image.ColorSpace;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -47,7 +53,7 @@ import java.util.function.Function;
  * @author codex
  * @param <T>
  */
-public class TextureDef <T extends Texture> extends AbstractResourceDef<T> implements Consumer<T> {
+public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
     
     public static final Function<Image, Texture2D> TEXTURE_2D = img -> new Texture2D(img);
     public static final Function<Image, Texture3D> TEXTURE_3D = img -> new Texture3D(img);
@@ -136,15 +142,11 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> imple
     }
     @Override
     public Consumer<T> getDisposalMethod() {
-        return this;
+        return tex -> tex.getImage().dispose();
     }
     @Override
     public boolean isDisposeOnRelease() {
         return false;
-    }
-    @Override
-    public void accept(T t) {
-        t.getImage().dispose();
     }
     
     protected T createTexture(Image img) {
@@ -277,6 +279,16 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> imple
         setDepth(depth);
     }
     /**
+     * Sets the width, height, and depth of the texture from the given definition.
+     * 
+     * @param def 
+     */
+    public void setSize(TextureDef<T> def) {
+        setWidth(def.width);
+        setHeight(def.height);
+        setDepth(def.depth);
+    }
+    /**
      * Sets the given texture demensions to contain the specified number of pixels.
      * 
      * @param pixels
@@ -285,9 +297,6 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> imple
      * @param d true to set depth
      */
     public void setNumPixels(int pixels, boolean w, boolean h, boolean d) {
-        width = height = 1;
-        if (depth > 0) depth = 1;
-        else depth = 0;
         int n = 0;
         if (w) n++;
         if (h) n++;
@@ -534,6 +543,131 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> imple
      */
     public static TextureDef<Texture3D> texture3D() {
         return new TextureDef<>(Texture3D.class, TEXTURE_3D);
+    }
+    /**
+     * Creates a general-purpose definition for {@link Texture2D}s.
+     * 
+     * @param format
+     * @return 
+     */
+    public static TextureDef<Texture2D> texture2D(Image.Format format) {
+        return new TextureDef<>(Texture2D.class, TEXTURE_2D, format);
+    }
+    /**
+     * Creates a general-purpose definition for {@link Texture3D}s.
+     * 
+     * @param format
+     * @return 
+     */
+    public static TextureDef<Texture3D> texture3D(Image.Format format) {
+        return new TextureDef<>(Texture3D.class, TEXTURE_3D, format);
+    }
+    
+    /**
+     * Creates a savable 2D texture definition capsule.
+     * <p>
+     * Texture builders and image extractors are not saved.
+     * 
+     * @param texDef
+     * @return 
+     */
+    public static Savable saveTexture2D(TextureDef<Texture2D> texDef) {
+        return new Texture2DCapsule(texDef);
+    }
+    /**
+     * Creates a savable 3D texture definition capsule.
+     * <p>
+     * Texture builders and image extractors are not saved.
+     * 
+     * @param texDef
+     * @return 
+     */
+    public static Savable saveTexture3D(TextureDef<Texture3D> texDef) {
+        return new Texture3DCapsule(texDef);
+    }
+    
+    public static abstract class TextureDefCapsule <T extends Texture> implements Savable {
+
+        protected TextureDef<T> textureDef;
+
+        public TextureDefCapsule(TextureDef<T> textureDef) {
+            this.textureDef = textureDef;
+        }
+        
+        @Override
+        public void write(JmeExporter ex) throws IOException {
+            OutputCapsule out = ex.getCapsule(this);
+            out.write(textureDef.getWidth(), "width", 1024);
+            out.write(textureDef.getHeight(), "height", 1024);
+            out.write(textureDef.getDepth(), "depth", 1);
+            out.write(textureDef.getSamples(), "samples", 1);
+            out.write(textureDef.getFormat(), "format", Image.Format.RGB8);
+            out.write(textureDef.isFormatFlexible(), "formatFlexible", false);
+            out.write(textureDef.getColorSpace(), "colorSpace", ColorSpace.Linear);
+            out.write(textureDef.getMagFilter(), "magFilter", Texture.MagFilter.Bilinear);
+            out.write(textureDef.getMinFilter(), "minFilter", Texture.MinFilter.BilinearNoMipMaps);
+            out.write(textureDef.getShadowCompare(), "shadowCompare", Texture.ShadowCompareMode.Off);
+            out.write(textureDef.isColorSpaceFlexible(), "colorSpaceFlexible", false);
+            out.write(textureDef.getWrap(Texture.WrapAxis.R), "wrapR", Texture.WrapMode.EdgeClamp);
+            out.write(textureDef.getWrap(Texture.WrapAxis.S), "wrapS", Texture.WrapMode.EdgeClamp);
+            out.write(textureDef.getWrap(Texture.WrapAxis.T), "wrapT", Texture.WrapMode.EdgeClamp);
+        }
+        @Override
+        public void read(JmeImporter im) throws IOException {
+            InputCapsule in = im.getCapsule(this);
+            textureDef = createDefinition();
+            textureDef.setWidth(in.readInt("width", 1024));
+            textureDef.setHeight(in.readInt("height", 1024));
+            textureDef.setDepth(in.readInt("depth", 1));
+            textureDef.setSamples(in.readInt("samples", 1));
+            textureDef.setFormat(in.readEnum("format", Image.Format.class, Image.Format.RGBA8));
+            textureDef.setFormatFlexible(in.readBoolean("formatFlexible", false));
+            textureDef.setColorSpace(in.readEnum("colorSpace", ColorSpace.class, ColorSpace.Linear));
+            textureDef.setMagFilter(in.readEnum("magFilter", Texture.MagFilter.class, Texture.MagFilter.Bilinear));
+            textureDef.setMinFilter(in.readEnum("minFilter", Texture.MinFilter.class, Texture.MinFilter.BilinearNoMipMaps));
+            textureDef.setShadowCompare(in.readEnum("shadowCompare", Texture.ShadowCompareMode.class, Texture.ShadowCompareMode.Off));
+            textureDef.setColorSpaceFlexible(in.readBoolean("colorSpaceFlexible", false));
+            textureDef.setWrap(Texture.WrapAxis.R, in.readEnum("wrapR", Texture.WrapMode.class, Texture.WrapMode.EdgeClamp));
+            textureDef.setWrap(Texture.WrapAxis.S, in.readEnum("wrapS", Texture.WrapMode.class, Texture.WrapMode.EdgeClamp));
+            textureDef.setWrap(Texture.WrapAxis.T, in.readEnum("wrapT", Texture.WrapMode.class, Texture.WrapMode.EdgeClamp));
+        }
+        
+        protected abstract TextureDef<T> createDefinition();
+        
+        public TextureDef<T> getTextureDef() {
+            return textureDef;
+        }
+        
+    }
+    public static class Texture2DCapsule extends TextureDefCapsule<Texture2D> {
+        
+        public Texture2DCapsule() {
+            this(null);
+        }
+        public Texture2DCapsule(TextureDef<Texture2D> textureDef) {
+            super(textureDef);
+        }
+
+        @Override
+        protected TextureDef<Texture2D> createDefinition() {
+            return texture2D();
+        }
+        
+    }
+    public static class Texture3DCapsule extends TextureDefCapsule<Texture3D> {
+        
+        public Texture3DCapsule() {
+            this(null);
+        }
+        public Texture3DCapsule(TextureDef<Texture3D> textureDef) {
+            super(textureDef);
+        }
+
+        @Override
+        protected TextureDef<Texture3D> createDefinition() {
+            return texture3D();
+        }
+        
     }
     
 }

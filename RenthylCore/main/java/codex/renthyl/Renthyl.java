@@ -14,29 +14,45 @@ import com.jme3.export.binary.BinaryLoader;
 import com.jme3.renderer.RenderManager;
 
 /**
- *
+ * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
+ * <p>
+ * To learn how to use Renthyl, visit the Renthyl wiki on GitHub:<br>
+ * <em>https://github.com/codex128/Renthyl/wiki/0.-Welcome!</em>
+ * <p>
+ * If you have questions about Renthyl, please ask on the JMonkeyEngine forum:<br>
+ * <em>https://hub.jmonkeyengine.org/</em>
+ * <p>
+ * Consider using Renthyl's official addon library:<br>
+ * <em>https://github.com/codex128/RenthylPlus</em>
+ * 
  * @author codex
  */
 public class Renthyl {
     
+    /**
+     * Name of the Renthyl library.
+     */
+    public static final String LIBRARY_NAME = Renthyl.class.getSimpleName();
+    
     private static Renthyl instance;
     
     /**
-     * Initializes Renthyl.
+     * Initializes {@link Renthyl}.
      * <p>
-     * This should be called before using Renthyl in a JMonkeyEngine application.
+     * This should always be called before using Renthyl functionality
+     * in a JMonkeyEngine application.
      * 
      * @param app 
      */
     public static void initialize(Application app) {
         if (isInitialized()) {
-            throw new IllegalStateException(Renthyl.class.getSimpleName()+" has already been initialized.");
+            throw new IllegalStateException(LIBRARY_NAME+" has already been initialized.");
         }
         instance = new Renthyl(app);
     }
     
     /**
-     * Returns true if Renthyl is initialized.
+     * Returns true if Renthyl has been initialized.
      * 
      * @return 
      */

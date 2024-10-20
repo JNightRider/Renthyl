@@ -46,29 +46,31 @@ import java.util.LinkedList;
 public class ResourceTicket <T> {
     
     public static final String RESERVED = "#";
+    public static final int INVALID = -1, FORCE_INVALID = -2;
     
     private final Connectable user;
     private String name;
     private int localIndex;
+    private int exportGroupId = -1;
     private long objectId = -1;
+    private boolean overrideWorld = false;
     private ResourceTicket<T> source;
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
-    private int exportGroupId = -1;
     
     public ResourceTicket() {
-        this(null, null, -1);
+        this(null, null, INVALID);
     }
     public ResourceTicket(String name) {
-        this(null, name, -1);
+        this(null, name, INVALID);
     }
     public ResourceTicket(String name, int index) {
         this(null, name, index);
     }
     public ResourceTicket(Connectable user) {
-        this(user, null, -1);
+        this(user, null, INVALID);
     }
     public ResourceTicket(Connectable user, String name) {
-        this(user, name, -1);
+        this(user, name, INVALID);
     }
     public ResourceTicket(Connectable user, String name, int index) {
         this.user = user;
@@ -155,6 +157,23 @@ public class ResourceTicket <T> {
         return this;
     }
     /**
+     * Sets this ticket to override the inherited world index with its
+     * own local index.
+     * <p>
+     * This is usually used by "referencing" tickets to temporarily ignore
+     * an incoming resource.
+     * <p>
+     * default={@code false}
+     * 
+     * @param override 
+     */
+    public void setOverrideWorldIndex(boolean override) {
+        if (source != null && this.overrideWorld != override && user != null) {
+            user.setLayoutUpdateNeeded();
+        }
+        this.overrideWorld = override;
+    }
+    /**
      * Sets the object ID.
      * 
      * @param objectId 
@@ -191,28 +210,37 @@ public class ResourceTicket <T> {
     /**
      * Gets the world index.
      * <p>
-     * If the source ticket is null or its world index is negative, this ticket's
-     * local index will be returned.
+     * World index for this ticket is inherited from this ticket's source. If the
+     * source ticket is null or its world index returns negative, this ticket's
+     * {@link #getLocalIndex() local index} will be returned instead.
+     * <p>
+     * The index, if not negative, corresponds to a {@link ResourceView}
+     * held by a {@link ResourceList}.
      * 
-     * @return 
+     * @return world index
      */
     public int getWorldIndex() {
-        if (source != null) {
+        if (source != null && !overrideWorld) {
             int i = source.getWorldIndex();
             if (i >= 0) return i;
         }
         return localIndex;
     }
     /**
+     * Returns the local index.
+     * <p>
+     * The index, if not negative, corresponds to a {@link ResourceView}
+     * held by a {@link ResourceList}.
      * 
-     * @return 
+     * @return local index
      */
     public int getLocalIndex() {
         return localIndex;
     }
     /**
+     * The ID of the last object this ticket was associated with.
      * 
-     * @return 
+     * @return object ID, or -1 if this ticket was never associated with an object
      */
     public long getObjectId() {
         return objectId;
@@ -233,6 +261,13 @@ public class ResourceTicket <T> {
         return source != null;
     }
     /**
+     * 
+     * @return 
+     */
+    public boolean isOverrideWorldIndex() {
+        return overrideWorld;
+    }
+    /**
      * Gets all tickets depending on this ticket.
      * 
      * @return 
@@ -240,6 +275,10 @@ public class ResourceTicket <T> {
     public Collection<ResourceTicket<T>> getTargets() {
         return targets;
     }
+    /**
+     * 
+     * @return 
+     */
     public int getExportGroupId() {
         return exportGroupId;
     }
@@ -253,7 +292,7 @@ public class ResourceTicket <T> {
     /**
      * Returns true if the ticket is valid for locating a resource.
      * <p>
-     * A ticket is only valid if it is not null and its world index
+     * A ticket is only valid if it is not null and its {@link #getWorldIndex() worldIndex}
      * is greater than or equal to zero.
      * 
      * @param ticket
@@ -263,6 +302,10 @@ public class ResourceTicket <T> {
         return ticket != null && ticket.getWorldIndex() >= 0;
     }
     
+    /**
+     * 
+     * @param name 
+     */
     public static void validateUserTicketName(String name) {
         if (name.startsWith(RESERVED)) {
             throw new IllegalArgumentException("Cannot start ticket name with reserved \""+RESERVED+"\".");
