@@ -149,9 +149,6 @@ public class RenderObject <T> {
         if (acquired) {
             throw new IllegalStateException("Already acquired.");
         }
-        if (object.getClass().isAssignableFrom(Texture3D.class)) {
-            System.out.println("restore texture3D timeout to " + timeoutDuration);
-        }
         timeout = timeoutDuration;
         acquired = true;
     }
@@ -224,9 +221,6 @@ public class RenderObject <T> {
      * @return true if the object is not considered abandoned
      */
     public boolean tickTimeout() {
-        if (object.getClass().isAssignableFrom(Texture3D.class)) {
-            System.out.println("tick texture3D timeout down from " + timeout);
-        }
         return timeout-- > 0;
     }
     

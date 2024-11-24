@@ -108,12 +108,10 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         if (depth > 0) {
             ArrayList<ByteBuffer> data = new ArrayList<>(1);
             ByteBuffer buf = BufferUtils.createByteBuffer(width * height * depth * format.getBitsPerPixel() / Byte.SIZE);
-            for (int i = 0; i < buf.capacity(); i++) {
-                buf.put(i, (byte)100);
-            }
-            buf.limit(buf.capacity());
+            buf.limit(buf.capacity()).position(0);
             data.add(buf);
             img = new Image(format, width, height, depth, data, colorSpace);
+            img.setUpdateNeeded();
         } else {
             img = new Image(format, width, height, null, colorSpace);
         }

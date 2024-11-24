@@ -200,13 +200,13 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     @Override
     public void pipelineRender(RenderManager rm, FGPipelineContext pContext, ViewPort vp, float tpf) {
         
-        rm.applyViewPort(vp);
-        context.target(rm, pContext, vp, tpf);
-        
-        GraphEventCapture cap = context.getGraphCapture();
         if (jobHandler.errorOccured()) {
             return;
         }
+        
+        rm.applyViewPort(vp);
+        context.target(rm, pContext, vp, tpf);
+        GraphEventCapture cap = context.getGraphCapture();
         
         // update
         if (cap != null) {
@@ -241,7 +241,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         jobList.getMainJob().run();
         jobHandler.waitForActiveJobs(THREAD_WAIT_TIMEOUT);
         if (jobHandler.errorOccured()) {
-            throw new RendererException("FrameGraph render incomplete.");
+            throw new RendererException("An error occured while executing a job.");
         }
         
         // reset
