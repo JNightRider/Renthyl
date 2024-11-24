@@ -47,14 +47,14 @@ import java.util.HashMap;
 public class FrameGraphData implements Savable {
     
     private String name;
-    private boolean dynamic;
+    private boolean temporalCulling;
     private ModuleGraphData modules;
     private ArrayList<SavableObject> settings = new ArrayList<>();
     
     public FrameGraphData() {}
     public FrameGraphData(FrameGraph frameGraph) {
         this.name = frameGraph.getName();
-        this.dynamic = frameGraph.isDynamic();
+        this.temporalCulling = frameGraph.isTemporalCulling();
         this.modules = frameGraph.createModuleData();
         HashMap<String, Object> settingsMap = frameGraph.getSettingsMap();
         for (String key : settingsMap.keySet()) {
@@ -66,7 +66,7 @@ public class FrameGraphData implements Savable {
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);
         out.write(name, "name", "FrameGraph");
-        out.write(dynamic, "dynamic", false);
+        out.write(temporalCulling, "temporalCulling", false);
         out.write(modules, "modules", null);
         out.writeSavableArrayList(settings, "settings", new ArrayList<>());
     }
@@ -74,7 +74,7 @@ public class FrameGraphData implements Savable {
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
         name = in.readString("name", "FrameGraph");
-        dynamic = in.readBoolean("dynamic", false);
+        temporalCulling = in.readBoolean("temporalCulling", false);
         modules = SavableObject.readSavable(in, "modules", ModuleGraphData.class, null);
         settings = in.readSavableArrayList("settings", new ArrayList<>());
     }

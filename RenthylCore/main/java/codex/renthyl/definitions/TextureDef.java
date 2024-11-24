@@ -39,10 +39,12 @@ import com.jme3.texture.Texture2D;
 import com.jme3.texture.Texture3D;
 import com.jme3.texture.image.ColorSpace;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.lwjgl.BufferUtils;
 
 /**
  * General resource definition for textures.
@@ -104,7 +106,14 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
     public T createResource() {
         Image img;
         if (depth > 0) {
-            img = new Image(format, width, height, depth, new ArrayList<>(depth), colorSpace);
+            ArrayList<ByteBuffer> data = new ArrayList<>(1);
+            ByteBuffer buf = BufferUtils.createByteBuffer(width * height * depth * format.getBitsPerPixel() / Byte.SIZE);
+            for (int i = 0; i < buf.capacity(); i++) {
+                buf.put(i, (byte)100);
+            }
+            buf.limit(buf.capacity());
+            data.add(buf);
+            img = new Image(format, width, height, depth, data, colorSpace);
         } else {
             img = new Image(format, width, height, null, colorSpace);
         }

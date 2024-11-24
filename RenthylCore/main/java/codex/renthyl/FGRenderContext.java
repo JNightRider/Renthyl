@@ -31,6 +31,7 @@ package codex.renthyl;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.util.FullScreenQuad;
 import codex.renthyl.debug.GraphEventCapture;
+import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.light.LightFilter;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -48,7 +49,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
 import java.util.function.Predicate;
-import com.jme3.renderer.GeometryRenderHandler;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.instancing.InstancedGeometry;
 
@@ -86,6 +86,7 @@ public class FGRenderContext {
     private final FullScreenQuad screen;
     private Context clContext;
     private CommandQueue clQueue;
+    private boolean temporalCulling = true;
     
     private String forcedTechnique;
     private Material forcedMat;
@@ -172,10 +173,11 @@ public class FGRenderContext {
         renderManager.getRenderer().setDepthRange(0, 1);
         renderManager.setLightFilter(lightFilter);
         renderManager.getRenderer().setBackgroundColor(background);
-        resizeCamera(camWidth, camHeight, true, false, false);
+        //resizeCamera(70, 70, false, false, false);
+        resizeCamera(camWidth, camHeight, false, viewPort.getCamera().isParallelProjection(), false);
         resizeCameraViewPort(camViewPort, false);
         if (renderManager.getCurrentCamera() != viewPort.getCamera()) {
-            renderManager.setCamera(viewPort.getCamera(), false);
+            renderManager.setCamera(viewPort.getCamera(), viewPort.getCamera().isParallelProjection());
         }
         if (viewPort.isClearColor()) {
             renderManager.getRenderer().setBackgroundColor(viewPort.getBackgroundColor());
@@ -316,7 +318,21 @@ public class FGRenderContext {
     public void setCLQueue(CommandQueue clQueue) {
         this.clQueue = clQueue;
     }
+    /**
+     * 
+     * @param temporalCulling 
+     */
+    protected void setTemporalCulling(boolean temporalCulling) {
+        this.temporalCulling = temporalCulling;
+    }
     
+    /**
+     * 
+     * @return 
+     */
+    public FrameGraph getFrameGraph() {
+        return frameGraph;
+    }
     /**
      * Gets the resource list belonging to the framegraph.
      * 
@@ -440,6 +456,20 @@ public class FGRenderContext {
      */
     public boolean isAsync() {
         return frameGraph.isAsync();
+    }
+    /**
+     * Returns true if temporal culling is enabled.
+     * <p>
+     * Temporal culling culls modules that were culled last frame
+     * from being considered this frame. This assumes that the layout
+     * of the FrameGraph has not changed.
+     * <p>
+     * Temporal culling can be enabled or disabled
+     * 
+     * @return 
+     */
+    public boolean isTemporalCulling() {
+        return temporalCulling;
     }
     
     /**

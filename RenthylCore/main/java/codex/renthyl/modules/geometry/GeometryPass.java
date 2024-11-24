@@ -28,7 +28,6 @@
  */
 package codex.renthyl.modules.geometry;
 
-import codex.boost.export.SavableObject;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
@@ -36,15 +35,11 @@ import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
 import codex.boost.render.DepthRange;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.math.ColorRGBA;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
-import java.io.IOException;
 
 /**
  * Renders a queue bucket to a set of color and depth textures.
@@ -65,22 +60,12 @@ import java.io.IOException;
  */
 public class GeometryPass extends RenderPass {
     
-    private final DepthRange depth = new DepthRange();
     private ResourceTicket<Texture2D> inColor, inDepth, outColor, outDepth;
     private ResourceTicket<GeometryQueue> geometry;
     private TextureDef<Texture2D> colorDef, depthDef;
-    private boolean perspective;
+    private GeometryRenderHandler geometryHandler;
     
-    public GeometryPass() {
-        this(DepthRange.NORMAL, true);
-    }
-    public GeometryPass(DepthRange depth) {
-        this(depth, true);
-    }
-    public GeometryPass(DepthRange depth, boolean perspective) {
-        this.depth.set(depth);
-        this.perspective = perspective;
-    }
+    public GeometryPass() {}
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
@@ -115,74 +100,27 @@ public class GeometryPass extends RenderPass {
         context.getRenderer().clearBuffers(true, true, true);
         context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
         context.renderTextures(resources.acquireOrElse(inColor, null), resources.acquireOrElse(inDepth, null));
-        //context.getRenderer().setDepthRange(depth);
-        //if (!perspective) {
-        //    context.getRenderManager().setCamera(context.getViewPort().getCamera(), true);
-        //}
-        context.renderGeometry(resources.acquire(geometry), null, null);
-        //if (!perspective) {
-        //    context.getRenderManager().setCamera(context.getViewPort().getCamera(), false);
-        //}
+        context.renderGeometry(resources.acquire(geometry), null, geometryHandler);
     }
     @Override
     protected void reset(FGRenderContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule out = ex.getCapsule(this);
-        out.write(depth, "depth", DepthRange.NORMAL);
-        out.write(perspective, "perspective", true);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule in = im.getCapsule(this);
-        depth.set(SavableObject.readSavable(in, "depth", DepthRange.class, DepthRange.NORMAL));
-        perspective = in.readBoolean("perspective", true);
-    }
-    
-    /**
-     * Sets the depth range objects are rendered within.
-     * 
-     * @param depth depth range (not null, unaffected)
-     */
-    public void setDepthRange(DepthRange depth) {
-        this.depth.set(depth);
-    }
-    
-    /**
-     * Gets the depth range objects are rendered within.
-     * 
-     * @return 
-     */
-    public DepthRange getDepthRange() {
-        return depth;
-    }
-    
-    /**
-     * 
-     * @param perspective 
-     */
-    public void setPerspective(boolean perspective) {
-        this.perspective = perspective;
-    }
-    
-    /**
-     * 
-     * @return 
-     */
-    public boolean isPerspective() {
-        return perspective;
-    }
 
+    public void setGeometryHandler(GeometryRenderHandler geometryHandler) {
+        this.geometryHandler = geometryHandler;
+    }
+    
     public TextureDef<Texture2D> getColorDef() {
         return colorDef;
     }
 
     public TextureDef<Texture2D> getDepthDef() {
         return depthDef;
+    }
+    
+    public GeometryRenderHandler getGeometryHandler() {
+        return geometryHandler;
     }
     
 }

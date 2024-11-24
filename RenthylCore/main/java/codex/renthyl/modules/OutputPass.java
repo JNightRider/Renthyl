@@ -73,9 +73,6 @@ public class OutputPass extends RenderPass {
         if (alphaDiscard != null) {
             context.getScreen().setAlphaDiscard(alphaDiscard);
         }
-        //System.out.println("camera: "+context.getWidth()+" "+context.getHeight());
-        //System.out.println("texture: "+colorTex.getImage().getWidth()+" "+colorTex.getImage().getHeight());
-        //context.resizeCamera(context.getWidth(), context.getHeight(), true, false, true);
         context.renderTextures(colorTex, depthTex);
     }
     @Override

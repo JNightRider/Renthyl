@@ -26,11 +26,13 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl;
+package codex.renthyl.jobs;
 
+import codex.renthyl.FGRenderContext;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.modules.RenderModule;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 
 /**
@@ -39,13 +41,20 @@ import java.util.LinkedList;
  * 
  * @author codex
  */
-public class ExecutionQueueList {
+public class ExecutionJobList {
     
-    private final ArrayList<LinkedList<RenderModule>> queues = new ArrayList<>();
+    private final JobEventHandler events;
+    private final FGRenderContext context;
+    private final FGExecutionJob mainJob;
+    private final ArrayList<FGExecutionJob> jobs = new ArrayList<>();
     private final ModuleIndex tempIndex = new ModuleIndex();
-    private int activeQueues = 0;
+    private int activeJobs = 1;
     
-    public ExecutionQueueList() {}
+    public ExecutionJobList(JobEventHandler events, FGRenderContext context) {
+        this.events = events;
+        this.context = context;
+        this.mainJob = new FGExecutionJob(this.events, this.context, 0);
+    }
     
     /**
      * Adds the module to the queue at the index.
@@ -58,45 +67,76 @@ public class ExecutionQueueList {
      * @return assigned queue index (do not use resulting object)
      */
     public ModuleIndex add(RenderModule module, int index) {
-        while (index >= queues.size()) {
-            queues.add(null);
+        FGExecutionJob job;
+        if (index == 0) {
+            job = mainJob;
+        } else {
+            while (index > jobs.size()) {
+                jobs.add(null);
+            }
+            job = jobs.get(index-1);
+            if (job == null) {
+                job = new FGExecutionJob(events, context, index);
+                jobs.set(index-1, job);
+                activeJobs++;
+            }
         }
-        LinkedList<RenderModule> queue = queues.get(index);
-        if (queue == null) {
-            queue = new LinkedList<>();
-            queues.set(index, queue);
-            activeQueues++;
-        }
-        tempIndex.set(index, queue.size());
-        queue.add(module);
+        tempIndex.set(job.getIndex(), job.add(module));
         return tempIndex;
     }
     
     /**
-     * Clears all queues.
+     * Clears all jobs.
      */
     public void flush() {
-        for (int i = queues.size()-1; i >= 0; i--) {
-            LinkedList<RenderModule> queue = queues.get(i);
-            if (queue != null) {
-                if (queue.isEmpty()) {
-                    queues.set(i, null);
-                    activeQueues--;
+        mainJob.flush();
+        for (int i = jobs.size()-1; i >= 0; i--) {
+            FGExecutionJob job = jobs.get(i);
+            if (job != null) {
+                if (job.isEmpty()) {
+                    jobs.set(i, null);
+                    activeJobs--;
                 } else {
-                    queue.clear();
+                    job.flush();
                 }
             }
         }
     }
     
     /**
-     * Gets the queue at the index.
+     * Gets the main execution job intended to be run on the main render thread.
+     * 
+     * @return 
+     */
+    public FGExecutionJob getMainJob() {
+        return mainJob;
+    }
+    
+    /**
+     * Gets the asynchronous job at the index
      * 
      * @param i
-     * @return queue (may be null)
+     * @return job at the index (may be null)
      */
-    public LinkedList<RenderModule> getQueue(int i) {
-        return queues.get(i);
+    public FGExecutionJob getAsyncJob(int i) {
+        return jobs.get(i);
+    }
+    
+    /**
+     * Gathers all active asynchronous jobs and stores them in the target
+     * collection.
+     * 
+     * @param store collection to store jobs, or null to create use a new list
+     * @return collection containing all active asynchronous jobs
+     */
+    public Collection<FGExecutionJob> gatherActiveAsyncJobs(Collection<FGExecutionJob> store) {
+        if (store == null) {
+            store = new LinkedList<>();
+        }
+        for (FGExecutionJob j : jobs) if (j != null) {
+            store.add(j);
+        }
+        return store;
     }
     
     /**
@@ -107,7 +147,7 @@ public class ExecutionQueueList {
      * @return 
      */
     public int size() {
-        return queues.size();
+        return jobs.size();
     }
     
     /**
@@ -115,8 +155,8 @@ public class ExecutionQueueList {
      * 
      * @return 
      */
-    public int getNumActiveQueues() {
-        return activeQueues;
+    public int getNumActiveJobs() {
+        return activeJobs;
     }
     
 }

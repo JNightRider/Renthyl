@@ -28,6 +28,7 @@
  */
 package codex.renthyl.resources;
 
+import codex.renthyl.debug.ResourceWatcher;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
 import java.util.Objects;
@@ -49,12 +50,13 @@ public class ResourceView <T> {
     private final ResourceDef<T> def;
     private final ResourceTicket<T> ticket;
     private final TimeFrame lifetime;
+    private final AtomicBoolean released = new AtomicBoolean(false);
     private RenderObject object;
     private T resource;
     private int refs = 0;
     private boolean temporary = false;
     private boolean undefined = false;
-    private final AtomicBoolean released = new AtomicBoolean(false);
+    private ResourceWatcher watcher;
     
     /**
      * 
@@ -75,6 +77,9 @@ public class ResourceView <T> {
      * @param index 
      */
     public void reference(ModuleIndex index) {
+        if (isTemporary()) {
+            throw new IllegalStateException("Temporary resource cannot be referenced.");
+        }
         lifetime.extendTo(index);
         refs++;
     }
@@ -86,7 +91,18 @@ public class ResourceView <T> {
     public boolean release() {
         refs--;
         released.set(true);
+        if (watcher != null) {
+            watcher.release(this);
+        }
         return refs >= 0;
+    }
+    /**
+     * Releases this resource from a culled user.
+     * 
+     * @return true if this resource is used after the release
+     */
+    public boolean drop() {
+        return --refs >= 0;
     }
     /**
      * Claims the resource for reading.
@@ -95,17 +111,6 @@ public class ResourceView <T> {
      */
     public boolean claimReadPermissions() {
         return ((def == null || def.isReadConcurrent()) && released.get()) || released.getAndSet(false);
-    }
-    
-    /**
-     * Merges the entry view's references and lifetime into this view.
-     * 
-     * @param entry 
-     */
-    public void merge(ResourceView<T> entry) {
-        refs += entry.refs+1;
-        lifetime.merge(entry.lifetime);
-        entry.refs = -1;
     }
     
     /**
@@ -175,6 +180,13 @@ public class ResourceView <T> {
      */
     public void setTemporary(boolean temporary) {
         this.temporary = temporary;
+    }
+    /**
+     * 
+     * @param watcher 
+     */
+    public void setWatcher(ResourceWatcher watcher) {
+        this.watcher = watcher;
     }
     
     /**

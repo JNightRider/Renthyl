@@ -30,6 +30,7 @@ package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
+import com.jme3.texture.Texture3D;
 import com.jme3.util.NativeObject;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -49,6 +50,7 @@ public class RenderObject <T> {
     
     private final long id;
     private final T object;
+    private final Object tag;
     private final LinkedList<Reservation> reservations = new LinkedList<>();
     private int timeoutDuration;
     private int timeout = 0;
@@ -72,6 +74,7 @@ public class RenderObject <T> {
             throw new NullPointerException("Object cannot be null.");
         }
         this.object = object;
+        this.tag = def.getResourceTag();
         this.timeoutDuration = def.getStaticTimeout();
         this.allowCasualAllocation = def.isAllowCasualAllocation();
         this.allowReservations = def.isAllowReservations();
@@ -146,6 +149,9 @@ public class RenderObject <T> {
         if (acquired) {
             throw new IllegalStateException("Already acquired.");
         }
+        if (object.getClass().isAssignableFrom(Texture3D.class)) {
+            System.out.println("restore texture3D timeout to " + timeoutDuration);
+        }
         timeout = timeoutDuration;
         acquired = true;
     }
@@ -218,6 +224,9 @@ public class RenderObject <T> {
      * @return true if the object is not considered abandoned
      */
     public boolean tickTimeout() {
+        if (object.getClass().isAssignableFrom(Texture3D.class)) {
+            System.out.println("tick texture3D timeout down from " + timeout);
+        }
         return timeout-- > 0;
     }
     
@@ -245,6 +254,14 @@ public class RenderObject <T> {
      */
     public T getObject() {
         return object;
+    }
+    /**
+     * Returns this object's tag.
+     * 
+     * @return tag (may be null)
+     */
+    public Object getTag() {
+        return tag;
     }
     /**
      * Returns true if this render object is acquired (and not yet released).
@@ -278,6 +295,11 @@ public class RenderObject <T> {
      */
     public boolean isAllowReservations() {
         return allowReservations;
+    }
+    
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[id=" + id + ", tag=" + tag + ", type=" + object.getClass().getName() + "]";
     }
     
     /**

@@ -4,6 +4,8 @@
  */
 package codex.renthyl;
 
+import codex.boost.material.ImmediateShader;
+import codex.renthyl.jobs.DefaultJobExecutor;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
@@ -16,13 +18,13 @@ import com.jme3.renderer.RenderManager;
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
  * <p>
- * To learn how to use Renthyl, visit the Renthyl wiki on GitHub:<br>
+ * <strong>To learn how to use Renthyl, visit the Renthyl wiki on GitHub:</strong><br>
  * <em>https://github.com/codex128/Renthyl/wiki/0.-Welcome!</em>
  * <p>
- * If you have questions about Renthyl, please ask on the JMonkeyEngine forum:<br>
+ * <strong>If you have questions about Renthyl, please ask on the JMonkeyEngine forum:</strong><br>
  * <em>https://hub.jmonkeyengine.org/</em>
  * <p>
- * Consider using Renthyl's official addon library:<br>
+ * <strong>Consider using Renthyl's official addon library:</strong><br>
  * <em>https://github.com/codex128/RenthylPlus</em>
  * 
  * @author codex
@@ -69,34 +71,13 @@ public class Renthyl {
         }
     }
     
-    private class AppDestroyListener extends BaseAppState {
-
-        @Override
-        protected void initialize(Application app) {}
-        @Override
-        protected void cleanup(Application app) {
-            context.applicationStopped();
-        }
-        @Override
-        protected void onEnable() {}
-        @Override
-        protected void onDisable() {}
-        
-    }
-    
-    private final FGPipelineContext context;
-    
-    private Renthyl(Application app) {
-        
-        RenderManager rm = app.getRenderManager();
-        context = new FGPipelineContext(rm);
-        rm.registerContext(FrameGraph.CONTEXT_TYPE, context);
-        
-        app.getStateManager().attach(new AppDestroyListener());
-        
-        AssetManager assetManager = app.getAssetManager();
-        assetManager.registerLoader(BinaryLoader.class, "fg");
-        
+    /**
+     * Returns the Renthyl instance.
+     * 
+     * @return 
+     */
+    public static Renthyl getInstance() {
+        return instance;
     }
     
     /**
@@ -124,6 +105,40 @@ public class Renthyl {
         
         return fg;
         
+    }
+    
+    private class AppDestroyState extends BaseAppState {
+        
+        @Override
+        protected void initialize(Application app) {}
+        @Override
+        protected void cleanup(Application app) {
+            defaultExecutor.terminate();
+        }
+        @Override
+        protected void onEnable() {}
+        @Override
+        protected void onDisable() {}
+        
+    }
+    
+    private final DefaultJobExecutor defaultExecutor = new DefaultJobExecutor();
+    
+    private Renthyl(Application app) {
+        
+        RenderManager rm = app.getRenderManager();
+        rm.registerContext(FrameGraph.CONTEXT_TYPE, new FGPipelineContext(this));
+        
+        app.getStateManager().attach(new AppDestroyState());
+        
+        AssetManager assetManager = app.getAssetManager();
+        assetManager.registerLoader(BinaryLoader.class, "fg");
+        assetManager.registerLocator("", ImmediateShader.class);
+        
+    }
+    
+    public DefaultJobExecutor getBaseExecutor() {
+        return defaultExecutor;
     }
     
 }

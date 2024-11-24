@@ -42,9 +42,10 @@ import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import com.jme3.texture.FrameBuffer;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -57,7 +58,6 @@ public abstract class RenderPass extends RenderModule implements Savable {
     
     private final LinkedList<PassFrameBuffer> frameBuffers = new LinkedList<>();
     protected ResourceList resources;
-    protected boolean autoTicketRelease = true;
     
     @Override
     public String toString() {
@@ -93,9 +93,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
             waitToExecute();
         }
         execute(context);
-        if (autoTicketRelease) {
-            releaseAll();
-        }
+        releaseAll();
         if (index.isMainThread()) {
             context.popRenderSettings();
         }
@@ -189,6 +187,18 @@ public abstract class RenderPass extends RenderModule implements Savable {
      */
     protected ResourceTicket declarePrimitive(ResourceTicket ticket) {
         return resources.declarePrimitive(this, ticket);
+    }
+    /**
+     * 
+     * @param tickets
+     * @return 
+     * @see ResourceList#declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     */
+    protected ResourceTicket[] declarePrimitive(ResourceTicket... tickets) {
+        for (ResourceTicket t : tickets) {
+            resources.declarePrimitive(this, t);
+        }
+        return tickets;
     }
     /**
      * Declares a new temporary resource using an unregistered ticket.
@@ -357,27 +367,37 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a list of resources from a ticket group and stores them in the given list.
      * 
      * @param <T>
+     * @param <R>
      * @param name group name
-     * @param list list to store resources in (or null to create a new {@link LinkedList}).
+     * @param collection list to store resources in (or null to create a new {@link LinkedList}).
      * @return given list
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
      */
-    protected <T> List<T> acquireList(String name, List<T> list) {
-        if (list == null) {
-            list = new LinkedList<>();
-        }
+    protected <T, R extends Collection<T>> R acquireList(String name, R collection) {
+        Objects.requireNonNull(collection, "Collection to store acquired resources cannot be null.");
         ResourceTicket<T>[] tickets = getGroup(name).getArray();
         for (ResourceTicket<T> t : tickets) {
             T res = resources.acquireOrElse(t, null);
-            if (res != null) list.add(res);
+            if (res != null) collection.add(res);
         }
-        return list;
+        return collection;
+    }
+    /**
+     * Acquires a list of resources from a ticket group and stores them in the given list.
+     * 
+     * @param <T>
+     * @param name group name
+     * @return given list
+     * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
+     */
+    protected <T> LinkedList<T> acquireList(String name) {
+        return acquireList(name, new LinkedList<>());
     }
     
     /**
      * Releases all reasources associated with any registered ticket.
      * <p>
-     * Called automatically.
+     * Called automatically after execution if {@link #autoTicketRelease} is true.
      * 
      * @see ResourceList#release(codex.renthyl.resources.ResourceTicket) 
      */

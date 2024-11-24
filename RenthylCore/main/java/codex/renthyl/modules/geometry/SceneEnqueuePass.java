@@ -66,17 +66,23 @@ import java.util.List;
  * <p>
  * Outputs vary based on what GeometryQueues are added. If default queues are
  * added (via {@link #SceneEnqueuePass(boolean, boolean)}), then the outputs
- * include: "Opaque", "Sky", "Transparent", "Gui", and "Translucent". All outputs
+ * include: "Opaque", "Sky", "Transparent", "Gui", "Translucent". All outputs
  * are GeometryQueues.
  * <p>
  * A geometry is placed in queues according to the userdata found at
  * {@link #QUEUE} (expected as String) according to ancestor inheritance, or the
  * value returned by {@link Geometry#getQueueBucket()} (converted to String).
  * Userdata value (if found) trumps queue bucket value.
+ * <p>
+ * If a geometry does not have a queue name corresponding to a queue built
+ * by this pass, the geometry will be added to the {@link #DEFAULT_QUEUE}, if
+ * it exists. Otherwise the geometry is discarded.
  * 
  * @author codex
  */
 public class SceneEnqueuePass extends RenderPass {
+    
+    public static final String DEFAULT_QUEUE = "Default";
     
     /**
      * Userdata key for denoting the queue the spatial should be sorted into.
@@ -204,6 +210,9 @@ public class SceneEnqueuePass extends RenderPass {
             throw new NullPointerException("World render queue value was not calculated correctly.");
         }
         Queue queue = queues.get(value);
+        if (queue == null) {
+            queue = queues.get(DEFAULT_QUEUE);
+        }
         // accumulate lights
         if (queue != null) for (Light l : spatial.getLocalLightList()) {
             queue.lightList.add(l);
@@ -225,6 +234,15 @@ public class SceneEnqueuePass extends RenderPass {
         }
     }
     
+    /**
+     * Creates the default queue.
+     * 
+     * @param comparator
+     * @return 
+     */
+    public final SceneEnqueuePass addDefault(GeometryComparator comparator) {
+        return add(DEFAULT_QUEUE, comparator);
+    }
     /**
      * Adds a queue with the name and comparator.
      * <p>
@@ -299,6 +317,13 @@ public class SceneEnqueuePass extends RenderPass {
      */
     public String getDefaultBucket() {
         return defaultBucket;
+    }
+    
+    public static SceneEnqueuePass withLegacyQueues(boolean runControlRender) {
+        return new SceneEnqueuePass(runControlRender, true);
+    }
+    public static SceneEnqueuePass withDefaultQueue(boolean runControlRender) {
+        return new SceneEnqueuePass(runControlRender, false).addDefault(new OpaqueComparator());
     }
     
     private static class Queue implements Savable {

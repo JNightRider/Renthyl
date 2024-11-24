@@ -28,6 +28,7 @@
  */
 package codex.renthyl.client;
 
+import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import com.jme3.renderer.ViewPort;
 
@@ -48,6 +49,10 @@ public interface GraphSource <T> {
      */
     public T getGraphValue(FrameGraph frameGraph, ViewPort viewPort);
     
+    public default T getGraphValue(FGRenderContext context) {
+        return getGraphValue(context.getFrameGraph(), context.getViewPort());
+    }
+    
     /**
      * Returns the value from provided by the GraphSource.
      * <p>
@@ -65,6 +70,19 @@ public interface GraphSource <T> {
             return source.getGraphValue(frameGraph, viewPort);
         }
         return defValue;
+    }
+    
+    /**
+     * 
+     * @param <T>
+     * @param source
+     * @param defValue
+     * @param context
+     * @return 
+     * @see #get(codex.renthyl.client.GraphSource, java.lang.Object, codex.renthyl.FrameGraph, com.jme3.renderer.ViewPort)
+     */
+    public static <T> T get(GraphSource<T> source, T defValue, FGRenderContext context) {
+        return get(source, defValue, context.getFrameGraph(), context.getViewPort());
     }
     
     /**

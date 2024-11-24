@@ -86,10 +86,17 @@ public class RenderObjectMap {
      * if it still exists, will be tried for reallocation. If that fails, each render object
      * will be tried for reallocation. Finally, if that fails, a new render object
      * will be created and allocated to the resource.
+     * <p>
+     * Each tried render object is tried for direct and indirect allocation. The exact
+     * distinction between these two are defined by the resource's definition, but
+     * direct allocation are always preferred over indirect allocations. Thus, even
+     * if a resource qualifies for indirect allocation, this method will continue
+     * trying objects until a direct allocation is found, or all objects have been
+     * tried.
      * 
      * @param <T>
      * @param resource 
-     * @param async true to execute asynchronous methods, otherwise synchronous methods will
+     * @param async true to execute asynchronous methods, otherwise non-threadsafe methods will
      * be used in the interest of efficiency
      */
     public <T> void allocate(ResourceView<T> resource, boolean async) {
@@ -101,6 +108,11 @@ public class RenderObjectMap {
     }
     /**
      * Allocates a render object from the object cache.
+     * <p>
+     * If the resource view's definition does not approve the object selected
+     * to allocate, an exception will be thrown. This is notably different from normal
+     * allocation, which creates a new object if the definition does not approve
+     * any tried objects.
      * 
      * @param <T>
      * @param cache
@@ -146,7 +158,7 @@ public class RenderObjectMap {
             RenderObject indirectObj = null;
             for (RenderObject obj : objectMap.values()) {
                 if (isAvailable(obj) && obj.isAllowCasualAllocation()
-                        && !obj.isReservedWithin(resource.getLifeTime())) {
+                        && def.isEquivalentTag(obj.getTag()) && !obj.isReservedWithin(resource.getLifeTime())) {
                     // try applying a direct resource
                     T r = def.applyDirectResource(obj.getObject());
                     if (r != null) {
@@ -157,7 +169,7 @@ public class RenderObjectMap {
                         return;
                     }
                     // then try applying an indirect resource, which is not as desirable
-                    if (indirectObj == null) {
+                    if (def.isAllowIndirectResources() && indirectObj == null) {
                         indirectRes = def.applyIndirectResource(obj.getObject());
                         if (indirectRes != null) {
                             indirectObj = obj;
@@ -187,7 +199,7 @@ public class RenderObjectMap {
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
-        if (obj != null) {
+        if (obj != null && def.isEquivalentTag(obj.getTag())) {
             if (cap != null) cap.attemptReallocation(id, resource.getIndex());
             if (isAvailable(obj) && (obj.claimReservation(resource.getProducer().getIndex())
                     || !obj.isReservedWithin(resource.getLifeTime()))) {
@@ -231,7 +243,7 @@ public class RenderObjectMap {
                 RenderObject obj;
                 if (next) obj = it.next();
                 else obj = skipped.removeFirst();
-                if (isAvailable(obj) && obj.isAllowCasualAllocation()) {
+                if (isAvailable(obj) && obj.isAllowCasualAllocation() && def.isEquivalentTag(def.getResourceTag())) {
                     if ((next || !skipped.isEmpty()) && obj.isInspect()) {
                         // Inspect this object later, because something else is inspecting it.
                         // This makes this thread try other objects first, instead of waiting
@@ -260,7 +272,7 @@ public class RenderObjectMap {
                                 return;
                             }
                             // then try applying an indirect resource, which is not as desirable
-                            if (!obj.isPrioritized() && indirectObj == null) {
+                            if (indirectObj == null && def.isAllowIndirectResources() && !obj.isPrioritized()) {
                                 indirectRes = def.applyIndirectResource(obj.getObject());
                                 if (indirectRes != null) {
                                     indirectObj = obj;
@@ -308,9 +320,11 @@ public class RenderObjectMap {
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
-        if (obj != null) {
+        if (obj != null && def.isEquivalentTag(obj.getTag())) {
             if (cap != null) cap.attemptReallocation(id, resource.getIndex());
+            // note: specific allocation does not defer if the object is currently being inspected
             if (isAvailable(obj)) synchronized (obj) {
+                // start object inspection to avoid thread build up on a single object
                 obj.startInspect();
                 if (obj.claimReservation(resource.getProducer().getIndex())
                         || !obj.isReservedWithin(resource.getLifeTime())) {
@@ -458,6 +472,9 @@ public class RenderObjectMap {
     private void flushCollection(Iterable<RenderObject> iterable, GraphEventCapture cap) {
         for (Iterator<RenderObject> it = iterable.iterator(); it.hasNext();) {
             RenderObject obj = it.next();
+            if (obj.isAcquired()) {
+                throw new IllegalStateException(obj + " is not released.");
+            }
             if (!obj.tickTimeout()) {
                 if (cap != null) cap.disposeObject(obj.getId());
                 obj.dispose();

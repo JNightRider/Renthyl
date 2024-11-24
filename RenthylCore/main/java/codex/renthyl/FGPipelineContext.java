@@ -30,11 +30,11 @@ package codex.renthyl;
 
 import codex.renthyl.resources.RenderObjectMap;
 import codex.renthyl.debug.GraphEventCapture;
+import codex.renthyl.jobs.FGJobExecutor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.pipeline.PipelineContext;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,12 +48,13 @@ public class FGPipelineContext implements PipelineContext {
     private static final Logger LOG = Logger.getLogger(FGPipelineContext.class.getName());
     
     private final RenderObjectMap renderObjects;
-    private final ExecutionThreadManager threadManager = new ExecutionThreadManager();
-    private final AtomicBoolean rendered = new AtomicBoolean(false);
+    private FGJobExecutor defaultExecutor;
     private GraphEventCapture eventCapture;
+    private boolean rendered = false;
     
-    public FGPipelineContext(RenderManager rm) {
+    public FGPipelineContext(Renthyl renthyl) {
         renderObjects = new RenderObjectMap(this);
+        defaultExecutor = renthyl.getBaseExecutor();
     }
 
     @Override
@@ -62,17 +63,18 @@ public class FGPipelineContext implements PipelineContext {
             eventCapture.beginRenderFrame();
         }
         renderObjects.newFrame();
-        return rendered.getAndSet(true);
+        return rendered;
     }
     @Override
-    public void endViewPortRender(RenderManager rm, ViewPort vp) {}
+    public void endViewPortRender(RenderManager rm, ViewPort vp) {
+        rendered = true;
+    }
     @Override
     public void endContextRenderFrame(RenderManager rm) {
         if (eventCapture != null) {
             eventCapture.endRenderFrame();
         }
         renderObjects.flushMap();
-        threadManager.stop();
         if (eventCapture != null && eventCapture.isComplete()) {
             try {
                 eventCapture.export();
@@ -81,22 +83,21 @@ public class FGPipelineContext implements PipelineContext {
             }
             eventCapture = null;
         }
-        rendered.set(false);
-    }
-
-    public void setEventCapture(GraphEventCapture eventCapture) {
-        this.eventCapture = eventCapture;
+        rendered = false;
     }
     
-    public void applicationStopped() {
-        threadManager.stop();
+    public void setDefaultExecutor(FGJobExecutor executor) {
+        defaultExecutor = (executor != null ? executor : Renthyl.getInstance().getBaseExecutor());
+    }
+    public void setEventCapture(GraphEventCapture eventCapture) {
+        this.eventCapture = eventCapture;
     }
     
     public RenderObjectMap getRenderObjects() {
         return renderObjects;
     }
-    public ExecutionThreadManager getThreadManager() {
-        return threadManager;
+    public FGJobExecutor getDefaultExecutor() {
+        return defaultExecutor;
     }
     public GraphEventCapture getEventCapture() {
         return eventCapture;

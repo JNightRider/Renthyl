@@ -29,7 +29,7 @@
 package codex.renthyl.modules;
 
 import codex.renthyl.Connectable;
-import codex.renthyl.ExecutionQueueList;
+import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceTicket;
@@ -81,7 +81,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
         }
     }
     @Override
-    public void queueModule(FGRenderContext context, ExecutionQueueList queues, int parentThread) {
+    public void queueModule(FGRenderContext context, ExecutionJobList queues, int parentThread) {
         index.set(queues.add(this, parentThread));
         for (RenderModule m : queue) {
             m.queueModule(context, queues, parentThread);
@@ -90,7 +90,9 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     @Override
     public void prepareModuleRender(FGRenderContext context) {
         for (RenderModule m : queue) {
-            m.prepareModuleRender(context);
+            if (!context.isTemporalCulling() || context.getFrameGraph().isLayoutUpdateNeeded() || m.isUsed()) {
+                m.prepareModuleRender(context);
+            }
         }
     }
     @Override

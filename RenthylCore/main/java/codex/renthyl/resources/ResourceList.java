@@ -31,19 +31,20 @@ package codex.renthyl.resources;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.debug.GraphEventCapture;
+import codex.renthyl.debug.ResourceWatcher;
 import codex.renthyl.definitions.ResourceDef;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
+import com.jme3.texture.Texture3D;
 import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.Objects;
 
 /**
  * Manages {@link ResourceView ResourceViews} for a {@link FrameGraph}.
  * <p>
- * ResourceList is responsible for managing resource views, which provides an abstract
+ * ResourceList is responsible for managing resource views, which provide an abstract
  * interface between render passes and concrete objects. Render passes are expected
- * beforehand to declare resources they plan on creating during execution and
+ * before execution to declare resources they plan on creating during execution and
  * reference resources they plan on using during execution from other render passes.
  * Then after execution, render passes are expected to release resources they are
  * finished using. The idea is to make a given render frame as internally predictable
@@ -83,7 +84,7 @@ public class ResourceList {
     private final FrameGraph frameGraph;
     private RenderObjectMap map;
     private GraphEventCapture cap;
-    private ArrayList<ResourceView> resources = new ArrayList<>(INITIAL_SIZE);
+    private final ArrayList<ResourceView> resources;
     private final LinkedList<FutureReference> futureRefs = new LinkedList<>();
     private final ResourceCache cache = new ResourceCache();
     private int nextSlot = 0;
@@ -94,7 +95,17 @@ public class ResourceList {
      * @param frameGraph 
      */
     public ResourceList(FrameGraph frameGraph) {
+        this(frameGraph, INITIAL_SIZE);
+    }
+    
+    /**
+     * 
+     * @param frameGraph
+     * @param initialListSize 
+     */
+    public ResourceList(FrameGraph frameGraph, int initialListSize) {
         this.frameGraph = frameGraph;
+        this.resources = new ArrayList<>(initialListSize);
     }
     
     private <T> ResourceView<T> create(ResourceUser producer, ResourceDef<T> def, String name) {
@@ -144,7 +155,12 @@ public class ResourceList {
             nextSlot++;
             return resources.size()-1;
         } else {
-            // insert resource into available slot
+            // Insert resource into available slot.
+            // Note: storing and finding the first empty slot is not necessary
+            // for the current implementation. In fact, it is mostly left over
+            // from a previous implementation. I probably won't remove it because
+            // this case should theoretically never occur anyway, and I may need
+            // it in the future.
             int i = nextSlot;
             resources.set(i, res);
             // find next available slot
@@ -167,12 +183,12 @@ public class ResourceList {
     
     /**
      * Returns true if the ticket can be used to locate a resource.
-     * <p>
-     * <em>Use {@link ResourceTicket#validate(com.jme3.renderer.framegraph.ResourceTicket)} instead.</em>
      * 
      * @param ticket
      * @return 
+     * @deprecated Use {@link ResourceTicket#validate(com.jme3.renderer.framegraph.ResourceTicket)} instead.
      */
+    @Deprecated
     public boolean validate(ResourceTicket ticket) {
         return ResourceTicket.validate(ticket);
     }
@@ -189,6 +205,10 @@ public class ResourceList {
      * and not shared with other users, it is critical that
      * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket) declareTemporary}
      * be used instead.
+     * <p>
+     * If the resource does not require intensive allocation management, consider using
+     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) declarePrimitive}
+     * instead.
      * <p>
      * <em>Note: passing {@code null} as the resource definition marks the resource
      * as primitive. This technique was deprecated because it was too vague. Older versions
@@ -212,9 +232,10 @@ public class ResourceList {
     /**
      * Declares a new primitive resource view.
      * <p>
-     * Usually, resource views references a special wrapper which contains the
-     * desired resource. Primitive resource views directly contain the resource
-     * assigned to it.
+     * Primitive resource views directly contain the resource without involving
+     * the {@link RenderObjectMap} for allocation management. This is a much more
+     * niave method of handling resources, but it can often be faster for
+     * low-impact resources that don't have much to gain much from reallocation.
      * 
      * @param <T>
      * @param producer
@@ -228,9 +249,11 @@ public class ResourceList {
     /**
      * Declares a new temporary resource.
      * <p>
-     * Temporary resources do not participate in culling, and should be only be used for
-     * resources that will not be shared. Thus, the ticket used should <em>not</em>
-     * be registered as an input or output.
+     * Temporary resources can only be used by the declaring pass, and do not
+     * participate in or affect culling. This is suitable for resources that
+     * require allocation management but are not shared with other passes.
+     * <p>
+     * Attempting to reference a temporary resource will result in an exception.
      * 
      * @param <T>
      * @param producer
@@ -366,6 +389,18 @@ public class ResourceList {
     }
     
     /**
+     * Attaches the watcher to the resource view.
+     * <p>
+     * The watcher receives notifications on events.
+     * 
+     * @param ticket
+     * @param watcher 
+     */
+    public void watch(ResourceTicket ticket, ResourceWatcher watcher) {
+        locate(ticket).setWatcher(watcher);
+    }
+    
+    /**
      * Gets the definition of the resource view associated with the ticket.
      * <p>
      * An exception will be thrown if the ticket is
@@ -495,8 +530,7 @@ public class ResourceList {
                             + " unreachable after "+timeoutMillis+" milliseconds.");
                 }
             }
-            // claim read permisions
-            // for resources that are read concurrent, this won't matter
+            // Claim read permissions. For resources that are read concurrent, this won't matter.
             if (!res.claimReadPermissions()) {
                 waitForReadPermission(ticket, thread);
             }
@@ -514,7 +548,7 @@ public class ResourceList {
      * @see #waitForReadPermission(codex.renthyl.resources.ResourceTicket, int, long) 
      */
     public void waitForReadPermission(ResourceTicket ticket, int thread) {
-        ResourceList.this.waitForReadPermission(ticket, thread, WAIT_TIMEOUT);
+        waitForReadPermission(ticket, thread, WAIT_TIMEOUT);
     }
     
     /**
@@ -599,7 +633,7 @@ public class ResourceList {
      * @see #acquire(codex.renthyl.resources.ResourceTicket) 
      */
     public <T> T acquireOrElse(ResourceTicket<T> ticket, T value) {
-        if (validate(ticket)) {
+        if (ResourceTicket.validate(ticket)) {
             ResourceView<T> resource = locate(ticket);
             if (!resource.isUndefined()) {
                 return acquire(resource, ticket);
@@ -763,6 +797,17 @@ public class ResourceList {
     }
     
     /**
+     * Returns true if the resource view associated with the ticket
+     * is available for {@link #acquire(codex.renthyl.resources.ResourceTicket) acquiring}.
+     * 
+     * @param ticket
+     * @return 
+     */
+    public boolean available(ResourceTicket ticket) {
+        return acquireOrElse(ticket, null) != null;
+    }
+    
+    /**
      * Directly assigns the resource view associated with the ticket to the value.
      * <p>
      * A render object is not created to store the value. Instead, the render resource
@@ -876,14 +921,15 @@ public class ResourceList {
      * Caches the object currently associated with the ticket's resource view.
      * <p>
      * The object associated with the resource view is saved to this resource
-     * list's local cache, and removed from regular management by {@link RenderObjectMap}.
+     * list's local cache, and removed from regular management in {@link RenderObjectMap}.
      * The object cannot be reallocated or accessed except through
      * {@link #acquireCached(codex.renthyl.resources.ResourceTicket, java.lang.String) acquireCached}.
      * <p>
      * Cached objects can still be destroyed after several frames of not being used.
      * <p>
      * An exception is thrown if the given ticket is
-     * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}.
+     * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid},
+     * or the resource is virtual or primitive.
      * 
      * @param ticket 
      * @param key 
@@ -943,32 +989,43 @@ public class ResourceList {
      */
     public void cullUnreferenced() {
         LinkedList<ResourceView> cull = new LinkedList<>();
+        // queue all resources that are not referenced
         for (ResourceView r : resources) {
             if (r != null && !r.isReferenced() && !r.isTemporary()) {
                 cull.add(r);
             }
         }
+        // recursively "dereference" users of unused resources
         ResourceView resource;
         while ((resource = cull.pollFirst()) != null) {
             // dereference producer of resource
-            ResourceUser producer = resource.getProducer();
-            if (producer == null) {
+            ResourceUser user = resource.getProducer();
+            if (user == null) {
                 remove(resource.getIndex());
                 continue;
             }
-            producer.dereference();
-            if (!producer.isUsed()) {
-                for (ResourceTicket t : producer.getInputTickets()) {
-                    if (!validate(t)) {
+            if (!user.isUsed()) {
+                continue;
+            }
+            user.dereference();
+            // If the user is found to not produce used resources, dereference
+            // all incoming resources and remove all outgoing resources.
+            if (!user.isUsed()) {
+                for (ResourceTicket t : user.getInputTickets()) {
+                    // make sure the resource still exists
+                    if (!ResourceTicket.validate(t)) {
                         continue;
                     }
                     ResourceView r = locate(t);
-                    r.release();
+                    // If the resource is found to no longer be referenced by
+                    // anything, queue the resource.
+                    r.drop();
                     if (!r.isReferenced()) {
                         cull.addLast(r);
                     }
                 }
-                for (ResourceTicket t : producer.getOutputTickets()) {
+                // remove output resource views
+                for (ResourceTicket t : user.getOutputTickets()) {
                     if (!t.hasSource()) {
                         remove(t.getLocalIndex());
                     }
@@ -981,9 +1038,8 @@ public class ResourceList {
      * Clears the resource list.
      */
     public void clear() {
-        // TODO: throw exceptions for unreleased resources.
         int size = resources.size();
-        resources = new ArrayList<>(size);
+        resources.clear();
         nextSlot = 0;
         if (cap != null) {
             cap.clearResources(size);

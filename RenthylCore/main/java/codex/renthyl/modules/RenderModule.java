@@ -29,7 +29,7 @@
 package codex.renthyl.modules;
 
 import codex.renthyl.Connectable;
-import codex.renthyl.ExecutionQueueList;
+import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceTicket;
@@ -61,7 +61,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     protected final LinkedList<ResourceTicket> outputs = new LinkedList<>();
     protected final HashMap<String, TicketGroup> groups = new HashMap<>();
     private BiConsumer<RenderContainer, RenderModule> connector;
-    private int refs = 0;
+    private int refs = 1; // start at one so this won't be temporally culled
     private int id = -1;
     
     @Override
@@ -277,7 +277,7 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
      * @param queues
      * @param parentThread
      */
-    public void queueModule(FGRenderContext context, ExecutionQueueList queues, int parentThread) {
+    public void queueModule(FGRenderContext context, ExecutionJobList queues, int parentThread) {
         index.set(queues.add(this, parentThread));
     }
     /**
@@ -329,7 +329,8 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     /**
      * Prepares the RenderModule implementation.
      * <p>
-     * For most cases, use {@link #prepareModuleRender(com.jme3.renderer.framegraph.FGRenderContext, com.jme3.renderer.framegraph.PassIndex)}
+     * For most cases, use
+     * {@link #prepareModuleRender(com.jme3.renderer.framegraph.FGRenderContext, com.jme3.renderer.framegraph.PassIndex)}
      * instead.
      * 
      * @param context 

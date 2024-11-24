@@ -29,7 +29,7 @@
 package codex.renthyl.modules;
 
 import codex.boost.export.SavableObject;
-import codex.renthyl.ExecutionQueueList;
+import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.client.GraphSource;
 import com.jme3.export.InputCapsule;
@@ -53,12 +53,11 @@ public class RenderThread extends RenderContainer<RenderModule> {
     }
     
     @Override
-    public void queueModule(FGRenderContext context, ExecutionQueueList queues, int parentThread) {
-        @SuppressWarnings("null")
-        int i = threadIndexSource != null ?
-                threadIndexSource.getGraphValue(frameGraph, context.getViewPort())
-                : parentThread;
-        if (i < 0) i = parentThread;
+    public void queueModule(FGRenderContext context, ExecutionJobList queues, int parentThread) {
+        int i = GraphSource.get(threadIndexSource, parentThread, context);
+        if (i < 0) {
+            i = parentThread;
+        }
         index.set(queues.add(this, i));
         for (RenderModule m : queue) {
             m.queueModule(context, queues, i);

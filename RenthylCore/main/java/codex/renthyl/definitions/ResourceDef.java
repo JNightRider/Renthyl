@@ -72,6 +72,31 @@ public interface ResourceDef <T> {
     public T applyIndirectResource(Object resource);
     
     /**
+     * Gets the tag object associated with the resource this definition represents.
+     * <p>
+     * The tag can be used to narrow reallocation scope. Only
+     * {@link codex.renthyl.resources.RenderObject RenderObjects} that have an
+     * {@link #isEquivalentTag(java.lang.Object) equivalent} tag to this can be reallocated.
+     * RenderObjects derive their tags from the resource definitions used to create them.
+     * 
+     * @return resource tag (may be null)
+     */
+    public default Object getResourceTag() {
+        return null;
+    }
+    
+    /**
+     * 
+     * 
+     * @param tag
+     * @return 
+     */
+    public default boolean isEquivalentTag(Object tag) {
+        Object t = getResourceTag();
+        return t == tag || (t != null && t.equals(tag));
+    }
+    
+    /**
      * Returns the number of frames which the resource must be
      * static (unused throughout rendering) before it is disposed.
      * <p>
@@ -137,6 +162,37 @@ public interface ResourceDef <T> {
      */
     public default boolean isReadConcurrent() {
         return true;
+    }
+    
+    /**
+     * Returns true if the definition allows allocation of
+     * indirect resources.
+     * <p>
+     * This has the same effect as always returning null for
+     * {@link #applyIndirectResource(java.lang.Object)}, but this method
+     * allows certain checks to be skipped if false is returned.
+     * <p>
+     * Note that this hint only applies to casual allocations.
+     * If a specific object id is presented, then applying an indirect
+     * resource will still be attempted if applying directly fails.
+     * However, those cases shuold be relatively rare.
+     * <p>
+     * default=false
+     * 
+     * @return 
+     */
+    public default boolean isAllowIndirectResources() {
+        return false;
+    }
+    
+    /**
+     * Returns true if console debugging should be enabled
+     * for this definition.
+     * 
+     * @return 
+     */
+    public default boolean isDebugEnabled() {
+        return false;
     }
     
     /**

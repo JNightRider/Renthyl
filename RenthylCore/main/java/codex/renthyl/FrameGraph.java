@@ -28,6 +28,7 @@
  */
 package codex.renthyl;
 
+import codex.renthyl.jobs.ExecutionJobList;
 import codex.boost.export.SavableObject;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.resources.ResourceList;
@@ -37,6 +38,9 @@ import codex.renthyl.client.GraphSource;
 import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.export.FrameGraphData;
 import codex.renthyl.export.ModuleGraphData;
+import codex.renthyl.jobs.FGExecutionJob;
+import codex.renthyl.jobs.JobEventHandler;
+import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderModule;
@@ -51,11 +55,10 @@ import com.jme3.renderer.pipeline.RenderPipeline;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
 import java.util.HashMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
 import java.util.function.Function;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import codex.renthyl.jobs.FGJobExecutor;
+import java.util.LinkedList;
 
 /**
  * Manages render passes, dependencies, and resources in a node-based parameter system.
@@ -127,13 +130,15 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     
     private final AssetManager assetManager;
     private final ResourceList resources;
-    private final ExecutionQueueList executionQueues;
     private final FGRenderContext context;
+    private final JobEventHandler jobHandler;
+    private final ExecutionJobList jobList;
     private final HashMap<String, Object> settings = new HashMap<>();
+    private final LinkedList<FGExecutionJob> asyncJobs = new LinkedList<>();
+    private FGJobExecutor executor;
     private RenderThread root;
     private String name = "FrameGraph";
     private String docAsset = null;
-    private boolean dynamic = false;
     private boolean layoutUpdateNeeded = true;
     private boolean rendered = false;
     private boolean debugPrint = false;
@@ -148,8 +153,9 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     public FrameGraph(AssetManager assetManager) {
         this.assetManager = assetManager;
         this.resources = new ResourceList(this);
-        this.executionQueues = new ExecutionQueueList();
         this.context = new FGRenderContext(this);
+        this.jobHandler = new JobEventHandler();
+        this.jobList = new ExecutionJobList(this.jobHandler, this.context);
         this.root = new RenderThread(MainThreadIndexSource.INSTANCE);
         this.root.initializeModule(this);
     }
@@ -197,9 +203,8 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         rm.applyViewPort(vp);
         context.target(rm, pContext, vp, tpf);
         
-        ExecutionThreadManager threadManager = pContext.getThreadManager();
         GraphEventCapture cap = context.getGraphCapture();
-        if (threadManager.didErrorOccur()) {
+        if (jobHandler.errorOccured()) {
             return;
         }
         
@@ -213,10 +218,10 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         root.updateModule(context, tpf);
         
         // prepare
-        boolean updateNeeded = dynamic || layoutUpdateNeeded;
+        boolean updateNeeded = !context.isTemporalCulling() || layoutUpdateNeeded;
         if (updateNeeded) {
-            executionQueues.flush();
-            root.queueModule(context, executionQueues, ModuleIndex.MAIN_THREAD);
+            jobList.flush();
+            root.queueModule(context, jobList, ModuleIndex.MAIN_THREAD);
         }
         root.prepareModuleRender(context);
         resources.applyFutureReferences();
@@ -230,9 +235,12 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         
         // execute
         context.pushRenderSettings();
-        threadManager.start(context, executionQueues);
-        waitForActiveThreads(threadManager);
-        if (threadManager.didErrorOccur()) {
+        FGJobExecutor ex = fetchExecutor(pContext);
+        jobHandler.start(jobList.getNumActiveJobs());
+        ex.submitExecutionJobs(jobList.gatherActiveAsyncJobs(asyncJobs));
+        jobList.getMainJob().run();
+        jobHandler.waitForActiveJobs(THREAD_WAIT_TIMEOUT);
+        if (jobHandler.errorOccured()) {
             throw new RendererException("FrameGraph render incomplete.");
         }
         
@@ -261,32 +269,8 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         return "FrameGraph ("+name+")";
     }
     
-    /**
-     * Waits until all threads have completed in the given thread manager,
-     * or until a timeout occurs after {@link #THREAD_WAIT_TIMEOUT} milliseconds.
-     * 
-     * @param threadManager 
-     * @throws RendererException if a timeout occurs
-     */
-    private void waitForActiveThreads(ExecutionThreadManager threadManager) {
-        if (threadManager.getNumActiveThreads() == 0) {
-            return;
-        }
-        try {
-            Lock lock = threadManager.getThreadLock();
-            if (!lock.tryLock(THREAD_WAIT_TIMEOUT, TimeUnit.MILLISECONDS)) {
-                // interrupt execution threads
-                threadManager.error(true);
-                throw new RendererException("FrameGraph timed out after " + THREAD_WAIT_TIMEOUT
-                        + " milliseconds waiting for " + threadManager.getNumActiveThreads()
-                        + " active thread(s) to complete.");
-            } else {
-                // immediately release the lock
-                lock.unlock();
-            }
-        } catch (InterruptedException ex) {
-            LOG.log(Level.SEVERE, "Rendering was interrupted while waiting for threads to complete.", ex);
-        }
+    private FGJobExecutor fetchExecutor(FGPipelineContext pContext) {
+        return executor != null ? executor : pContext.getDefaultExecutor();
     }
     
     /**
@@ -540,6 +524,16 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     }
     
     /**
+     * Sets the executor responsible for executing this FrameGraph
+     * asynchronously.
+     * 
+     * @param executor 
+     */
+    public void setExecutor(FGJobExecutor executor) {
+        this.executor = executor;
+    }
+    
+    /**
      * Sets the name of this FrameGraph.
      * 
      * @param name 
@@ -549,15 +543,26 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     }
     
     /**
-     * Sets layout updates as dynamic, so specifically setting
-     * an update flag is not necessary.
+     * Enables temporal culling.
      * <p>
-     * default=false
+     * Temporal culling forces the FrameGraph into rendering the same jobs of the
+     * previous frame. Modules that were executed last frame are guaranteed to
+     * execute, and modules that were culled last frame are guaranteed not to
+     * be prepared or executed. This makes the rendering process more efficient,
+     * as the many processes can be outright skipped.
+     * <p>
+     * If the FrameGraph's layout does change (such as adding/removing a module or
+     * connecting/disconnecting tickets), {@link #setLayoutUpdateNeeded()} must be
+     * called, otherwise the changes may not be recognized or an exception may occur.
+     * For most operations (especially common operations), {@link #setLayoutUpdateNeeded()}
+     * is called automatically.
+     * <p>
+     * default=true (enabled)
      * 
-     * @param dynamic 
+     * @param temporalCulling 
      */
-    public void setDynamic(boolean dynamic) {
-        this.dynamic = dynamic;
+    public void setTemporalCulling(boolean temporalCulling) {
+        context.setTemporalCulling(temporalCulling);
     }
     
     /**
@@ -653,6 +658,16 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     }
     
     /**
+     * Gets the executor responsible for executing this FrameGraph
+     * asynchronously.
+     * 
+     * @return 
+     */
+    public FGJobExecutor getExecutor() {
+        return executor;
+    }
+    
+    /**
      * Gets the OpenCL context used for compute shading, or null if not set.
      * 
      * @return 
@@ -695,10 +710,10 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     /**
      * 
      * @return 
-     * @see #setDynamic(boolean) 
+     * @see #setTemporalCulling(boolean) 
      */
-    public boolean isDynamic() {
-        return dynamic;
+    public boolean isTemporalCulling() {
+        return context.isTemporalCulling();
     }
     
     /**
@@ -716,7 +731,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
      * @return 
      */
     public boolean isAsync() {
-        return executionQueues.getNumActiveQueues() > 1;
+        return jobList.getNumActiveJobs() > 1;
     }
     
     /**
