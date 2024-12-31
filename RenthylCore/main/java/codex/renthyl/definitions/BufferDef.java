@@ -198,6 +198,7 @@ public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
     public static BufferDef<ShortBuffer> shorts(int size) {
         return new BufferDef<>(ShortBuffer.class, SHORT, size);
     }
+    
     public static <T extends Buffer> BufferDef<T> buffer(Class<T> type) {
         return buffer(type, 1);
     }

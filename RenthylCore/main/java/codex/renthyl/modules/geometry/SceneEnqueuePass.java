@@ -35,17 +35,15 @@ import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.resources.ResourceTicket;
 import codex.boost.render.DepthRange;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.util.SpatialWorldParam;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
-import com.jme3.light.Light;
-import com.jme3.light.LightList;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
-import com.jme3.renderer.queue.GeometryComparator;
 import com.jme3.renderer.queue.GuiComparator;
 import com.jme3.renderer.queue.NullComparator;
 import com.jme3.renderer.queue.OpaqueComparator;
@@ -57,7 +55,6 @@ import com.jme3.scene.Spatial;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -75,25 +72,14 @@ import java.util.List;
  * Userdata value (if found) trumps queue bucket value.
  * <p>
  * If a geometry does not have a queue name corresponding to a queue built
- * by this pass, the geometry will be added to the {@link #DEFAULT_QUEUE}, if
+ * by this pass, the geometry will be added to the {@link #SINGLE_QUEUE}, if
  * it exists. Otherwise the geometry is discarded.
  * 
  * @author codex
  */
 public class SceneEnqueuePass extends RenderPass {
     
-    public static final String DEFAULT_QUEUE = "Default";
-    
-    /**
-     * Userdata key for denoting the queue the spatial should be sorted into.
-     */
-    public static final String QUEUE = "SceneEnqueuePass.RenderQueue";
-    
-    /**
-     * Userdata value for inheriting the queue of the spatial's parent.
-     */
-    public static final String INHERIT = RenderQueue.Bucket.Inherit.name();
-    
+    public static final String SINGLE_QUEUE = "Queue";
     public static final String
             OPAQUE = "Opaque",
             SKY = "Sky",
@@ -101,48 +87,19 @@ public class SceneEnqueuePass extends RenderPass {
             GUI = "Gui",
             TRANSLUCENT = "Translucent";
     
-    private boolean runControlRender = true;
     private final HashMap<String, Queue> queues = new HashMap<>();
-    private final LinkedList<SpatialWorldParam> worldParams = new LinkedList<>();
-    private String defaultBucket = OPAQUE;
-
-    /**
-     * Initialize an instance with default settings.
-     * <p>
-     * Default queues are not added.
-     */
-    public SceneEnqueuePass() {
-        this(true, true);
-    }
-    /**
-     * 
-     * @param runControlRender true to have this pass run {@link com.jme3.scene.control.Control} renders
-     * @param useDefaultBuckets true to have default queues registered
-     */
-    public SceneEnqueuePass(boolean runControlRender, boolean useDefaultBuckets) {
-        this.runControlRender = runControlRender;
-        if (useDefaultBuckets) {
-            add(OPAQUE, new OpaqueComparator());
-            add(SKY, null, DepthRange.REAR, true);
-            add(TRANSPARENT, new TransparentComparator());
-            add(GUI, new GuiComparator(), DepthRange.FRONT, false);
-            add(TRANSLUCENT, new TransparentComparator());
-        }
-        worldParams.add(SpatialWorldParam.RenderQueueParam);
-    }
+    private String defaultQueue;
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
         for (Queue b : queues.values()) {
             b.geometry = addOutput(b.name);
-            b.lights = addOutput(b.name+"Lights");
         }
     }
     @Override
     protected void prepare(FGRenderContext context) {
         for (Queue b : queues.values()) {
             declare(null, b.geometry);
-            declare(null, b.lights);
         }
     }
     @Override
@@ -155,14 +112,12 @@ public class SceneEnqueuePass extends RenderPass {
         }
         for (Queue b : queues.values()) {
             resources.setPrimitive(b.geometry, b.queue);
-            resources.setPrimitive(b.lights, b.lightList);
         }
     }
     @Override
     protected void reset(FGRenderContext context) {
         for (Queue b : queues.values()) {
             b.queue.clear();
-            b.lightList.clear();
         }
     }
     @Override
@@ -171,180 +126,94 @@ public class SceneEnqueuePass extends RenderPass {
     public void write(JmeExporter ex) throws IOException {
         super.write(ex);
         OutputCapsule out = ex.getCapsule(this);
-        out.write(runControlRender, "runControlRender", true);
         ArrayList<Queue> list = new ArrayList<>();
         list.addAll(queues.values());
         out.writeSavableArrayList(list, "buckets", new ArrayList<>());
-        out.write(defaultBucket, "defaultBucket", OPAQUE);
+        out.write(defaultQueue, "defaultQueue", OPAQUE);
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         super.read(im);
         InputCapsule in = im.getCapsule(this);
-        runControlRender = in.readBoolean("runControlRender", true);
         ArrayList<Savable> list = in.readSavableArrayList("buckets", new ArrayList<>());
         for (Savable s : list) {
             Queue b = (Queue)s;
             queues.put(b.name, b);
         }
-        defaultBucket = in.readString("defaultBucket", OPAQUE);
+        defaultQueue = in.readString("defaultQueue", OPAQUE);
     }
     
     private void queueSubScene(FGRenderContext context, Spatial spatial) {
-        // check culling
-        Camera cam = context.getViewPort().getCamera();
-        if (!spatial.checkCulling(cam)) {
-            return;
-        }
-        // render controls
-        if (runControlRender) {
-            spatial.runControlRender(context.getRenderManager(), context.getViewPort());
-        }
-        // apply world parameters
-        for (SpatialWorldParam p : worldParams) {
-            p.apply(spatial);
-        }
         // get target bucket
+        SpatialWorldParam.RenderQueueParam.apply(spatial);
         String value = SpatialWorldParam.RenderQueueParam.getWorldValue(spatial);
         if (value == null) {
             throw new NullPointerException("World render queue value was not calculated correctly.");
         }
         Queue queue = queues.get(value);
         if (queue == null) {
-            queue = queues.get(DEFAULT_QUEUE);
-        }
-        // accumulate lights
-        if (queue != null) for (Light l : spatial.getLocalLightList()) {
-            queue.lightList.add(l);
+            queue = queues.get(defaultQueue);
         }
         if (spatial instanceof Node) {
-            int camState = cam.getPlaneState();
             for (Spatial s : ((Node)spatial).getChildren()) {
-                // restore cam state before queueing children
-                cam.setPlaneState(camState);
                 queueSubScene(context, s);
             }
-        } else if (queue != null && spatial instanceof Geometry) {
-            // add to the render queue
+        } else if (spatial instanceof Geometry) {
             Geometry g = (Geometry)spatial;
             if (g.getMaterial() == null) {
-                throw new IllegalStateException("No material is set for Geometry: " + g.getName());
+                throw new IllegalStateException("No material is set for geometry: " + g.getName());
             }
             queue.queue.add(g);
         }
     }
     
-    /**
-     * Creates the default queue.
-     * 
-     * @param comparator
-     * @return 
-     */
-    public final SceneEnqueuePass addDefault(GeometryComparator comparator) {
-        return add(DEFAULT_QUEUE, comparator);
-    }
-    /**
-     * Adds a queue with the name and comparator.
-     * <p>
-     * If a bucket already exists under the name, it will be replaced.
-     * 
-     * @param name name of the queue corresponding to the output name
-     * @param comparator sorts geometries within the queue
-     * @return this instance
-     * @throws IllegalStateException if called while assigned to a framegraph
-     */
-    public final SceneEnqueuePass add(String name, GeometryComparator comparator) {
-        return add(name, comparator, DepthRange.NORMAL, true);
-    }
-    /**
-     * Adds a queue with the name, comparator, depth range, and perspective mode.
-     * 
-     * @param name name of the queue corresponding to the output name.
-     * @param comparator sorts geometries within the queue
-     * @param depth range in which geometries in the bucket will be rendered within
-     * @param perspective true to render geometries in the bucket in perspective mode (versus orthogonal)
-     * @return this instance
-     * @throws IllegalStateException if called while assigned to a framegraph
-     */
-    public final SceneEnqueuePass add(String name, GeometryComparator comparator, DepthRange depth, boolean perspective) {
+    public final SceneEnqueuePass add(String name, GeometryQueue queue) {
         if (isAssigned()) {
-            throw new IllegalStateException("Cannot add buckets while assigned to a framegraph.");
+            throw new IllegalStateException("Cannot add queues while assigned to a framegraph.");
         }
-        queues.put(name, new Queue(name, comparator, depth, perspective));
+        if (defaultQueue == null) {
+            defaultQueue = name;
+        }
+        queues.put(name, new Queue(name, queue));
         return this;
     }
-    
-    /**
-     * 
-     * @param param 
-     */
-    public void addWorldParam(SpatialWorldParam param) {
-        worldParams.add(param);
+    public void setDefaultQueue(String defaultQueue) {
+        this.defaultQueue = defaultQueue;
+    }
+    public String getDefaultQueue() {
+        return defaultQueue;
     }
     
-    /**
-     * Sets this pass to render controls when traversing the scene.
-     * <p>
-     * default=true
-     * 
-     * @param runControlRender 
-     */
-    public void setRunControlRender(boolean runControlRender) {
-        this.runControlRender = runControlRender;
+    public static SceneEnqueuePass withLegacyQueues() {
+        SceneEnqueuePass p = new SceneEnqueuePass();
+        p.add(OPAQUE, new GeometryQueue(new OpaqueComparator()));
+        p.add(TRANSPARENT, new GeometryQueue(new TransparentComparator()));
+        p.add(TRANSLUCENT, new GeometryQueue(new TransparentComparator()));
+        GeometryQueue sky = new GeometryQueue();
+        sky.addMode(RenderMode.depthRange(DepthRange.REAR));
+        p.add(SKY, sky);
+        GeometryQueue gui = new GeometryQueue(new GuiComparator());
+        gui.addMode(RenderMode.depthRange(DepthRange.FRONT));
+        gui.addMode(RenderMode.parallelProjection(true));
+        p.add(GUI, gui);
+        return p;
     }
-    /**
-     * Sets the default bucket geometries are added to if their
-     * hierarchy only calls for {@link #INHERIT}.
-     * <p>
-     * default={@link #OPAQUE}
-     * 
-     * @param defaultBucket 
-     */
-    public void setDefaultBucket(String defaultBucket) {
-        this.defaultBucket = defaultBucket;
-    }
-
-    /**
-     * 
-     * @return 
-     */
-    public boolean isRunControlRender() {
-        return runControlRender;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public String getDefaultBucket() {
-        return defaultBucket;
-    }
-    
-    public static SceneEnqueuePass withLegacyQueues(boolean runControlRender) {
-        return new SceneEnqueuePass(runControlRender, true);
-    }
-    public static SceneEnqueuePass withDefaultQueue(boolean runControlRender) {
-        return new SceneEnqueuePass(runControlRender, false).addDefault(new OpaqueComparator());
+    public static SceneEnqueuePass withSingleQueue() {
+        SceneEnqueuePass p = new SceneEnqueuePass();
+        p.add(SINGLE_QUEUE, new GeometryQueue(new OpaqueComparator()));
+        return p;
     }
     
     private static class Queue implements Savable {
         
-        public static final NullComparator NULL_COMPARATOR = new NullComparator();
-        
         public String name;
         public GeometryQueue queue;
-        public final LightList lightList = new LightList(null);
         public ResourceTicket<GeometryQueue> geometry;
-        public ResourceTicket<LightList> lights;
         
         public Queue() {}
-        public Queue(String name, GeometryComparator comparator, DepthRange depth, boolean perspective) {
-            if (comparator == null) {
-                comparator = Queue.NULL_COMPARATOR;
-            }
+        public Queue(String name, GeometryQueue queue) {
             this.name = name;
-            this.queue = new GeometryQueue(comparator);
-            this.queue.setDepth(depth);
-            this.queue.setPerspective(perspective);
+            this.queue = queue;
         }
 
         @Override

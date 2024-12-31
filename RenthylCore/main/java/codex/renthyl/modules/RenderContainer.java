@@ -33,7 +33,7 @@ import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.TicketGroup;
+import codex.renthyl.resources.tickets.TicketGroup;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -90,13 +90,18 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     @Override
     public void prepareModuleRender(FGRenderContext context) {
         for (RenderModule m : queue) {
+            // Checking for usage and culling states is critical. Niavely preparing modules
+            // could lead to resources not fully being released which will result in an exception.
             if (!context.isTemporalCulling() || context.getFrameGraph().isLayoutUpdateNeeded() || m.isUsed()) {
                 m.prepareModuleRender(context);
             }
         }
     }
     @Override
-    public void executeRender(FGRenderContext context) {}
+    public void executeRender(FGRenderContext context) {
+        // Nothing to do. Modules are executed via execution jobs instead of
+        // traversing the framegraph.
+    }
     @Override
     public void resetRender(FGRenderContext context) {
         for (RenderModule m : queue) {
@@ -117,7 +122,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     @Override
     public boolean isUsed() {
-        // if executing a container becomes heavy on its own, change this to
+        // If executing a container becomes heavy on its own, change this to
         // check isUsed() for each contained module.
         return !queue.isEmpty();
     }
@@ -161,7 +166,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param <T>
      * @param module
      * @param index
-     * @return 
+     * @return the added module
      */
     public <T extends R> T add(T module, int index) {
         Objects.requireNonNull(module, "Cannot add null module.");

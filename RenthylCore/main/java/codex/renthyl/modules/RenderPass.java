@@ -32,9 +32,9 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.TicketGroup;
-import codex.renthyl.debug.GraphEventCapture;
+import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.util.MappedCache;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -43,7 +43,6 @@ import com.jme3.export.Savable;
 import com.jme3.texture.FrameBuffer;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -56,7 +55,7 @@ import java.util.function.Function;
  */
 public abstract class RenderPass extends RenderModule implements Savable {
     
-    private final LinkedList<PassFrameBuffer> frameBuffers = new LinkedList<>();
+    private final FrameBufferCache frameBuffers = new FrameBufferCache(new FrameBufferParameters(null, 1024, 1024, 1));
     protected ResourceList resources;
     
     @Override
@@ -95,12 +94,13 @@ public abstract class RenderPass extends RenderModule implements Savable {
         execute(context);
         releaseAll();
         if (index.isMainThread()) {
-            context.popRenderSettings();
+            context.popActiveModes();
         }
     }
     @Override
     public void resetRender(FGRenderContext context) {
         reset(context);
+        frameBuffers.flush();
     }
     @Override
     public void cleanupModule(FrameGraph frameGraph) {
@@ -108,8 +108,11 @@ public abstract class RenderPass extends RenderModule implements Savable {
         inputs.clear();
         outputs.clear();
         groups.clear();
+        frameBuffers.clear();
         this.frameGraph = null;
     }
+    @Override
+    public void renderingComplete() {}
     
     /**
      * Initializes the pass.
@@ -148,23 +151,6 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @param frameGraph 
      */
     protected abstract void cleanup(FrameGraph frameGraph);
-    
-    /**
-     * Called when all rendering is complete in a rendering frame this pass
-     * participated in.
-     */
-    @Override
-    public void renderingComplete() {
-        for (Iterator<PassFrameBuffer> it = frameBuffers.iterator(); it.hasNext();) {
-            PassFrameBuffer fb = it.next();
-            if (!fb.used) {
-                fb.dispose();
-                it.remove();
-            } else {
-                fb.used = false;
-            }
-        }
-    }
     
     /**
      * Declares a new resource using a registered ticket.
@@ -446,38 +432,19 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * <p>
      * If the event capturer is not null, an event will be logged for debugging.
      * 
-     * @param cap graph event capturer for debugging (may be null)
      * @param tag tag (name) requirement for returned FrameBuffer (may be null)
      * @param width width requirement for returned FrameBuffer
      * @param height height requirement for returned FrameBuffer
      * @param samples samples requirement for returned FrameBuffer
      * @return FrameBuffer matching given width, height, and samples
      */
-    protected FrameBuffer getFrameBuffer(GraphEventCapture cap, Object tag, int width, int height, int samples) {
-        if (tag == null) {
-            tag = PassFrameBuffer.DEF_TAG;
-        }
-        for (PassFrameBuffer fb : frameBuffers) {
-            if (fb.qualifies(tag, width, height, samples)) {
-                return fb.use();
-            }
-        }
-        PassFrameBuffer fb = new PassFrameBuffer(tag, width, height, samples);
-        frameBuffers.add(fb);
-        if (cap != null) cap.createFrameBuffer(fb.frameBuffer);
-        return fb.use();
-    }
-    /**
-     * 
-     * @param cap
-     * @param width
-     * @param height
-     * @param samples
-     * @return 
-     * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
-     */
-    protected FrameBuffer getFrameBuffer(GraphEventCapture cap, int width, int height, int samples) {
-        return getFrameBuffer(cap, null, width, height, samples);
+    protected FrameBuffer getFrameBuffer(Object tag, int width, int height, int samples) {
+        FrameBufferParameters params = frameBuffers.getLocalKey();
+        params.tag = tag;
+        params.width = width;
+        params.height = height;
+        params.samples = samples;
+        return frameBuffers.fetch();
     }
     /**
      * 
@@ -488,19 +455,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(int width, int height, int samples) {
-        return getFrameBuffer(null, null, width, height, samples);
-    }
-    /**
-     * 
-     * @param tag
-     * @param width
-     * @param height
-     * @param samples
-     * @return 
-     * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
-     */
-    protected FrameBuffer getFrameBuffer(Object tag, int width, int height, int samples) {
-        return getFrameBuffer(null, tag, width, height, samples);
+        return getFrameBuffer(null, width, height, samples);
     }
     /**
      * Creates a FrameBuffer matching the width and height presented by the {@link FGRenderContext}.
@@ -511,7 +466,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(FGRenderContext context, int samples) {
-        return getFrameBuffer(context.getGraphCapture(), context.getWidth(), context.getHeight(), samples);
+        return getFrameBuffer(context.getWidth(), context.getHeight(), samples);
     }
     /**
      * Creates a FrameBuffer matching the width and height presented by the {@link FGRenderContext}.
@@ -523,7 +478,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(FGRenderContext context, Object tag, int samples) {
-        return getFrameBuffer(context.getGraphCapture(), tag, context.getWidth(), context.getHeight(), samples);
+        return getFrameBuffer(tag, context.getWidth(), context.getHeight(), samples);
     }
     
     /**
@@ -550,36 +505,66 @@ public abstract class RenderPass extends RenderModule implements Savable {
      */
     protected void read(InputCapsule in) throws IOException {}
     
-    private static class PassFrameBuffer {
-        
-        public static final String DEF_TAG = "#DefaultTag";
-        
-        public final Object tag;
-        public final FrameBuffer frameBuffer;
-        public boolean used = false;
-        
-        public PassFrameBuffer(int width, int height, int samples) {
-            this(DEF_TAG, width, height, samples);
+    private static class FrameBufferCache extends MappedCache<FrameBufferParameters, FrameBuffer> {
+
+        public FrameBufferCache() {}
+        public FrameBufferCache(FrameBufferParameters localKey) {
+            super(localKey);
         }
-        public PassFrameBuffer(Object tag, int width, int height, int samples) {
+        
+        @Override
+        protected FrameBuffer createElement(FrameBufferParameters key) {
+            return new FrameBuffer(key.width, key.height, key.samples);
+        }
+        @Override
+        protected void destroyElement(FrameBuffer element) {
+            element.dispose();
+        }
+        
+    }
+    private static class FrameBufferParameters {
+        
+        private Object tag;
+        private int width, height, samples;
+
+        public FrameBufferParameters(Object tag, int width, int height, int samples) {
             this.tag = tag;
-            frameBuffer = new FrameBuffer(width, height, samples);
+            this.width = width;
+            this.height = height;
+            this.samples = samples;
         }
-        
-        public FrameBuffer use() {
-            used = true;
-            return frameBuffer;
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 97 * hash + Objects.hashCode(this.tag);
+            hash = 97 * hash + this.width;
+            hash = 97 * hash + this.height;
+            hash = 97 * hash + this.samples;
+            return hash;
         }
-        
-        public boolean qualifies(Object tag, int width, int height, int samples) {
-            return frameBuffer.getWidth()   == width
-                && frameBuffer.getHeight()  == height
-                && frameBuffer.getSamples() == samples
-                && this.tag.equals(tag);
-        }
-        
-        public void dispose() {
-            frameBuffer.dispose();
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final FrameBufferParameters other = (FrameBufferParameters) obj;
+            if (this.width != other.width) {
+                return false;
+            }
+            if (this.height != other.height) {
+                return false;
+            }
+            if (this.samples != other.samples) {
+                return false;
+            }
+            return Objects.equals(this.tag, other.tag);
         }
         
     }

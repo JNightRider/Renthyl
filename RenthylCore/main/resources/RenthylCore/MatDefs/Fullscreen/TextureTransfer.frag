@@ -16,18 +16,16 @@ varying vec2 texCoord;
 void main() {
     
     #ifdef WRITE_COLOR_MAP
-        gl_FragColor = texture2D(m_ColorMap, texCoord);
-        #ifdef ALPHA_DISCARD
-            if (gl_FragColor.a <= m_AlphaDiscard) {
-                //gl_FragColor = vec4(1.0);
-                discard;
-            }
-        #endif
-        if (gl_FragColor.rgb == vec3(0.0)) {
-            //gl_FragColor.rgb = vec3(1.0, 0.0, 0.0);
-        }
-        #ifdef DEBUG
-            gl_FragColor.rgba = vec4(gl_FragColor.a, 0.0, 0.0, 1.0);
+        #ifdef DEPTH_VIS
+            gl_FragColor = vec4(1.0 - texture2D(m_ColorMap, texCoord).r);
+        #else
+            gl_FragColor = texture2D(m_ColorMap, texCoord);
+            #ifdef ALPHA_DISCARD
+                if (gl_FragColor.a <= m_AlphaDiscard) {
+                    gl_FragColor = vec4(1.0);
+                    discard;
+                }
+            #endif
         #endif
     #else
         gl_FragColor = vec4(0.0);

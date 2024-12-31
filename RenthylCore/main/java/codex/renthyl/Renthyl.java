@@ -6,6 +6,7 @@ package codex.renthyl;
 
 import codex.boost.material.ImmediateShader;
 import codex.renthyl.jobs.DefaultJobExecutor;
+import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
@@ -13,7 +14,9 @@ import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.export.binary.BinaryLoader;
+import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
 
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
@@ -91,7 +94,8 @@ public class Renthyl {
         FrameGraph fg = new FrameGraph(assetManager);
         fg.setName("Forward");
         
-        SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
+        fg.add(new ControlRenderPass());
+        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
         QueueMergePass merge = fg.add(new QueueMergePass(5));
         OutputGeometryPass out = fg.add(new OutputGeometryPass());
         
@@ -126,11 +130,14 @@ public class Renthyl {
     
     private Renthyl(Application app) {
         
+        // attach pipeline
         RenderManager rm = app.getRenderManager();
         rm.registerContext(FrameGraph.CONTEXT_TYPE, new FGPipelineContext(this));
         
+        // attach app state
         app.getStateManager().attach(new AppDestroyState());
         
+        // register loaders and locators
         AssetManager assetManager = app.getAssetManager();
         assetManager.registerLoader(BinaryLoader.class, "fg");
         assetManager.registerLocator("", ImmediateShader.class);

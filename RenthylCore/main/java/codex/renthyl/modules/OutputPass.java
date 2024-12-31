@@ -67,7 +67,6 @@ public class OutputPass extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
-        context.popFrameBuffer();
         Texture2D colorTex = resources.acquireOrElse(color, null);
         Texture2D depthTex = resources.acquireOrElse(depth, null);
         if (alphaDiscard != null) {

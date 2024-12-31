@@ -23,7 +23,7 @@ public class JobEventHandler {
     
     public JobEventHandler() {}
     
-    private void signal() {
+    private void signalEnd() {
         lock.lock();
         try {
             complete.signalAll();
@@ -47,7 +47,7 @@ public class JobEventHandler {
      */
     public void interrupt() {
         if (!error.getAndSet(true)) {
-            signal();
+            signalEnd();
         }
     }
     
@@ -56,7 +56,7 @@ public class JobEventHandler {
      */
     public void complete() {
         if (!error.get() && activeJobs.addAndGet(-1) == 0) {
-            signal();
+            signalEnd();
         }
     }
     
@@ -95,6 +95,11 @@ public class JobEventHandler {
         return error.get();
     }
     
+    /**
+     * Returns true if a job is currently running.
+     * 
+     * @return 
+     */
     public boolean isRunning() {
         return !error.get() && activeJobs.get() > 0;
     }

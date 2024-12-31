@@ -34,7 +34,6 @@ import codex.renthyl.GeometryQueue;
 import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
-import codex.boost.render.DepthRange;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.math.ColorRGBA;
 import com.jme3.texture.FrameBuffer;
@@ -100,7 +99,7 @@ public class GeometryPass extends RenderPass {
         context.getRenderer().clearBuffers(true, true, true);
         context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
         context.renderTextures(resources.acquireOrElse(inColor, null), resources.acquireOrElse(inDepth, null));
-        context.renderGeometry(resources.acquire(geometry), null, geometryHandler);
+        resources.acquire(geometry).render(context, geometryHandler);
     }
     @Override
     protected void reset(FGRenderContext context) {}

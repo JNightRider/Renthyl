@@ -28,11 +28,13 @@
  */
 package codex.renthyl.resources;
 
-import codex.renthyl.debug.ResourceWatcher;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Represents an existing or future resource used for rendering.
@@ -50,59 +52,69 @@ public class ResourceView <T> {
     private final ResourceDef<T> def;
     private final ResourceTicket<T> ticket;
     private final TimeFrame lifetime;
+    private final LinkedList<ResourceView> dependencies = new LinkedList<>();
+    private final AtomicInteger refs = new AtomicInteger(0);
     private final AtomicBoolean released = new AtomicBoolean(false);
     private RenderObject object;
     private T resource;
-    private int refs = 0;
     private boolean temporary = false;
     private boolean undefined = false;
-    private ResourceWatcher watcher;
     
     /**
      * 
      * @param producer
      * @param def
-     * @param ticket 
+     * @param declaringTicket 
      */
-    public ResourceView(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> ticket) {
+    public ResourceView(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> declaringTicket) {
         this.producer = producer;
         this.def = def;
-        this.ticket = ticket;
+        this.ticket = new ResourceTicket<>(declaringTicket.getName());
         this.lifetime = new TimeFrame(this.producer.getIndex(), 0);
+        declaringTicket.setBindFlag();
     }
     
     /**
-     * Reference this resource from the specified render pass index.
+     * Reference this resource from the specified renderpass index
+     * using the ticket.
      * 
      * @param index 
+     * @param ticket 
      */
-    public void reference(ModuleIndex index) {
+    public void reference(ModuleIndex index, ResourceTicket ticket) {
         if (isTemporary()) {
             throw new IllegalStateException("Temporary resource cannot be referenced.");
         }
         lifetime.extendTo(index);
-        refs++;
+        refs.addAndGet(1);
+        ticket.setBindFlag();
     }
     /**
      * Releases this resource from one user.
      * 
+     * @param list
+     * @param ticket
      * @return true if this resource is used after the release
      */
-    public boolean release() {
-        refs--;
-        released.set(true);
-        if (watcher != null) {
-            watcher.release(this);
+    public boolean release(ResourceList list, ResourceTicket ticket) {
+        boolean complete = refs.addAndGet(-1) < 0;
+        if (complete) {
+            setObject(null);
         }
-        return refs >= 0;
+        released.set(true);
+        ticket.clearBindFlag();
+        return !complete;
     }
     /**
      * Releases this resource from a culled user.
+     * <p>
+     * This does not affect resource's using this resource as a dependency.
      * 
-     * @return true if this resource is used after the release
+     * @return true if this resource is still used after the release by
+     * a user other than the declaring user
      */
-    public boolean drop() {
-        return --refs >= 0;
+    public boolean cull() {
+        return refs.addAndGet(-1) > 0;
     }
     /**
      * Claims the resource for reading.
@@ -111,6 +123,30 @@ public class ResourceView <T> {
      */
     public boolean claimReadPermissions() {
         return ((def == null || def.isReadConcurrent()) && released.get()) || released.getAndSet(false);
+    }
+    
+    /**
+     * Registers a ResourceView to merge into this ResourceView.
+     * 
+     * @param view 
+     */
+    public void registerDependency(ResourceView view) {
+        dependencies.add(view);
+    }
+    /**
+     * Applies registered merges.
+     */
+    public void applyDependencies() {
+        for (Iterator<ResourceView> it = dependencies.iterator(); it.hasNext();) {
+            ResourceView m = it.next();
+            if (m.isReferenced()) {
+                //lifetime.merge(m.lifetime);
+                m.lifetime.merge(lifetime);
+                m.refs.addAndGet(1);
+            } else {
+                it.remove();
+            }
+        }
     }
     
     /**
@@ -181,13 +217,6 @@ public class ResourceView <T> {
     public void setTemporary(boolean temporary) {
         this.temporary = temporary;
     }
-    /**
-     * 
-     * @param watcher 
-     */
-    public void setWatcher(ResourceWatcher watcher) {
-        this.watcher = watcher;
-    }
     
     /**
      * Gets this resource's producer.
@@ -230,6 +259,14 @@ public class ResourceView <T> {
         return object;
     }
     /**
+     * Gets the list of resources this resource depends on.
+     * 
+     * @return 
+     */
+    public LinkedList<ResourceView> getDependencies() {
+        return dependencies;
+    }
+    /**
      * Gets the concrete resource.
      * 
      * @return 
@@ -246,12 +283,17 @@ public class ResourceView <T> {
         return ticket.getWorldIndex();
     }
     /**
-     * Gets the number of references to this resource.
+     * Gets the number of references to this resource, not including
+     * the reference from the producer.
+     * <p>
+     * Zero references means that no users are referencing this resource
+     * except the producing user. -1 references indicates that no
+     * users are referencing this resource with no exceptions.
      * 
      * @return 
      */
     public int getNumReferences() {
-        return refs;
+        return refs.get();
     }
     
     /**
@@ -278,13 +320,28 @@ public class ResourceView <T> {
         return def == null;
     }
     /**
-     * Returns true if this resource is referenced by users other than the
-     * producer.
+     * Returns true if this resource is referenced by more than one user.
      * 
      * @return 
      */
     public boolean isReferenced() {
-        return refs > 0;
+        return refs.get() > 0;
+    }
+    /**
+     * Returns true if this resource not referenced by any users.
+     * 
+     * @return 
+     */
+    public boolean isFullyReleased() {
+        return refs.get() < 0;
+    }
+    /**
+     * Returns true if this resource is referenced by exactly one user.
+     * 
+     * @return 
+     */
+    public boolean isPartiallyReleased() {
+        return refs.get() == 0;
     }
     /**
      * Returns true if this resource is used (including the producer).
@@ -292,7 +349,7 @@ public class ResourceView <T> {
      * @return 
      */
     public boolean isUsed() {
-        return refs >= 0;
+        return refs.get() >= 0;
     }
     /**
      * Returns true if this resource is marked as undefined.
@@ -319,10 +376,19 @@ public class ResourceView <T> {
     public boolean isReadAvailable() {
         return released.get();
     }
+    /**
+     * Returns true if this ResoureView is dependent on one or
+     * more other ResourceViews.
+     * 
+     * @return 
+     */
+    public boolean isDependent() {
+        return !dependencies.isEmpty();
+    }
     
     @Override
     public String toString() {
-        return "RenderResource["+producer+", "+ticket+"]";
+        return getClass().getSimpleName() + "["+producer+", "+ticket+"]";
     }
     
 }

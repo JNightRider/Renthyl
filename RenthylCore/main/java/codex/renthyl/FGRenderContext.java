@@ -28,9 +28,11 @@
  */
 package codex.renthyl;
 
+import codex.boost.render.DepthRange;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.util.FullScreenQuad;
 import codex.renthyl.debug.GraphEventCapture;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.light.LightFilter;
 import com.jme3.material.Material;
@@ -51,6 +53,7 @@ import com.jme3.texture.Texture2D;
 import java.util.function.Predicate;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.instancing.InstancedGeometry;
+import java.util.ArrayDeque;
 
 /**
  * Context for FrameGraph rendering.
@@ -68,7 +71,7 @@ import com.jme3.scene.instancing.InstancedGeometry;
  *   <li>Geometry filter</li>
  *   <li>Forced render state</li>
  * </ul>
- * After each pass execution on the main render thread, {@link #popRenderSettings()} is
+ * After each pass execution on the main render thread, {@link #popActiveModes()} is
  * called to reset these settings to what they were before rendering began.
  * <p>
  * FrameBuffers are <em>not</em> managed. Passes are expected to explicitely set
@@ -88,15 +91,8 @@ public class FGRenderContext {
     private CommandQueue clQueue;
     private boolean temporalCulling = true;
     
-    private String forcedTechnique;
-    private Material forcedMat;
-    private FrameBuffer frameBuffer;
-    private Predicate<Geometry> geomFilter;
-    private RenderState renderState;
-    private LightFilter lightFilter;
-    private ColorRGBA background;
-    private int camWidth, camHeight;
-    private final Vector4f camViewPort = new Vector4f(0, 1, 0, 1);
+    private final ArrayDeque<RenderMode> activeModes = new ArrayDeque<>();
+    private final DepthRange depth = new DepthRange();
     
     /**
      * 
@@ -142,69 +138,27 @@ public class FGRenderContext {
         return renderManager != null && viewPort != null;
     }
     
-    /**
-     * Saves the current render settings.
-     */
-    public void pushRenderSettings() {
-        forcedTechnique = renderManager.getForcedTechnique();
-        forcedMat = renderManager.getForcedMaterial();
-        frameBuffer = renderManager.getRenderer().getCurrentFrameBuffer();
-        geomFilter = renderManager.getRenderFilter();
-        renderState = renderManager.getForcedRenderState();
-        lightFilter = renderManager.getLightFilter();
-        background = viewPort.getBackgroundColor();
-        Camera cam = viewPort.getCamera();
-        camWidth = cam.getWidth();
-        camHeight = cam.getHeight();
-        camViewPort.x = cam.getViewPortLeft();
-        camViewPort.y = cam.getViewPortRight();
-        camViewPort.z = cam.getViewPortBottom();
-        camViewPort.w = cam.getViewPortTop();
+    public void registerMode(RenderMode mode) {
+        activeModes.addFirst(mode);
+        mode.apply(this);
     }
-    /**
-     * Applies saved render settings, except the framebuffer.
-     */
-    public void popRenderSettings() {
-        renderManager.setForcedTechnique(forcedTechnique);
-        renderManager.setForcedMaterial(forcedMat);
-        renderManager.getRenderer().setFrameBuffer(frameBuffer);
-        renderManager.setRenderFilter(geomFilter);
-        renderManager.setForcedRenderState(renderState);
-        renderManager.getRenderer().setDepthRange(0, 1);
-        renderManager.setLightFilter(lightFilter);
-        renderManager.getRenderer().setBackgroundColor(background);
-        //resizeCamera(70, 70, false, false, false);
-        resizeCamera(camWidth, camHeight, false, viewPort.getCamera().isParallelProjection(), false);
-        resizeCameraViewPort(camViewPort, false);
-        if (renderManager.getCurrentCamera() != viewPort.getCamera()) {
-            renderManager.setCamera(viewPort.getCamera(), viewPort.getCamera().isParallelProjection());
-        }
-        if (viewPort.isClearColor()) {
-            renderManager.getRenderer().setBackgroundColor(viewPort.getBackgroundColor());
-        }
+    public void clearBuffers() {
+        clearBuffers(true, true, true);
     }
-    /**
-     * Applies the saved framebuffer.
-     */
-    public void popFrameBuffer() {
-        renderManager.getRenderer().setFrameBuffer(frameBuffer);
+    public void clearBuffers(boolean color, boolean depth, boolean stencil) {
+        getRenderer().clearBuffers(color, depth, stencil);
     }
     
     /**
-     * Renders the given geometry list with the camera and render handler.
-     * 
-     * @param queue queue of geometry to render (not null)
-     * @param queueSortCam camera to sort geometry by (or null to use viewport camera is used)
-     * @param handler handler to render with (or null to render with {@link GeometryRenderHandler#DEFAULT})
+     * Applies saved render settings, except the framebuffer.
      */
-    public void renderGeometry(GeometryQueue queue, Camera queueSortCam, GeometryRenderHandler handler) {
-        if (queueSortCam == null) {
-            queueSortCam = viewPort.getCamera();
+    public void popActiveModes() {
+        for (RenderMode m : activeModes) {
+            m.reset(this);
         }
-        queue.setCamera(queueSortCam);
-        queue.sort();
-        queue.render(renderManager, handler);
+        activeModes.clear();
     }
+    
     /**
      * Renders the material on a fullscreen quad.
      * 
@@ -257,49 +211,27 @@ public class FGRenderContext {
     }
     
     /**
-     * Resizes the camera to the width and height.
      * 
-     * @param w new camera width
-     * @param h new camera height
-     * @param fixAspect true to fix camera aspect
-     * @param ortho true to use parallel projection
-     * @param force true to force setting the width and height
+     * @param cam 
      */
-    public void resizeCamera(int w, int h, boolean fixAspect, boolean ortho, boolean force) {
-        Camera cam = viewPort.getCamera();
-        if (force || w != cam.getWidth() || h != cam.getHeight()) {
-            cam.resize(w, h, fixAspect);
-            renderManager.setCamera(cam, ortho);
-        }
+    public void setCamera(Camera cam) {
+        renderManager.setCamera(cam, cam.isParallelProjection());
     }
     /**
+     * Updates the RenderManager with the given camera's properties only if
+     * the given camera is the camera currently being used for rendering.
      * 
-     * @param left
-     * @param right
-     * @param top
-     * @param bottom
-     * @param force 
+     * @param cam 
      */
-    public void resizeCameraViewPort(float left, float right, float top, float bottom, boolean force) {
-        Camera cam = viewPort.getCamera();
-        if (force || left != cam.getViewPortLeft() || right != cam.getViewPortRight()
-                || bottom != cam.getViewPortBottom() || top != cam.getViewPortTop()) {
-            cam.setViewPort(left, right, bottom, top);
+    public void updateCamera(Camera cam) {
+        if (cam == renderManager.getCurrentCamera()) {
+            renderManager.setCamera(cam, cam.isParallelProjection());
         }
-    }
-    /**
-     * 
-     * @param viewport
-     * @param force 
-     */
-    public void resizeCameraViewPort(Vector4f viewport, boolean force) {
-        resizeCameraViewPort(viewport.x, viewport.y, viewport.z, viewport.w, force);
     }
     
-    public void setCamera(Camera cam, boolean ortho, boolean force) {
-        if (force || renderManager.getCurrentCamera() != cam) {
-            renderManager.setCamera(cam, ortho);
-        }
+    public void setDepth(DepthRange depth) {
+        this.depth.set(depth);
+        this.depth.apply(getRenderer());
     }
     
     /**
@@ -366,6 +298,13 @@ public class FGRenderContext {
         return viewPort;
     }
     /**
+     * 
+     * @return 
+     */
+    public Camera getCurrentCamera() {
+        return renderManager.getCurrentCamera();
+    }
+    /**
      * Gets the profiler.
      * 
      * @return app profiler, or null
@@ -400,6 +339,18 @@ public class FGRenderContext {
      */
     public FullScreenQuad getScreen() {
         return screen;
+    }
+    /**
+     * Gets the current depth range.
+     * 
+     * @param store
+     * @return 
+     */
+    public DepthRange getDepth(DepthRange store) {
+        if (store == null) {
+            store = new DepthRange();
+        }
+        return store.set(depth);
     }
     /**
      * Gets the debug frame capture if one is assigned.

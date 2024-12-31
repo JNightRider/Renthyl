@@ -28,8 +28,9 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.resources.TicketGroup;
+import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketCollection;
 
 /**
  * Able to recieve inputs through input tickets and broadcast outputs
@@ -38,6 +39,20 @@ import codex.renthyl.resources.ResourceTicket;
  * @author codex
  */
 public interface Connectable {
+    
+    public <T> ResourceTicket<T> addInput(ResourceTicket<T> ticket);
+    
+    public <T> ResourceTicket<T> addOutput(ResourceTicket<T> ticket);
+    
+    public default <T> ResourceTicket<T> addInput(String name) {
+        return addInput(new ResourceTicket(name));
+    }
+    
+    public default <T> ResourceTicket<T> addOutput(String name) {
+        return addOutput(new ResourceTicket(name));
+    }
+    
+    public <T> TicketCollection<T> addGroup(TicketCollection<T> group);
     
     /**
      * Gets the named input ticket.
@@ -72,8 +87,8 @@ public interface Connectable {
     public ResourceTicket addTicketListEntry(String groupName);
     
     /**
-     * Indicates that the FrameGraph layout has changed and requires
-     * an update before rendering.
+     * Passes layout change events to the {@link FrameGraph} so that the graph
+     * layout can be properly updated.
      */
     public void setLayoutUpdateNeeded();
     
@@ -230,6 +245,85 @@ public interface Connectable {
      */
     public default void makeGroupInputToList(Connectable source, String sourceGroup, String targetGroup) {
         makeGroupInputToList(source, sourceGroup, targetGroup, 0, Integer.MAX_VALUE);
+    }
+    
+    /**
+     * Connects each ticket named in the source array to the corresponding ticket at
+     * the same index named in the target array.
+     * 
+     * @param source
+     * @param sourceArray
+     * @param targetArray 
+     */
+    public default void makeAllInput(Connectable source, String[] sourceArray, String[] targetArray) {
+        int length = Math.min(sourceArray.length, targetArray.length);
+        for (int i = 0; i < length; i++) {
+            getInput(targetArray[i]).setSource(source.getOutput(sourceArray[i]));
+        }
+    }
+    
+    /**
+     * Connects each ticket named in the source array to the corresponding ticket in
+     * the target group.
+     * 
+     * @param source
+     * @param sourceArray
+     * @param targetGroup 
+     * @param sourceStart
+     * @param targetStart 
+     * @param length 
+     */
+    public default void makeAllGroupInput(Connectable source, String[] sourceArray, String targetGroup, int sourceStart, int targetStart, int length) {
+        ResourceTicket[] targetArray = getGroup(targetGroup, true).getArray();
+        int n = Math.min(sourceStart+length, sourceArray.length);
+        int m = Math.min(targetStart+length, targetArray.length);
+        for (; sourceStart < n && targetStart < m; sourceStart++, targetStart++) {
+            targetArray[targetStart].setSource(source.getOutput(sourceArray[sourceStart]));
+        }
+    }
+    
+    /**
+     * Connects each ticket named in the source array to the corresponding ticket in
+     * the target group.
+     * 
+     * @param source
+     * @param sourceArray
+     * @param targetGroup 
+     */
+    public default void makeAllGroupInput(Connectable source, String[] sourceArray, String targetGroup) {
+        Connectable.this.makeAllGroupInput(source, sourceArray, targetGroup, 0, 0, Integer.MAX_VALUE);
+    }
+    
+    /**
+     * Connects each ticket in the source group to the corresponding ticket named
+     * in the target array.
+     * 
+     * @param source
+     * @param sourceGroup
+     * @param targetArray
+     * @param sourceStart
+     * @param targetStart
+     * @param length 
+     */
+    public default void makeAllGroupInput(Connectable source, String sourceGroup, String[] targetArray, int sourceStart, int targetStart, int length) {
+        ResourceTicket[] sourceArray = source.getGroup(sourceGroup, true).getArray();
+        int n = Math.min(sourceStart+length, sourceArray.length);
+        int m = Math.min(targetStart+length, targetArray.length);
+        for (; sourceStart < n && targetStart < m; sourceStart++, targetStart++) {
+            getInput(targetArray[targetStart]).setSource(sourceArray[sourceStart]);
+        }
+    }
+    
+    /**
+     * Connects each ticket in the source group to the corresponding ticket named
+     * in the target array.
+     * 
+     * @param source
+     * @param sourceGroup
+     * @param targetArray 
+     */
+    public default void makeAllGroupInput(Connectable source, String sourceGroup, String[] targetArray) {
+        Connectable.this.makeAllGroupInput(source, sourceGroup, targetArray, 0, 0, Integer.MAX_VALUE);
     }
     
     /**

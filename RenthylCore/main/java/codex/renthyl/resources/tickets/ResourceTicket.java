@@ -29,6 +29,7 @@
 package codex.renthyl.resources;
 
 import codex.renthyl.Connectable;
+import codex.renthyl.resources.tickets.TicketCollection;
 import java.util.Collection;
 import java.util.LinkedList;
 
@@ -48,34 +49,49 @@ public class ResourceTicket <T> {
     public static final String RESERVED = "#";
     public static final int INVALID = -1, FORCE_INVALID = -2;
     
-    private final Connectable user;
+    private TicketCollection<T> group;
     private String name;
     private int localIndex;
     private int exportGroupId = -1;
     private long objectId = -1;
+    private boolean bound = false;
     private boolean overrideWorld = false;
     private ResourceTicket<T> source;
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
     
     public ResourceTicket() {
-        this(null, null, INVALID);
+        this(null, INVALID);
     }
     public ResourceTicket(String name) {
-        this(null, name, INVALID);
+        this(name, INVALID);
     }
     public ResourceTicket(String name, int index) {
-        this(null, name, index);
-    }
-    public ResourceTicket(Connectable user) {
-        this(user, null, INVALID);
-    }
-    public ResourceTicket(Connectable user, String name) {
-        this(user, name, INVALID);
-    }
-    public ResourceTicket(Connectable user, String name, int index) {
-        this.user = user;
         this.name = name;
         this.localIndex = index;
+    }
+    
+    /**
+     * Sets the flag indicating that this ticket is currently bound to a ResourceView.
+     * That is, this ticket has been used to declare or reference a ResourceView,
+     * but has not yet released.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     */
+    public void setBindFlag() {
+        if (bound) {
+            throw new IllegalStateException("Cannot make multiple declarations/references with a single ticket: " + this);
+        }
+        bound = true;
+    }
+    /**
+     * Clears the flag indicating that this ticket is currently bound to a ResourceView.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     * 
+     * @see #setBindFlag() 
+     */
+    public void clearBindFlag() {
+        bound = false;
     }
     
     /**
@@ -115,6 +131,13 @@ public class ResourceTicket <T> {
     }
     
     /**
+     * 
+     * @param group 
+     */
+    protected void setGroup(TicketCollection<T> group) {
+        this.group = group;
+    }
+    /**
      * Sets the source ticket.
      * 
      * @param source 
@@ -124,8 +147,8 @@ public class ResourceTicket <T> {
             if (this.source != null) {
                 this.source.targets.remove(this);
             }
-            if (user != null) {
-                user.setLayoutUpdateNeeded();
+            if (group != null) {
+                group.setLayoutUpdateNeeded();
             }
             this.source = source;
             if (this.source != null) {
@@ -168,8 +191,8 @@ public class ResourceTicket <T> {
      * @param override 
      */
     public void setOverrideWorldIndex(boolean override) {
-        if (source != null && this.overrideWorld != override && user != null) {
-            user.setLayoutUpdateNeeded();
+        if (source != null && this.overrideWorld != override && group != null) {
+            group.setLayoutUpdateNeeded();
         }
         this.overrideWorld = override;
     }
@@ -192,14 +215,6 @@ public class ResourceTicket <T> {
         this.exportGroupId = exportGroupId;
     }
     
-    /**
-     * Gets the user (owner) of this ticket.
-     * 
-     * @return user (may be null)
-     */
-    public Connectable getUser() {
-        return user;
-    }
     /**
      * 
      * @return 
@@ -253,6 +268,16 @@ public class ResourceTicket <T> {
         return source;
     }
     /**
+     * Returns true if this ticket is currently associated with a ResourceView.
+     * That is, if this ticket was used to declare or reference a ResourceView
+     * and has not yet released.
+     * 
+     * @return 
+     */
+    public boolean isBindFlagSet() {
+        return bound;
+    }
+    /**
      * Returns true if this source ticket is not null.
      * 
      * @return 
@@ -285,7 +310,7 @@ public class ResourceTicket <T> {
     
     @Override
     public String toString() {
-        return "Ticket[name="+name+", worldIndex="+getWorldIndex()+"]";
+        return "Ticket[name=" + name + ", worldIndex=" + getWorldIndex() + "]";
     }
     
     

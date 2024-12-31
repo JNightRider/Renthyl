@@ -200,8 +200,11 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     @Override
     public void pipelineRender(RenderManager rm, FGPipelineContext pContext, ViewPort vp, float tpf) {
         
+        // Never render after an error has occured in rendering.
+        // Resources could easily have been left in a bad state.
         if (jobHandler.errorOccured()) {
-            return;
+            throw new RendererException("An error occured during a previous render frame. "
+                    + "Aborting because it is dangerous to proceed.");
         }
         
         rm.applyViewPort(vp);
@@ -234,7 +237,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         }
         
         // execute
-        context.pushRenderSettings();
         FGJobExecutor ex = fetchExecutor(pContext);
         jobHandler.start(jobList.getNumActiveJobs());
         ex.submitExecutionJobs(jobList.gatherActiveAsyncJobs(asyncJobs));
@@ -245,10 +247,11 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         }
         
         // reset
-        context.popFrameBuffer();
+        context.popActiveModes();
         root.resetModuleRender(context);
         pContext.getRenderObjects().clearReservations();
-        resources.clear();
+        resources.reset();
+        asyncJobs.clear();
         rm.getRenderer().clearClipRect();
         
         rendered = true;

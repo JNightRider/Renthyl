@@ -4,6 +4,7 @@ MaterialDef TextureTransfer {
         Texture2D ColorMap
         Texture2D DepthMap
         Vector2 Scale : 1.0 1.0
+        Boolean VisualizeAsDepth
         Float AlphaDiscard
         Boolean Debug
     }
@@ -24,6 +25,7 @@ MaterialDef TextureTransfer {
         Defines {
             WRITE_COLOR_MAP : ColorMap
             WRITE_DEPTH : DepthMap
+            DEPTH_VIS : VisualizeAsDepth
             ALPHA_DISCARD : AlphaDiscard
             DEBUG : Debug
         }

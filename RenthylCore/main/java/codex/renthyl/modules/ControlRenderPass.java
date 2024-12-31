@@ -26,35 +26,34 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.modules.geometry;
+package codex.renthyl.modules;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.util.GeometryRenderHandler;
+import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
+import com.jme3.scene.SceneGraphIterator;
+import com.jme3.scene.Spatial;
 
 /**
- * Renders a queue bucket to the viewport's output framebuffer.
- * 
+ *
  * @author codex
  */
-public class OutputGeometryPass extends RenderPass {
-    
-    private ResourceTicket<GeometryQueue> geometry;
-    
+public class ControlRenderPass extends RenderPass {
+
     @Override
-    protected void initialize(FrameGraph frameGraph) {
-        geometry = addInput("Geometry");
-    }
+    protected void initialize(FrameGraph frameGraph) {}
     @Override
-    protected void prepare(FGRenderContext context) {
-        reference(geometry);
-    }
+    protected void prepare(FGRenderContext context) {}
     @Override
     protected void execute(FGRenderContext context) {
-        resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
+        RenderManager rm = context.getRenderManager();
+        ViewPort vp = context.getViewPort();
+        for (Spatial scene : context.getViewPort().getScenes()) {
+            for (Spatial s : new SceneGraphIterator(scene)) {
+                s.runControlRender(rm, vp);
+            }
+        }
     }
     @Override
     protected void reset(FGRenderContext context) {}
@@ -62,7 +61,7 @@ public class OutputGeometryPass extends RenderPass {
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
     public boolean isUsed() {
-        return geometry.hasSource();
+        return true;
     }
     
 }

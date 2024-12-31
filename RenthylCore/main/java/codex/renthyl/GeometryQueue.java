@@ -29,454 +29,404 @@
 package codex.renthyl;
 
 import codex.boost.export.SavableObject;
-import codex.boost.render.DepthRange;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.util.GeometryRenderHandler;
+import com.jme3.bounding.BoundingBox;
+import com.jme3.bounding.BoundingSphere;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
+import com.jme3.math.FastMath;
 import com.jme3.renderer.Camera;
-import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.GeometryComparator;
 import com.jme3.renderer.queue.GeometryList;
 import com.jme3.renderer.queue.NullComparator;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Spatial;
 import com.jme3.util.ListSort;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.function.Function;
+import java.util.Objects;
 
 /**
  * Queue of ordered geometries for rendering.
  * <p>
- * Similar to {@link GeometryList}, but designed for use in FrameGraphs. Specifically,
- * this can store other GeometryQueues internally, essentially making queues able
- * to merge very quickly and still maintain geometry order.
- * 
+ * Similar to {@link GeometryList}, but designed for use in FrameGraphs.
+ * Specifically, this can store other GeometryQueues internally, essentially
+ * making queues able to merge very quickly and still maintain geometry order.
+ *
  * @author codex
  */
 public class GeometryQueue implements Iterable<Geometry>, Savable {
-    
+
     private static final int DEFAULT_SIZE = 32;
-    
+    private static final NullComparator NULL_COMPARATOR = new NullComparator();
+
     private Geometry[] geometries;
-    private GeometryComparator comparator;
-    private Camera cam;
-    private final ListSort listSort;
-    private final LinkedList<GeometryQueue> internalQueues = new LinkedList<>();
-    private final DepthRange depth = new DepthRange();
-    private boolean updateFlag = true;
-    private boolean perspective = true;
+    private QueueComparator comparator;
+    private final ArrayList<QueueView> views = new ArrayList<>();
+    private final LinkedList<Integer[]> availableQueues = new LinkedList<>();
+    private final ArrayList<GeometryQueue> internalQueues = new ArrayList<>();
+    private final ArrayList<RenderMode> modes = new ArrayList<>();
+    private final ListSort<Integer> listSort = new ListSort<>();
+    private final BoundingBox localBound = new BoundingBox();
+    private final boolean gui;
     private int size = 0;
+    private boolean allViewsNeedUpdate = true;
     
-    /**
-     * Geometry queue with default settings and a {@link NullComparator}.
-     */
     public GeometryQueue() {
-        this(new NullComparator());
+        this(NULL_COMPARATOR);
     }
-    /**
-     * Geometry queue with default settings and the given comparator.
-     * 
-     * @param comparator 
-     */
     public GeometryQueue(GeometryComparator comparator) {
-        this(comparator, DEFAULT_SIZE);
+        this(comparator, false, DEFAULT_SIZE);
     }
-    /**
-     * 
-     * @param comparator
-     * @param initialSize 
-     */
-    public GeometryQueue(GeometryComparator comparator, int initialSize) {
-        this.comparator = comparator;
+    public GeometryQueue(GeometryComparator comparator, boolean gui) {
+        this(comparator, gui, DEFAULT_SIZE);
+    }
+    public GeometryQueue(GeometryComparator comparator, boolean gui, int initialSize) {
+        this.comparator = new QueueComparator(comparator);
+        this.gui = gui;
         geometries = new Geometry[initialSize];
-        listSort = new ListSort<Geometry>();
     }
     
-    /**
-     * Sorts this queue and all internal queues.
-     */
-    public void sort() {
-        if (updateFlag && size > 1) {
-            // sort the spatial list using the comparator
-            if (listSort.getLength() != size) {
-                listSort.allocateStack(size);
+    public void render(FGRenderContext context, GeometryRenderHandler handler) {
+        for (RenderMode m : modes) {
+            m.apply(context);
+        }
+        if (size > 0) {
+            Camera current = context.getCurrentCamera();
+            QueueView view = fetchView(current);
+            if (view == null) {
+                view = new QueueView(current);
+                views.add(view);
             }
-            listSort.sort(geometries, comparator);
-            updateFlag = false;
+            view.render(context, handler);
         }
         for (GeometryQueue q : internalQueues) {
-            q.sort();
+            q.render(context, handler);
         }
-    }
-    /**
-     * Renders this queue and all internal queues.
-     * 
-     * @param renderManager 
-     * @param handler 
-     */
-    public void render(RenderManager renderManager, GeometryRenderHandler handler) {
-        if (handler == null) {
-            handler = GeometryRenderHandler.DEFAULT;
-        }
-        depth.apply(renderManager.getRenderer());
-        if (!perspective) {
-            renderManager.setCamera(cam, true);
-        }
-        for (Geometry g : geometries) {
-            if (g == null) continue;
-            handler.renderGeometry(renderManager, g);
-            g.queueDistance = Float.NEGATIVE_INFINITY;
-        }
-        if (!perspective) {
-            renderManager.setCamera(cam, false);
-        }
-        DepthRange.NORMAL.apply(renderManager.getRenderer());
-        for (GeometryQueue q : internalQueues) {
-            q.render(renderManager, handler);
+        for (RenderMode m : modes) {
+            m.reset(context);
         }
     }
     
-    /**
-     * Adds the geometry to the queue.
-     * 
-     * @param g 
-     */
     public void add(Geometry g) {
         if (size == geometries.length) {
             Geometry[] temp = new Geometry[size * 2];
             System.arraycopy(geometries, 0, temp, 0, size);
-            geometries = temp; // original list replaced by double-size list
+            geometries = temp;
         }
-        geometries[size++] = g;
-        updateFlag = true;
+        if (size == 0) {
+            g.getWorldBound().clone(localBound);
+        } else {
+            localBound.mergeLocal(g.getWorldBound());
+        }
+        if (geometries[size] != g) {
+            geometries[size] = g;
+            if (!allViewsNeedUpdate) for (QueueView v : views) {
+                v.setUpdateFlag();
+            }
+            allViewsNeedUpdate = true;
+        }
+        size++;
     }
-    /**
-     * Sets the element at the given index.
-     *
-     * @param index The index to set
-     * @param value The value
-     */
-    public void set(int index, Geometry value) {
-        geometries[index] = value;
-        updateFlag = true;
-    }
-    /**
-     * Adds the geometry queue.
-     * 
-     * @param q 
-     */
     public void add(GeometryQueue q) {
         internalQueues.add(q);
     }
-    /**
-     * Adds the geometry queue at the index.
-     * 
-     * @param q
-     * @param index 
-     */
-    public void add(GeometryQueue q, int index) {
-        internalQueues.add(index, q);
+    public void addMode(RenderMode m) {
+        modes.add(m);
     }
-
-    /**
-     * Resets list size to 0.
-     * <p>
-     * Clears internal queue list, but does not clear internal queues.
-     */
+    
+    public void fitParallelCamera(Camera cam) {
+        if (!cam.isParallelProjection()) {
+            throw new IllegalArgumentException("Camera must be in parallel projection mode.");
+        }
+        BoundingSphere sphere = sphereFromBox(getWorldBound(null));
+        cam.setLocation(sphere.getCenter().subtract(cam.getDirection().mult(sphere.getRadius() + cam.getFrustumNear())));
+        cam.setFrustumLeft(sphere.getRadius());
+        cam.setFrustumRight(sphere.getRadius());
+        cam.setFrustumBottom(sphere.getRadius());
+        cam.setFrustumTop(sphere.getRadius());
+        cam.setFrustumFar(sphere.getRadius()*2 + cam.getFrustumNear());
+        cam.update();
+        cam.updateViewProjection();
+    }
+    private BoundingSphere sphereFromBox(BoundingBox box) {
+        BoundingSphere sphere = new BoundingSphere();
+        sphere.setCenter(box.getCenter());
+        sphere.setRadius(FastMath.sqrt(FastMath.sqr(box.getXExtent())
+                + FastMath.sqr(box.getYExtent()) + FastMath.sqr(box.getZExtent())));
+        return sphere;
+    }
+    
     public void clear() {
-        for (int i = 0; i < size; i++) {
-            geometries[i] = null;
-        }
-        internalQueues.clear();
-        updateFlag = true;
+        availableQueues.clear();
         size = 0;
-    }
-    
-    /**
-     * Removes all geometries from
-     */
-    public void removeAllGeometries() {
-        
-    }
-    
-    /**
-     * Makes a copy of this queue's parameters (not geometries or internal queues).
-     * 
-     * @param includeInternalQueues
-     * @return 
-     */
-    public GeometryQueue makeParamCopy(boolean includeInternalQueues) {
-        GeometryQueue target = new GeometryQueue(comparator, size);
-        target.cam = cam;
-        target.depth.set(depth);
-        target.updateFlag = updateFlag;
-        target.perspective = perspective;
-        if (includeInternalQueues) for (GeometryQueue q : internalQueues) {
-            target.add(q.makeParamCopy(true));
-        }
-        return target;
-    }
-    
-    /**
-     * Makes a copy of this queue and all internal queues.
-     * 
-     * @return 
-     */
-    public GeometryQueue makeCopy() {
-        GeometryQueue target = makeParamCopy(false);
-        for (Geometry g : geometries) {
-            target.add(g);
-        }
-        for (GeometryQueue q : internalQueues) {
-            target.add(q.makeCopy());
-        }
-        return target;
-    }
-    
-    /**
-     * Generates a new GeometryQueue that contains only geometry
-     * approved by the filter.
-     * 
-     * @param filter
-     * @return 
-     */
-    public GeometryQueue cull(Function<Geometry, Boolean> filter) {
-        GeometryQueue target = makeParamCopy(false);
-        for (Geometry g : geometries) {
-            if (!filter.apply(g)) {
-                target.add(g);
-            }
-        }
-        for (GeometryQueue q : internalQueues) {
-            GeometryQueue result = q.cull(filter);
-            if (result.containsGeometry()) {
-                target.add(result);
-            }
-        }
-        return target;
-    }
-    
-    /**
-     * Culls geometries from this queue and internal queues that are rejected
-     * by the filter.
-     * <p>
-     * Internal queues that no longer contain geometry as a result of this
-     * operation are removed.
-     * 
-     * @param filter
-     * @return 
-     */
-    public GeometryQueue cullLocal(Function<Geometry, Boolean> filter) {
-        int skip = 0;
-        for (int i = 0; i < size; i++) {
-            Geometry g = geometries[i-skip] = geometries[i];
-            if (!filter.apply(g)) {
-                geometries[i] = null;
-                skip++;
-            }
-        }
-        size -= skip;
-        for (Iterator<GeometryQueue> it = internalQueues.iterator(); it.hasNext();) {
-            if (it.next().cullLocal(filter).containsGeometry()) {
+        allViewsNeedUpdate = true;
+        for (Iterator<QueueView> it = views.iterator(); it.hasNext();) {
+            QueueView v = it.next();
+            v.setUpdateFlag();
+            if (!v.pollIsUsed()) {
+                availableQueues.add(v.queue);
                 it.remove();
             }
         }
-        return this;
+        for (GeometryQueue q : internalQueues) {
+            q.clear();
+        }
+        internalQueues.clear();
     }
     
-    /**
-     * Marks this list as requiring sorting.
-     */
-    public void setUpdateNeeded() {
-        updateFlag = true;
-    }
-    /**
-     * Sets the comparator used to sort geometries.
-     * 
-     * @param comparator 
-     */
-    public void setComparator(GeometryComparator comparator) {
-        if (this.comparator != comparator) {
-            this.comparator = comparator;
-            updateFlag = true;
-        }
-    }
-    /**
-     * Set the camera that will be set on the geometry comparators
-     * via {@link GeometryComparator#setCamera(com.jme3.renderer.Camera)}.
-     *
-     * @param cam Camera to use for sorting.
-     */
-    public void setCamera(Camera cam) {
-        if (this.cam != cam) {
-            this.cam = cam;
-            comparator.setCamera(this.cam);
-            updateFlag = true;
-        }
-        for (GeometryQueue q : internalQueues) {
-            q.setCamera(cam);
-        }
-    }
-    /**
-     * Sets the depth range geometries in this queue (not internal queues)
-     * are rendered at.
-     * 
-     * @param depth 
-     */
-    public void setDepth(DepthRange depth) {
-        this.depth.set(depth);
-    }
-    /**
-     * Sets this queue (not internal queues) to render in perspective mode
-     * (as opposed to parallel projection or orthogonal).
-     * 
-     * @param perspective 
-     */
-    public void setPerspective(boolean perspective) {
-        this.perspective = perspective;
-    }
-
-    /**
-     * Returns the GeometryComparator that this Geometry list uses
-     * for sorting.
-     *
-     * @return the pre-existing instance
-     */
-    public GeometryComparator getComparator() {
-        return comparator;
-    }
-    /**
-     * Gets the list of internal queues.
-     * <p>
-     * Do not modify.
-     * 
-     * @return 
-     */
-    public LinkedList<GeometryQueue> getInternalQueues() {
-        return internalQueues;
-    }
-    /**
-     * Returns the number of elements in this GeometryList.
-     *
-     * @return Number of elements in the list
-     */
-    public int size() {
-        return size;
-    }
-    /**
-     * Gets the number of geometries contained in this queue and internal queues.
-     * 
-     * @return 
-     */
     public int getNumGeometries() {
-        int s = size;
+        int n = size;
         for (GeometryQueue q : internalQueues) {
-            s += q.getNumGeometries();
+            n += q.getNumGeometries();
         }
-        return s;
+        return n;
     }
-    /**
-     * Returns the element at the given index.
-     *
-     * @param index The index to lookup
-     * @return Geometry at the index
-     */
-    public Geometry get(int index) {
-        return geometries[index];
+    public BoundingBox getLocalBound() {
+        return localBound;
     }
-    /**
-     * 
-     * @return 
-     */
-    public DepthRange getDepth() {
-        return depth;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public boolean isPerspective() {
-        return perspective;
-    }
-    /**
-     * Returns true if this queue or any internal queue contains geometry.
-     * 
-     * @return 
-     */
-    public boolean containsGeometry() {
-        if (size > 0) return true;
+    public BoundingBox getWorldBound(BoundingBox store) {
+        if (store == null) {
+            store = new BoundingBox(localBound);
+        } else {
+            localBound.clone(store);
+        }
         for (GeometryQueue q : internalQueues) {
-            if (q.containsGeometry()) return true;
+            q.mergeWorldBoundInto(store);
         }
-        return false;
+        return store;
     }
-    /**
-     * 
-     * @return 
-     */
-    public int getAllocatedSpace() {
-        int space = geometries.length;
+    public boolean isGui() {
+        return gui;
+    }
+    
+    private QueueView fetchView(Camera cam) {
+        for (QueueView v : views) {
+            if (v.cam == cam) {
+                return v;
+            }
+        }
+        return null;
+    }
+    private Integer[] reuseAvailableQueue() {
+        for (Iterator<Integer[]> it = availableQueues.iterator(); it.hasNext();) {
+            Integer[] q = it.next();
+            if (q.length >= size) {
+                it.remove();
+                return q;
+            }
+        }
+        return null;
+    }
+    private void mergeWorldBoundInto(BoundingBox target) {
+        target.mergeLocal(localBound);
         for (GeometryQueue q : internalQueues) {
-            space += q.getAllocatedSpace();
+            q.mergeWorldBoundInto(target);
         }
-        return space;
     }
-
+    
     @Override
     public Iterator<Geometry> iterator() {
-        return new GeometryIterator();
+        return new QueueIterator();
     }
     @Override
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);
-        out.write(new SavableObject(comparator), "comparator", SavableObject.NULL);
-        out.write(depth, "depth", DepthRange.NORMAL);
-        out.write(perspective, "perspective", true);
+        out.write(new SavableObject(comparator.delegate), "comparator", new SavableObject(NULL_COMPARATOR));
+        SavableObject.writeFromCollection(out, modes, "modes");
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
-        comparator = SavableObject.read(in, "comparator", GeometryComparator.class);
-        depth.set(SavableObject.readSavable(in, "depth", DepthRange.class, DepthRange.NORMAL));
-        perspective = in.readBoolean("perspective", true);
+        comparator.setDelegate(SavableObject.read(in, "comparator", new SavableObject(NULL_COMPARATOR), GeometryComparator.class));
+        SavableObject.readToCollection(in, "modes", modes);
     }
     
-    private class GeometryIterator implements Iterator<Geometry> {
+    protected class QueueView {
+        
+        private final Camera cam;
+        private Integer[] queue;
+        private int lastSortedSize = -1;
+        private boolean updateFlag = true;
+        private boolean used = false;
+        
+        public QueueView(Camera cam) {
+            this.cam = Objects.requireNonNull(cam);
+        }
+        
+        public void render(FGRenderContext context, GeometryRenderHandler handler) {
+            if (context.getCurrentCamera() != cam) {
+                throw new IllegalStateException("Attempted to render queue view with the incorrect camera.");
+            }
+            sort();
+            for (int i = 0; i < size; i++) {
+                Geometry g = geometries[queue[i]];
+                int planeState = cam.getPlaneState();
+                if (CullTag.evaluate(context, g, handler, gui).isInside()) {
+                    handler.renderGeometry(context, g);
+                }
+                cam.setPlaneState(planeState);
+                g.queueDistance = Float.NEGATIVE_INFINITY;
+            }
+            used = true;
+        }
+        
+        public void sort() {
+            if (updateFlag) {
+                comparator.setCamera(cam);
+                if (listSort.getLength() != size) {
+                    listSort.allocateStack(size);
+                }
+                if (queue == null || queue.length < size) {
+                    queue = reuseAvailableQueue();
+                    if (queue == null) {
+                        queue = new Integer[geometries.length];
+                    }
+                    lastSortedSize = -1;
+                }
+                // Repopulate the index queue if there is a chance that
+                // necessary indices would be missing from the lower part.
+                if (size < lastSortedSize || lastSortedSize < 0) {
+                    for (int i = 0; i < queue.length; i++) {
+                        queue[i] = i;
+                    }
+                }
+                lastSortedSize = size;
+                listSort.sort(queue, comparator);
+                updateFlag = allViewsNeedUpdate = false;
+            }
+        }
+        
+        public void setUpdateFlag() {
+            updateFlag = true;
+        }
+        
+        public boolean pollIsUsed() {
+            boolean u = used;
+            used = false;
+            return u;
+        }
+        
+    }
+    protected class QueueComparator implements Comparator<Integer> {
+        
+        private GeometryComparator delegate;
+        
+        public QueueComparator(GeometryComparator delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int compare(Integer o1, Integer o2) {
+            return delegate.compare(geometries[o1], geometries[o2]);
+        }
+        
+        public void setDelegate(GeometryComparator delegate) {
+            this.delegate = delegate;
+        }
+        
+        public void setCamera(Camera cam) {
+            delegate.setCamera(cam);
+        }
+        
+    }
+    protected class QueueIterator implements Iterator<Geometry> {
         
         private int index = 0;
-        private Iterator<GeometryQueue> queue;
-        private Iterator<Geometry> queueGeom;
+        private int internalIndex = 0;
+        private Iterator<Geometry> internal;
         
         @Override
         public boolean hasNext() {
-            if (index < size || (queueGeom != null && queueGeom.hasNext())) {
+            if (index < size) {
                 return true;
             }
-            if (queue == null) {
-                queue = internalQueues.iterator();
-            }
-            while (queueGeom == null || !queueGeom.hasNext()) {
-                if (queue.hasNext()) {
-                    queueGeom = queue.next().iterator();
-                } else {
+            while (true) {
+                if (internal != null && internal.hasNext()) {
+                    return true;
+                }
+                if (internalIndex >= internalQueues.size()) {
                     return false;
                 }
+                internal = internalQueues.get(internalIndex++).iterator();
             }
-            return true;
         }
 
         @Override
         public Geometry next() {
             if (index < size) {
                 return geometries[index++];
+            } else {
+                return internal.next();
             }
-            return queueGeom.next();
         }
         
     }
-    
+    protected static class CullTag implements Savable {
+        
+        public static final String TAG_USERDATA = "codex.renthyl.GeometryQueue.CullTag:userdata";
+        private static final Object evalLock = new Object();
+        private static long cullVersion = 1; // start at 1; 0 indicates unknown; -1 indicates invalid
+        
+        private final Spatial spatial;
+        private long version = 0;
+        private Visibility state = Visibility.InsidePartial;
+        
+        public CullTag() {
+            this.spatial = null;
+            this.version = -1;
+        }
+        private CullTag(Spatial spatial) {
+            this.spatial = spatial;
+            attachToSpatial();
+        }
+        
+        private void attachToSpatial() {
+            spatial.setUserData(TAG_USERDATA, this);
+        }
+        
+        public Visibility solve(FGRenderContext context, GeometryRenderHandler handler, boolean gui, long version) {
+            if (this.version != version) {
+                this.version = version;
+                Visibility result = evaluate(context, spatial.getParent(), handler, gui, version);
+                state = handler.evaluateSpatialVisibility(context, spatial, result, gui);
+            }
+            return state;
+        }
+        
+        public boolean isValid() {
+            return version >= 0;
+        }
+        
+        private static Visibility evaluate(FGRenderContext context, Spatial spatial, GeometryRenderHandler handler, boolean gui, long version) {
+            if (spatial == null) {
+                return Visibility.OutsidePartial;
+            }
+            CullTag tag = spatial.getUserData(TAG_USERDATA);
+            if (tag == null || !tag.isValid()) {
+                tag = new CullTag(spatial);
+            }
+            return tag.solve(context, handler, gui, version);
+        }
+        
+        public static Visibility evaluate(FGRenderContext context, Spatial spatial, GeometryRenderHandler handler, boolean gui) {
+            synchronized (evalLock) {
+                return evaluate(context, spatial, handler, gui, cullVersion++);
+            }
+        }
+        
+        @Override
+        public void write(JmeExporter ex) throws IOException {}
+        @Override
+        public void read(JmeImporter im) throws IOException {}
+        
+    }
+
 }

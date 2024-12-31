@@ -31,6 +31,9 @@ public class CacheWrite extends RenderPass {
     private ResourceTicket input;
     
     public CacheWrite() {}
+    public CacheWrite(String key) {
+        this(GraphSource.value(key));
+    }
     public CacheWrite(GraphSource<String> keySource) {
         this.keySource = keySource;
     }

@@ -34,7 +34,8 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.resources.ResourceUser;
-import codex.renthyl.resources.TicketGroup;
+import codex.renthyl.resources.tickets.TicketCollection;
+import codex.renthyl.resources.tickets.TicketGroup;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -51,34 +52,35 @@ import java.util.stream.Stream;
  *
  * @author codex
  */
-public abstract class RenderModule implements Connectable, ResourceUser, Savable {
+public abstract class RenderModule implements NewConnectable, ResourceUser, Savable {
+    
+    private static final String MAIN_GROUP = "MAIN_GROUP";
     
     protected FrameGraph frameGraph;
     protected String name;
     protected RenderContainer parent;
     protected final ModuleIndex index = new ModuleIndex();
-    protected final LinkedList<ResourceTicket> inputs = new LinkedList<>();
-    protected final LinkedList<ResourceTicket> outputs = new LinkedList<>();
-    protected final HashMap<String, TicketGroup> groups = new HashMap<>();
+    protected final HashMap<String, TicketCollection> inputGroups = new HashMap<>();
+    protected final HashMap<String, TicketCollection> outputGroups = new HashMap<>();
     private BiConsumer<RenderContainer, RenderModule> connector;
     private int refs = 1; // start at one so this won't be temporally culled
     private int id = -1;
     
-    @Override
-    public LinkedList<ResourceTicket> getInputTickets() {
-        return inputs;
+    public RenderModule() {
+        inputGroups.put(MAIN_GROUP, value);
+        outputGroups.put(MAIN_GROUP, value);
     }
-    @Override
-    public LinkedList<ResourceTicket> getOutputTickets() {
-        return outputs;
-    }
+    
     @Override
     public ModuleIndex getIndex() {
         return index;
     }
     @Override
     public void countReferences() {
-        refs = outputs.size();
+        refs = 0;
+        for (TicketCollection c : outputGroups.values()) {
+            refs += c.size();
+        }
     }
     @Override
     public void dereference() {
@@ -104,137 +106,52 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
     }
     
     @Override
-    public ResourceTicket getInput(String name) {
-        return getTicketFromStream(inputs.stream(), name);
+    public <T> ResourceTicket<T> addInput(ResourceTicket<T> ticket) {
+        getMainInputGroup().add(ticket);
+        return ticket;
     }
     @Override
-    public ResourceTicket getOutput(String name) {
-        return getTicketFromStream(outputs.stream(), name);
+    public <T> ResourceTicket<T> addOutput(ResourceTicket<T> ticket) {
+        getMainOutputGroup().add(ticket);
+        return ticket;
     }
     @Override
-    public TicketGroup getGroup(String name) {
-        return groups.get(name);
-    }
-    @Override
-    public ResourceTicket addTicketListEntry(String groupName) {
-        TicketGroup g = getGroup(groupName, true);
-        g.requireAsList(true);
-        return addInput(g.add());
-    }
-    @Override
-    public void setLayoutUpdateNeeded() {
-        if (isAssigned()) {
-            frameGraph.setLayoutUpdateNeeded();
+    public <T> TicketCollection<T> addInputGroup(TicketCollection<T> group) {
+        if (inputGroups.put(group.getName(), group) != null) {
+            throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\".");
         }
+        group.attach(this);
+        return group;
+    }
+    @Override
+    public <T> TicketCollection<T> addOutputGroup(TicketCollection<T> group) {
+        if (outputGroups.put(group.getName(), group) != null) {
+            throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\".");
+        }
+        group.attach(this);
+        return group;
+    }
+    @Override
+    public HashMap<String, TicketCollection> getInputGroups() {
+        return inputGroups;
+    }
+    @Override
+    public HashMap<String, TicketCollection> getOutputGroups() {
+        return outputGroups;
+    }
+    @Override
+    public TicketCollection getMainInputGroup() {
+        return inputGroups.get(MAIN_GROUP);
+    }
+    @Override
+    public TicketCollection getMainOutputGroup() {
+        return outputGroups.get(MAIN_GROUP);
     }
     
     public int getId() {
         return id;
     }
-    
-    /**
-     * Adds the ticket as input.
-     * 
-     * @param <T>
-     * @param input
-     * @return given ticket
-     */
-    public <T> ResourceTicket<T> addInput(ResourceTicket<T> input) {
-        getInputTickets().add(input);
-        return input;
-    }
-    /**
-     * Adds the ticket as output.
-     * 
-     * @param <T>
-     * @param output
-     * @return given ticket
-     */
-    public <T> ResourceTicket<T> addOutput(ResourceTicket<T> output) {
-        getOutputTickets().add(output);
-        return output;
-    }
-    /**
-     * Creates and registers a new ticket as input.
-     * 
-     * @param <T>
-     * @param name name assigned to the new ticket
-     * @return created ticket
-     */
-    public <T> ResourceTicket<T> addInput(String name) {
-        ResourceTicket.validateUserTicketName(name);
-        return addInput(new ResourceTicket<>(name));
-    }
-    /**
-     * Creates and registers a new ticket as output.
-     * 
-     * @param <T>
-     * @param name name assigned to the new ticket
-     * @return created ticket
-     */
-    public <T> ResourceTicket<T> addOutput(String name) {
-        ResourceTicket.validateUserTicketName(name);
-        return addOutput(new ResourceTicket<>(name));
-    }
-    /**
-     * Creates and adds a ticket array as a group input of the specified length under the given name.
-     * <p>
-     * A group bundles several tickets together so that they can easily be used together.
-     * Each individual ticket is handled just like any other, it is just registered with the group as well.
-     * Names are formatted as {@code groupName+"["+index+"]"}.
-     * 
-     * @param <T>
-     * @param name
-     * @param length
-     * @return created ticket array
-     */
-    public <T> ResourceTicket<T>[] addInputGroup(String name, int length) {
-        ResourceTicket.validateUserTicketName(name);
-        TicketGroup group = new TicketGroup(this, name, true, length);
-        for (int i = 0; i < length; i++) {
-            group.getArray()[i] = addInput(group.create(i));
-        }
-        groups.put(name, group);
-        return group.getArray();
-    }
-    /**
-     * Creates and adds a ticket array as a group output of the specified length under the given name.
-     * <p>
-     * A group bundles several tickets together so that they can easily be used together.
-     * Each individual ticket is handled just like any other, it is just registered with the group as well.
-     * Names are formatted as {@code groupName+"["+index+"]"}.
-     * 
-     * @param <T>
-     * @param name
-     * @param length
-     * @return create ticket array
-     */
-    public <T> ResourceTicket<T>[] addOutputGroup(String name, int length) {
-        ResourceTicket.validateUserTicketName(name);
-        TicketGroup group = new TicketGroup(this, name, false, length);
-        for (int i = 0; i < length; i++) {
-            group.getArray()[i] = addOutput(group.create(i));
-        }
-        groups.put(name, group);
-        return group.getArray();
-    }
-    /**
-     * Creates an input ticket list.
-     * <p>
-     * A ticket list is an extension of a ticket group where the size is indefinite, meaning connections
-     * can be added or removed at will. The order of connections is not guaranteed, especially
-     * when a ticket list is loaded from a save file.
-     * <p>
-     * Each addition or removal from a ticket list requires an array resize, so it a ticket
-     * list should remain static where possible.
-     * 
-     * @param name 
-     */
-    public void addInputList(String name) {
-        ResourceTicket.validateUserTicketName(name);
-        groups.put(name, new TicketGroup(this, name));
-    }
-    
+        
     private static ResourceTicket getTicketFromStream(Stream<ResourceTicket> stream, String name) {
         return stream.filter(t -> name.equals(t.getName())).findFirst().orElse(null);
     }
@@ -307,11 +224,11 @@ public abstract class RenderModule implements Connectable, ResourceUser, Savable
         if (frameGraph != null) {
             frameGraph.setLayoutUpdateNeeded();
             cleanupModule(frameGraph);
-            for (ResourceTicket t : inputs) {
-                t.setSource(null);
+            for (TicketCollection g : inputGroups.values()) {
+                g.disconnect();
             }
-            for (ResourceTicket t : outputs) {
-                t.clearAllTargets();
+            for (TicketCollection g : outputGroups.values()) {
+                g.disconnect();
             }
             frameGraph = null;
         }
