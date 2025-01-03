@@ -31,13 +31,10 @@ package codex.renthyl.modules.geometry;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.modules.RenderPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
-import java.io.IOException;
+import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketList;
 
 /**
  * Merges a specified number of {@link GeometryQueue}s into one output queue.
@@ -55,29 +52,30 @@ import java.io.IOException;
  */
 public class QueueMergePass extends RenderPass {
     
-    private int groupSize = 2;
+    private ArbitraryTicketList<GeometryQueue> queues;
     private ResourceTicket<GeometryQueue> result;
     private final GeometryQueue target = new GeometryQueue();
 
     public QueueMergePass() {}
-    public QueueMergePass(int groupSize) {
-        this.groupSize = groupSize;
-    }
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        addInputGroup("Queues", groupSize);
         result = addOutput("Result");
+    }
+    @Override
+    protected void createMainGroups() {
+        queues = addInputGroup(new ArbitraryTicketList<>(MAIN_GROUP));
+        addOutputGroup(new TicketList(MAIN_GROUP));
     }
     @Override
     protected void prepare(FGRenderContext context) {
         declare(null, result);
-        referenceOptional(getGroupArray("Queues"));
+        referenceOptional(queues);
     }
     @Override
     protected void execute(FGRenderContext context) {
-        GeometryQueue[] queues = acquireArrayOrElse("Queues", n -> new GeometryQueue[n], null);
-        for (GeometryQueue q : queues) {
+        GeometryQueue[] array = acquireArrayOrElse(queues, n -> new GeometryQueue[n], null);
+        for (GeometryQueue q : array) {
             if (q != null) {
                 target.add(q);
             }
@@ -90,28 +88,5 @@ public class QueueMergePass extends RenderPass {
     }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule out = ex.getCapsule(this);
-        out.write(groupSize, "groupSize", 2);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule in = im.getCapsule(this);
-        groupSize = in.readInt("groupSize", 2);
-    }
-    
-    public void setGroupSize(int groupSize) {
-        if (isAssigned()) {
-            throw new IllegalStateException("Cannot alter group size while assigned to a framegraph.");
-        }
-        this.groupSize = groupSize;
-    }
-    
-    public int getGroupSize() {
-        return groupSize;
-    }
     
 }

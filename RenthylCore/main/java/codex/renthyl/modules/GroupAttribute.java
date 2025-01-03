@@ -31,9 +31,11 @@ package codex.renthyl.modules;
 import codex.boost.export.SavableObject;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.client.GraphTarget;
+import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketArray;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -41,6 +43,7 @@ import com.jme3.export.OutputCapsule;
 import com.jme3.renderer.ViewPort;
 import java.io.IOException;
 import java.util.ArrayList;
+import codex.renthyl.resources.tickets.TicketGroup;
 
 /**
  * Accepts and produces and group of inputs and outputs to/from game logic.
@@ -65,6 +68,8 @@ public class GroupAttribute extends RenderPass {
     public static final String INPUT = "Input", OUTPUT = "Output";
     
     private int groupSize = 2;
+    private ArbitraryTicketList<Object> input;
+    private TicketArray<Object> output;
     private final ArrayList<GraphSource> sources = new ArrayList<>(5);
     private final ArrayList<GraphTarget> targets = new ArrayList<>(5);
     
@@ -75,42 +80,43 @@ public class GroupAttribute extends RenderPass {
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        addInputGroup(INPUT, groupSize);
-        addOutputGroup(OUTPUT, groupSize);
+        input = addInputGroup(new ArbitraryTicketList(INPUT));
+        output = addOutputGroup(new TicketArray(OUTPUT, groupSize));
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        for (ResourceTicket t : getGroupArray(OUTPUT)) {
+        for (ResourceTicket t : output) {
             declare(null, t);
         }
-        referenceOptional(getGroupArray(INPUT));
+        referenceOptional(input);
     }
     @Override
     protected void execute(FGRenderContext context) {
         ViewPort vp = context.getViewPort();
-        ResourceTicket[] inTickets = getGroupArray(INPUT);
-        for (int i = 0, n = Math.min(groupSize, targets.size()); i < n; i++) {
-            Object value = resources.acquireOrElse(inTickets[i], null);
-            GraphTarget t = targets.get(i);
-            if (t != null && t.setGraphValue(frameGraph, vp, value)) {
-                resources.setConstant(inTickets[i]);
+        int i = 0;
+        for (ResourceTicket t : input.getTickets()) {
+            if (i >= targets.size()) {
+                break;
+            }
+            Object value = resources.acquireOrElse(t, null);
+            GraphTarget target = targets.get(i++);
+            if (target != null && target.setGraphValue(frameGraph, vp, value)) {
+                resources.setConstant(t);
             }
         }
-        int i = 0;
-        ResourceTicket[] outTickets = getGroupArray(OUTPUT);
-        for (int n = Math.min(groupSize, sources.size()); i < n; i++) {
-            GraphSource s = sources.get(i);
-            if (s != null) {
-                Object value = s.getGraphValue(frameGraph, vp);
-                if (value != null) {
-                    resources.setPrimitive(outTickets[i], value);
-                    continue;
+        i = 0;
+        for (ResourceTicket t : output) {
+            if (i < sources.size()) {
+                GraphSource s = sources.get(i++);
+                if (s != null) {
+                    Object value = s.getGraphValue(frameGraph, vp);
+                    if (value != null) {
+                        resources.setPrimitive(t, value);
+                        continue;
+                    }
                 }
             }
-            resources.setUndefined(outTickets[i]);
-        }
-        for (; i < groupSize; i++) {
-            resources.setUndefined(outTickets[i]);
+            resources.setUndefined(t);
         }
     }
     @Override

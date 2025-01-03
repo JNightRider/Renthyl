@@ -44,7 +44,6 @@ import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderModule;
-import codex.renthyl.modules.RenderPass;
 import codex.renthyl.modules.RenderThread;
 import com.jme3.asset.AssetManager;
 import com.jme3.opencl.CommandQueue;
@@ -58,6 +57,7 @@ import java.util.HashMap;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import codex.renthyl.jobs.FGJobExecutor;
+import codex.renthyl.modules.LayoutMember;
 import java.util.LinkedList;
 
 /**
@@ -122,7 +122,7 @@ import java.util.LinkedList;
  * 
  * @author codex
  */
-public class FrameGraph implements RenderPipeline<FGPipelineContext> {
+public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMember {
     
     private static final Logger LOG = Logger.getLogger(FrameGraph.class.getName());
     private static final long THREAD_WAIT_TIMEOUT = 5000;
@@ -266,6 +266,10 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         root.renderingComplete();
         resources.endRenderFrame();
         rendered = false;
+    }
+    @Override
+    public void setLayoutUpdateNeeded() {
+        layoutUpdateNeeded = true;
     }
     @Override
     public String toString() {
@@ -516,14 +520,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
      */
     public HashMap<String, Object> getSettingsMap() {
         return settings;
-    }
-    
-    /**
-     * Indicates that the layout of the framegraph has changed and
-     * an update is necessary before rendering.
-     */
-    public void setLayoutUpdateNeeded() {
-        layoutUpdateNeeded = true;
     }
     
     /**

@@ -30,11 +30,15 @@ package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents an existing or future resource used for rendering.
@@ -53,8 +57,10 @@ public class ResourceView <T> {
     private final ResourceTicket<T> ticket;
     private final TimeFrame lifetime;
     private final LinkedList<ResourceView> dependencies = new LinkedList<>();
+    private final AtomicBoolean writeComplete = new AtomicBoolean(false);
     private final AtomicInteger refs = new AtomicInteger(0);
-    private final AtomicBoolean released = new AtomicBoolean(false);
+    private final ReentrantLock readLock = new ReentrantLock();
+    private final Condition readCondition = readLock.newCondition();
     private RenderObject object;
     private T resource;
     private boolean temporary = false;
@@ -91,6 +97,9 @@ public class ResourceView <T> {
     }
     /**
      * Releases this resource from one user.
+     * <p>
+     * If a single user releases a resource view multiple times, unexpected
+     * behavior may emerge, possibly resulting in an exception at some point.
      * 
      * @param list
      * @param ticket
@@ -101,8 +110,17 @@ public class ResourceView <T> {
         if (complete) {
             setObject(null);
         }
-        released.set(true);
         ticket.clearBindFlag();
+        if (!writeComplete.getAndSet(true)) {
+            if (isReadConcurrent()) {
+                readCondition.signalAll();
+            } else {
+                readCondition.signal();
+            }
+        }
+        if (readLock.isHeldByCurrentThread()) {
+            readLock.unlock();
+        }
         return !complete;
     }
     /**
@@ -116,13 +134,33 @@ public class ResourceView <T> {
     public boolean cull() {
         return refs.addAndGet(-1) > 0;
     }
+    
     /**
-     * Claims the resource for reading.
-     * 
-     * @return 
+     * Claims write permissions for the current thread. If this method
+     * is called multiple times for the same resource view, the second
+     * call will result in an exception at some point.
      */
-    public boolean claimReadPermissions() {
-        return ((def == null || def.isReadConcurrent()) && released.get()) || released.getAndSet(false);
+    public void claimWritePermissions() {
+        readLock.lock();
+        if (writeComplete.get()) {
+            throw new IllegalStateException("Multiple attempts at claiming write permissions on " + this);
+        }
+    }
+    /**
+     * Causes the current thread to wait until this resource may
+     * be safely acquired for reading.
+     * 
+     * @param millis milliseconds to wait before exiting with an {@code InterruptedException}.
+     * @throws java.lang.InterruptedException
+     */
+    public void waitForReadPermissions(long millis) throws InterruptedException {
+        if (!writeComplete.get() || !isReadConcurrent()) {
+            readLock.lock();
+            readCondition.await(millis, TimeUnit.MILLISECONDS);
+            if (writeComplete.get() && isReadConcurrent()) {
+                readLock.unlock();
+            }
+        }
     }
     
     /**
@@ -367,16 +405,6 @@ public class ResourceView <T> {
         return temporary;
     }
     /**
-     * Return true if this resource is available for reading.
-     * <p>
-     * This is true typically after the first release occurs.
-     * 
-     * @return 
-     */
-    public boolean isReadAvailable() {
-        return released.get();
-    }
-    /**
      * Returns true if this ResoureView is dependent on one or
      * more other ResourceViews.
      * 
@@ -384,6 +412,15 @@ public class ResourceView <T> {
      */
     public boolean isDependent() {
         return !dependencies.isEmpty();
+    }
+    /**
+     * Returns true if this resource can be read concurrently
+     * by multiple threads at once.
+     * 
+     * @return 
+     */
+    public boolean isReadConcurrent() {
+        return def == null || def.isReadConcurrent();
     }
     
     @Override

@@ -26,12 +26,13 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.resources;
+package codex.renthyl.resources.tickets;
 
-import codex.renthyl.Connectable;
-import codex.renthyl.resources.tickets.TicketCollection;
+import codex.renthyl.resources.ResourceView;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
+import jdk.internal.foreign.ResourceScopeImpl.ResourceList;
 
 /**
  * References a {@link RenderResource} by index.
@@ -49,13 +50,12 @@ public class ResourceTicket <T> {
     public static final String RESERVED = "#";
     public static final int INVALID = -1, FORCE_INVALID = -2;
     
-    private TicketCollection<T> group;
+    private TicketGroup<T> group;
     private String name;
     private int localIndex;
     private int exportGroupId = -1;
     private long objectId = -1;
     private boolean bound = false;
-    private boolean overrideWorld = false;
     private ResourceTicket<T> source;
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
     
@@ -92,6 +92,19 @@ public class ResourceTicket <T> {
      */
     public void clearBindFlag() {
         bound = false;
+    }
+    /**
+     * Clears the bind flag and returns its previous value.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     * 
+     * @return 
+     * @see #setBindFlag()
+     */
+    public boolean pollBindFlag() {
+        boolean b = bound;
+        bound = false;
+        return b;
     }
     
     /**
@@ -134,7 +147,7 @@ public class ResourceTicket <T> {
      * 
      * @param group 
      */
-    protected void setGroup(TicketCollection<T> group) {
+    protected void setGroup(TicketGroup<T> group) {
         this.group = group;
     }
     /**
@@ -142,13 +155,16 @@ public class ResourceTicket <T> {
      * 
      * @param source 
      */
-    public void setSource(ResourceTicket<T> source) {
+    public void setSource(ResourceTicket source) {
         if (this.source != source) {
+            if (source == this) {
+                throw new IllegalArgumentException("Ticket cannot have itself as its source.");
+            }
             if (this.source != null) {
                 this.source.targets.remove(this);
             }
             if (group != null) {
-                group.setLayoutUpdateNeeded();
+                group.ticketSourceChanged(this, source);
             }
             this.source = source;
             if (this.source != null) {
@@ -175,26 +191,9 @@ public class ResourceTicket <T> {
      * @param index
      * @return 
      */
-    protected ResourceTicket<T> setLocalIndex(int index) {
+    public ResourceTicket<T> setLocalIndex(int index) {
         this.localIndex = index;
         return this;
-    }
-    /**
-     * Sets this ticket to override the inherited world index with its
-     * own local index.
-     * <p>
-     * This is usually used by "referencing" tickets to temporarily ignore
-     * an incoming resource.
-     * <p>
-     * default={@code false}
-     * 
-     * @param override 
-     */
-    public void setOverrideWorldIndex(boolean override) {
-        if (source != null && this.overrideWorld != override && group != null) {
-            group.setLayoutUpdateNeeded();
-        }
-        this.overrideWorld = override;
     }
     /**
      * Sets the object ID.
@@ -223,6 +222,13 @@ public class ResourceTicket <T> {
         return name;
     }
     /**
+     * 
+     * @return 
+     */
+    public TicketGroup<T> getGroup() {
+        return group;
+    }
+    /**
      * Gets the world index.
      * <p>
      * World index for this ticket is inherited from this ticket's source. If the
@@ -235,7 +241,7 @@ public class ResourceTicket <T> {
      * @return world index
      */
     public int getWorldIndex() {
-        if (source != null && !overrideWorld) {
+        if (source != null) {
             int i = source.getWorldIndex();
             if (i >= 0) return i;
         }
@@ -286,13 +292,6 @@ public class ResourceTicket <T> {
         return source != null;
     }
     /**
-     * 
-     * @return 
-     */
-    public boolean isOverrideWorldIndex() {
-        return overrideWorld;
-    }
-    /**
      * Gets all tickets depending on this ticket.
      * 
      * @return 
@@ -312,7 +311,6 @@ public class ResourceTicket <T> {
     public String toString() {
         return "Ticket[name=" + name + ", worldIndex=" + getWorldIndex() + "]";
     }
-    
     
     /**
      * Returns true if the ticket is valid for locating a resource.

@@ -31,8 +31,11 @@ package codex.renthyl.modules;
 import codex.boost.export.SavableObject;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.client.GraphSource;
+import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketList;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -53,43 +56,25 @@ import java.io.IOException;
  */
 public class Junction <T> extends RenderPass {
     
-    private int length;
-    private int groupSize;
+    public static final String OUTPUT = "Output";
+    
+    private ArbitraryTicketList<T> input;
     private ResourceTicket<T> output;
     private GraphSource<Integer> source;
-    private int defaultIndex = 0;
-    private int curIndex = -1;
-    
-    public Junction() {
-        this(2);
-    }
-    public Junction(int length) {
-        this(length, 1);
-    }
-    public Junction(int length, int groupSize) {
-        setLength(length);
-        setGroupSize(groupSize);
-    }
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        if (groupSize == 1) {
-            addInputGroup(getInput(), length);
-            output = addOutput(getOutput());
-        } else {
-            for (int i = 0; i < length; i++) {
-                addInputGroup(getInput(i), groupSize);
-            }
-            addOutputGroup(getOutput(), groupSize);
-        }
+        output = addOutput(OUTPUT);
+    }
+    @Override
+    protected void createMainGroups() {
+        input = addInputGroup(new ArbitraryTicketList<>(MAIN_GROUP));
+        addOutputGroup(new TicketList(MAIN_GROUP));
     }
     @Override
     public void updateModule(FGRenderContext context, float tpf) {
-        if (source != null) {
-            connect(source.getGraphValue(frameGraph, context.getViewPort()));
-        } else {
-            connect(defaultIndex);
-        }
+        super.updateModule(context, tpf);
+        connect(GraphSource.get(source, 0, context));
     }
     @Override
     protected void prepare(FGRenderContext context) {}
@@ -101,133 +86,34 @@ public class Junction <T> extends RenderPass {
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
     public boolean isUsed() {
-        // This pass will never execute
+        // this pass will never execute
         return false;
     }
     @Override
     public void write(JmeExporter ex) throws IOException {
         super.write(ex);
         OutputCapsule out = ex.getCapsule(this);
-        out.write(length, "length", 2);
-        out.write(groupSize, "groupSize", 1);
-        out.write(defaultIndex, "defaultIndex", 0);
         out.write(new SavableObject(source), "source", SavableObject.NULL);
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         super.read(im);
         InputCapsule in = im.getCapsule(this);
-        length = in.readInt("length", 2);
-        groupSize = in.readInt("groupSize", 1);
-        defaultIndex = in.readInt("defaultIndex", 0);
         source = SavableObject.read(in, "source", GraphSource.class);
     }
     
     private void connect(int i) {
-        boolean assignNull = i < 0 || i >= length;
-        if (i != curIndex) {
-            frameGraph.setLayoutUpdateNeeded();
-            curIndex = i;
-        }
-        if (groupSize > 1) {
-            ResourceTicket[] outArray = getGroupArray(getOutput());
-            if (!assignNull) {
-                ResourceTicket[] inArray = getGroupArray(getInput(i));
-                for (int j = 0; j < groupSize; j++) {
-                    outArray[j].setSource(inArray[j]);
-                }
-            } else for (ResourceTicket t : outArray) {
-                t.setSource(null);
-            }
-        } else {
-            output.setSource(assignNull ? null : getGroupArray(getInput())[i]);
-        }
+        output.setSource(i < 0 || i >= input.size() ? null : input.select(TicketSelector.at(i)));
     }
     
-    public final void setLength(int length) {
-        if (isAssigned()) {
-            throw new IllegalStateException("Cannot change length while assigned.");
-        }
-        if (length <= 0) {
-            throw new IllegalArgumentException("Length must be greater than zero.");
-        }
-        this.length = length;
-    }
-    public final void setGroupSize(int groupSize) {
-        if (isAssigned()) {
-            throw new IllegalStateException("Cannot alter group size while assigned to a framegraph.");
-        }
-        if (groupSize <= 0) {
-            throw new IllegalArgumentException("Group length must be greater than zero.");
-        }
-        this.groupSize = groupSize;
-    }
     public void setIndexSource(GraphSource<Integer> source) {
         this.source = source;
-    }
-    public void setDefaultIndex(int defaultIndex) {
-        this.defaultIndex = defaultIndex;
-    }
-    
-    public int getLength() {
-        return length;
-    }
-    public int getGroupSize() {
-        return groupSize;
     }
     public GraphSource<Integer> getIndexSource() {
         return source;
     }
-    public int getDefaultIndex() {
-        return defaultIndex;
-    }
-    
-    /**
-     * 
-     * @return 
-     */
-    public static String getInput() {
-        return "Input";
-    }
-    /**
-     * Returns a string referencing an individual input (groupSize = 1) or 
-     * an input group (groupSize &gt; 1).
-     * 
-     * @param i index of input or input group
-     * @return 
-     */
-    public static String getInput(int i) {
-        return "Input["+i+"]";
-    }
-    /**
-     * Returns a string referencing an individual input that is part of
-     * a group (groupSize &gt; 1 only).
-     * 
-     * @param i index of group
-     * @param j index of input in group
-     * @return 
-     */
-    public static String getInput(int i, int j) {
-        return "Input["+i+"]["+j+"]";
-    }
-    /**
-     * Returns a string referencing the individual output (groupSize = 1)
-     * or the output group (groupSize &gt; 1).
-     * 
-     * @return 
-     */
-    public static String getOutput() {
-        return "Value";
-    }
-    /**
-     * Returns a string referencing an individual output in the output group
-     * (groupSize &gt; 1 only).
-     * 
-     * @param i index of output in group
-     * @return 
-     */
-    public static String getOutput(int i) {
-        return "Value["+i+"]";
+    public int getLength() {
+        return input.size();
     }
     
 }

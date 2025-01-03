@@ -31,9 +31,8 @@ package codex.renthyl.modules;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceList;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.MappedCache;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -46,7 +45,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.IntFunction;
+import codex.renthyl.resources.tickets.TicketGroup;
 
 /**
  * Modular rendering process for a {@link FrameGraph}.
@@ -55,7 +55,8 @@ import java.util.function.Function;
  */
 public abstract class RenderPass extends RenderModule implements Savable {
     
-    private final FrameBufferCache frameBuffers = new FrameBufferCache(new FrameBufferParameters(null, 1024, 1024, 1));
+    private final FrameBufferCache frameBuffers = new FrameBufferCache(
+            new FrameBufferParameters(null, 1024, 1024, 1));
     protected ResourceList resources;
     
     @Override
@@ -89,7 +90,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
     @Override
     public void executeRender(FGRenderContext context) {
         if (context.isAsync()) {
-            waitToExecute();
+            claimResourcePermissions();
         }
         execute(context);
         releaseAll();
@@ -105,9 +106,6 @@ public abstract class RenderPass extends RenderModule implements Savable {
     @Override
     public void cleanupModule(FrameGraph frameGraph) {
         cleanup(frameGraph);
-        inputs.clear();
-        outputs.clear();
-        groups.clear();
         frameBuffers.clear();
         this.frameGraph = null;
     }
@@ -187,6 +185,16 @@ public abstract class RenderPass extends RenderModule implements Savable {
         return tickets;
     }
     /**
+     * 
+     * @param tickets
+     * @see ResourceList#declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     */
+    protected void declarePrimitive(Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
+            resources.declarePrimitive(this, t);
+        }
+    }
+    /**
      * Declares a new temporary resource using an unregistered ticket.
      * 
      * @param <T>
@@ -217,6 +225,15 @@ public abstract class RenderPass extends RenderModule implements Savable {
         resources.reserve(index, tickets);
     }
     /**
+     * Reserves each RenderObject associated with the tickets.
+     * 
+     * @param tickets
+     * @see ResourceList#reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void reserve(Iterable<? extends ResourceTicket> tickets) {
+        resources.reserve(index, tickets);
+    }
+    /**
      * References the resource associated with the ticket.
      * 
      * @param ticket 
@@ -232,6 +249,15 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
      */
     protected void reference(ResourceTicket... tickets) {
+        resources.reference(index, name, tickets);
+    }
+    /**
+     * References each resource associated with the tickets.
+     * 
+     * @param tickets 
+     * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void reference(Iterable<? extends ResourceTicket> tickets) {
         resources.reference(index, name, tickets);
     }
     /**
@@ -251,20 +277,34 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
      */
     protected void referenceOptional(ResourceTicket... tickets) {
-        for (ResourceTicket t : tickets) {
-            referenceOptional(t);
-        }
+        resources.referenceOptional(index, name, tickets);
+    }
+    /**
+     * Optionally references each resource associated with the tickets.
+     * 
+     * @param tickets 
+     * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void referenceOptional(Iterable<? extends ResourceTicket> tickets) {
+        resources.referenceOptional(index, name, tickets);
     }
     
     /**
-     * Forces this thread to wait until all inputs are available for this pass.
+     * Claims read and write permissions for input and output resources,
+     * respectively, before exiting.
      * <p>
-     * An incoming resource is deemed ready when {@link com.jme3.renderer.framegraph.ResourceView#claimReadPermissions()
-     * read permissions are claimed}.
+     * The current thread is blocked until the necessary permissions are acquired.
      */
-    public void waitToExecute() {
-        for (ResourceTicket t : inputs) {
-            resources.waitForReadPermission(t, index.threadIndex);
+    public void claimResourcePermissions() {
+        for (TicketGroup<Object> g : outputGroups.values()) {
+            for (ResourceTicket t : g.getTickets()) {
+                resources.claimWritePermissions(t);
+            }
+        }
+        for (TicketGroup<Object> g : inputGroups.values()) {
+            for (ResourceTicket t : g.getTickets()) {
+                resources.waitForReadPermission(t);
+            }
         }
     }
     
@@ -272,16 +312,60 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a set of resources from a ticket group and stores them in the array.
      * 
      * @param <T>
-     * @param name
+     * @param group
      * @param array
      * @return 
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket) 
      */
-    protected <T> T[] acquireArray(String name, T[] array) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquire(tickets[i]);
+    protected <T> T[] acquireArray(TicketGroup<T> group, T[] array) {
+        int i = 0;
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquire(t);
+        }
+        return array;
+    }
+    /**
+     * Acquires a set of resources from a ticket group and stores them in an
+     * array created by the function.
+     * 
+     * @param <T>
+     * @param group
+     * @param func
+     * @return 
+     */
+    protected <T> T[] acquireArray(TicketGroup<T> group, IntFunction<T[]> func) {
+        int i = 0;
+        T[] array = func.apply(group.size());
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquire(t);
+        }
+        return array;
+    }
+    /**
+     * Acquires a set of resources from a ticket group and stores them in the array.
+     * <p>
+     * Tickets that are invalid will acquire {@code val} instead.
+     * 
+     * @param <T>
+     * @param group
+     * @param array
+     * @param val
+     * @return 
+     * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
+     */
+    protected <T> T[] acquireArrayOrElse(TicketGroup<T> group, T[] array, T val) {
+        int i = 0;
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquireOrElse(t, val);
         }
         return array;
     }
@@ -289,63 +373,23 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a set of resources from a ticket group and stores them in an
      * array created by the function.
      * <p>
-     * The function is expected to create an array of the given length.
-     * 
-     * @param <T>
-     * @param name
-     * @param func
-     * @return created array
-     * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket) 
-     */
-    protected <T> T[] acquireArray(String name, Function<Integer, T[]> func) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        T[] array = func.apply(tickets.length);
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquire(tickets[i]);
-        }
-        return array;
-    }
-    /**
-     * Acquires a set of resources from a ticket group and stores them in
-     * the array.
-     * <p>
      * Tickets that are invalid will acquire {@code val}.
      * 
      * @param <T>
-     * @param name
-     * @param array
-     * @param val
-     * @return 
-     * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
-     */
-    protected <T> T[] acquireArrayOrElse(String name, T[] array, T val) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquireOrElse(tickets[i], val);
-        }
-        return array;
-    }
-    /**
-     * Acquires a set of resources from a ticket group and stores them in an
-     * array created by the function.
-     * <p>
-     * Tickets that are invalid will acquire {@code val}.
-     * 
-     * @param <T>
-     * @param name
+     * @param group
      * @param func
      * @param val
      * @return 
      * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
      */
-    protected <T> T[] acquireArrayOrElse(String name, Function<Integer, T[]> func, T val) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        T[] array = func.apply(tickets.length);
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquireOrElse(tickets[i], val);
+    protected <T> T[] acquireArrayOrElse(TicketGroup<T> group, IntFunction<T[]> func, T val) {
+        int i = 0;
+        T[] array = func.apply(group.size());
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquireOrElse(t, val);
         }
         return array;
     }
@@ -354,15 +398,14 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * 
      * @param <T>
      * @param <R>
-     * @param name group name
+     * @param group
      * @param collection list to store resources in (or null to create a new {@link LinkedList}).
      * @return given list
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
      */
-    protected <T, R extends Collection<T>> R acquireList(String name, R collection) {
+    protected <T, R extends Collection<T>> R acquireList(TicketGroup<T> group, R collection) {
         Objects.requireNonNull(collection, "Collection to store acquired resources cannot be null.");
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        for (ResourceTicket<T> t : tickets) {
+        for (ResourceTicket<T> t : group.getTickets()) {
             T res = resources.acquireOrElse(t, null);
             if (res != null) collection.add(res);
         }
@@ -372,12 +415,12 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a list of resources from a ticket group and stores them in the given list.
      * 
      * @param <T>
-     * @param name group name
+     * @param group
      * @return given list
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
      */
-    protected <T> LinkedList<T> acquireList(String name) {
-        return acquireList(name, new LinkedList<>());
+    protected <T> Collection<T> acquireList(TicketGroup<T> group) {
+        return acquireList(group, new LinkedList<>());
     }
     
     /**
@@ -388,39 +431,12 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#release(codex.renthyl.resources.ResourceTicket) 
      */
     protected void releaseAll() {
-        for (ResourceTicket t : inputs) {
-            resources.releaseOptional(t);
+        for (TicketGroup g : inputGroups.values()) {
+            g.releaseAll(resources);
         }
-        for (ResourceTicket t : outputs) {
-            resources.releaseOptional(t);
+        for (TicketGroup g : outputGroups.values()) {
+            g.releaseAll(resources);
         }
-    }
-    
-    /**
-     * Removes all members of the named group from the input and output lists.
-     * 
-     * @param <T>
-     * @param name
-     * @return 
-     */
-    protected <T> ResourceTicket<T>[] removeGroup(String name) {
-        TicketGroup<T> group = groups.remove(name);
-        if (group == null) {
-            return null;
-        }
-        // Once we determine which list group members were added to, we only
-        // need to remove from that list for future members.
-        byte state = 0;
-        if (group.isList()) state = 1;
-        for (ResourceTicket<T> t : group.getArray()) {
-            if (state >= 0 && inputs.remove(t)) {
-                state = 1;
-            }
-            if (state <= 0 && outputs.remove(t)) {
-                state = -1;
-            }
-        }
-        return group.getArray();
     }
     
     /**

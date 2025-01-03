@@ -31,8 +31,8 @@ package codex.renthyl.modules.geometry;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
 
 /**

@@ -1,234 +1,196 @@
 /*
- * Copyright (c) 2024, codex
- * 
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package codex.renthyl.resources.tickets;
 
-import codex.renthyl.Connectable;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.modules.LayoutMember;
+import codex.renthyl.modules.NewConnectable;
+import codex.renthyl.resources.ResourceList;
+import java.util.Collection;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  *
  * @author codex
  * @param <T>
  */
-public class TicketGroup <T> {
+public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T>> {
+    
+    /****************
+     * Abstract API *
+     ****************/
     
     /**
-     * Prefix for tickets that are members of a list.
+     * Updates this group.
      */
-    public static final String LIST = "#list:";
-    
-    private final Connectable user;
-    private final String name;
-    private final boolean input;
-    private ResourceTicket<T>[] array;
-    private boolean list = false;
-
-    public TicketGroup(Connectable user, String name) {
-        this.user = user;
-        this.name = name;
-        this.array = new ResourceTicket[0];
-        this.list = true;
-        this.input = true;
-    }
-    public TicketGroup(Connectable user, String name, boolean input, int length) {
-        this.user = user;
-        this.name = name;
-        this.input = input;
-        this.array = new ResourceTicket[length];
-    }
+    public void update();
     
     /**
-     * Creates a ticket for this group.
+     * Returns the name of this group.
+     * 
+     * @return 
+     */
+    public String getName();
+    
+    /**
+     * Assigns this group to the owner.
      * <p>
-     * The created ticket is not added to the group.
+     * If this group is already assigned to an owner,
+     * an exception will be thrown.
      * 
-     * @param i
-     * @return 
+     * @param owner 
      */
-    public ResourceTicket<T> create(int i) {
-        String tName;
-        if (!list) {
-            tName = arrayTicketName(name, i);
-        } else {
-            tName = listTicketName(name);
-        }
-        return new ResourceTicket<>(tName);
-    }
+    public void attach(NewConnectable owner);
     
     /**
-     * Adds a new ticket to this group.
-     * 
-     * @return added ticket
-     */
-    public ResourceTicket<T> add() {
-        ResourceTicket[] temp = new ResourceTicket[array.length+1];
-        System.arraycopy(array, 0, temp, 0, array.length);
-        array = temp;
-        ResourceTicket t = array[array.length-1] = create(array.length-1);
-        return t;
-    }
-    
-    /**
-     * Removes the given ticket from this group.
+     * Cleans up the group.
      * <p>
-     * Requires the group be a list.
-     * 
-     * @param t ticket to remove
-     * @return index of the removed ticket, or -1 if the ticket was not a member
-     * of this group
+     * Called if the group is removed from its owner or the owner is
+     * removed from the framegraph.
      */
-    public int remove(ResourceTicket t) {
-        requireAsList(true);
-        int i = array.length-1;
-        for (; i >= 0; i--) {
-            if (array[i] == t) {
-                break;
-            }
+    public void detach();
+    
+    /**
+     * Adds the given ticket to this group.
+     * 
+     * @param ticket 
+     */
+    public void add(ResourceTicket<T> ticket);
+    
+    /**
+     * Gets all tickets in this group.
+     * 
+     * @return 
+     */
+    public Collection<ResourceTicket<T>> getTickets();
+    
+    /**
+     * Connects each target ticket accepted by the target selector to a
+     * corresponding source ticket accepted by the source selector.
+     * 
+     * @param source
+     * @param sourceSelector
+     * @param targetSelector 
+     */
+    public void makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector);
+    
+    /**
+     * Gets the number of tickets in the group that have a
+     * non-null source.
+     * 
+     * @return 
+     */
+    public int getNumConnectedTickets();
+    
+    /*******************
+     * Implemented API *
+     *******************/
+    
+    /**
+     * Gets the first ticket accepted by the selector.
+     * 
+     * @param selector
+     * @return 
+     */
+    public default ResourceTicket<T> select(TicketSelector selector) {
+        return selector.selectFrom(getTickets());
+    }
+    
+    /**
+     * Adds each selected ticket in this group to {@code collection}.
+     * 
+     * @param <R>
+     * @param selector
+     * @param collection
+     * @return collection containing selected tickets
+     */
+    public default <R extends Collection<ResourceTicket<T>>> R select(TicketSelector selector, R collection) {
+        return selector.selectFrom(getTickets(), collection);
+    }
+    
+    /**
+     * Returns the size of this group.
+     * 
+     * @return 
+     */
+    public default int size() {
+        return getTickets().size();
+    }
+    
+    /**
+     * Called when the source of a ticket in this group is changing.
+     * 
+     * @param ticket ticket whose source is changing
+     * @param source the new source that will be assigned to the ticket
+     */
+    public default void ticketSourceChanged(ResourceTicket<T> ticket, ResourceTicket<T> source) {
+        setLayoutUpdateNeeded();
+    }
+    
+    /**
+     * Disconnects all tickets in this group from all target and source tickets.
+     */
+    public default void disconnect() {
+        for (ResourceTicket<T> t : getTickets()) {
+            t.setSource(null);
+            t.clearAllTargets();
         }
-        if (i >= 0) {
-            ResourceTicket[] temp = new ResourceTicket[array.length-1];
-            if (i > 0) {
-                System.arraycopy(array, 0, temp, 0, i);
-            }
-            if (i < array.length-1) {
-                System.arraycopy(array, i+1, temp, i, array.length-i-1);
-            }
-            array = temp;
-        }
-        return i;
     }
     
     /**
-     * Removes all tickets in this group that have the given ticket
-     * as their source.
+     * Connects the named target ticket from this group to the named source
+     * ticket from the source group.
      * 
-     * @param source 
-     * @return number of tickets removed
+     * @param source
+     * @param sourceName
+     * @param targetName 
      */
-    public int removeSource(ResourceTicket source) {
-        int n = 0;
-        for (int i = 0; i < array.length; i++) {
-            ResourceTicket t = array[i];
-            if (t.getSource() == source) {
-                t.setSource(null);
-                if (list) {
-                    array[i] = null;
-                }
-                n++;
-            }
-        }
-        if (list) {
-            ResourceTicket[] temp = new ResourceTicket[array.length-n];
-            for (int i = 0, j = 0; i < temp.length; i++) {
-                ResourceTicket t;
-                while ((t = array[j++]) == null) {}
-                temp[i] = t;
-            }
-            array = temp;
-        }
-        return n;
+    public default void makeInput(TicketGroup<T> source, String sourceName, String targetName) {
+        makeInput(source, TicketSelector.name(sourceName), TicketSelector.name(targetName));
     }
-
+    
     /**
-     * Requires this group as either a list or an array.
+     * Connects all named target tickets from this group to the corresponding
+     * named source tickets from the source group.
+     * <p>
+     * The source names and target names are intertwined within the same array
+     * {@code names}. Every other name is expected to be a source name, with the
+     * corresponding target name being directly after.
      * 
-     * @param list 
-     * @throws IllegalStateException if expected state is not true
+     * @param source
+     * @param names
+     * @throws IllegalArgumentException if an odd number of names is passed
      */
-    public void requireAsList(boolean list) {
-        if (this.list != list) {
-            throw new IllegalStateException("Group must be "+(list ? "a list" : "an array")+" in this context.");
+    public default void makeAllInput(TicketGroup<T> source, String... names) {
+        if ((names.length & 1) == 1) {
+            throw new IllegalArgumentException("An even number of names is required (found " + names.length + ").");
+        }
+        for (int i = 0; i < names.length; i += 2) {
+            makeInput(source, TicketSelector.name(names[i]), TicketSelector.name(names[i + 1]));
         }
     }
     
     /**
-     * Gets the name of this group.
      * 
-     * @return 
+     * @param selector 
      */
-    public String getName() {
-        return name;
+    public default void clearInput(TicketSelector selector) {
+        for (ResourceTicket<T> t : getTickets()) {
+            t.setSource(null);
+        }
     }
     
     /**
-     * Gets the ticket array.
+     * Releases all resources associated with all tickets in this group.
      * 
-     * @return 
+     * @param resources 
      */
-    public ResourceTicket<T>[] getArray() {
-        return array;
-    }
-    
-    /**
-     * Returns true if this group is a list.
-     * 
-     * @return 
-     */
-    public boolean isList() {
-        return list;
-    }
-    
-    /**
-     * 
-     * @param group
-     * @param i
-     * @return 
-     */
-    public static String arrayTicketName(String group, int i) {
-        return group+'['+i+']';
-    }
-    
-    /**
-     * 
-     * @param group
-     * @return 
-     */
-    public static String listTicketName(String group) {
-        return LIST+group;
-    }
-    
-    /**
-     * 
-     * @param name
-     * @return 
-     */
-    public static boolean isListTicket(String name) {
-        return name.startsWith(LIST);
-    }
-    
-    /**
-     * 
-     * @param name
-     * @return 
-     */
-    public static String extractGroupName(String name) {
-        return name.substring(LIST.length());
+    public default void releaseAll(ResourceList resources) {
+        for (ResourceTicket<T> t : getTickets()) {
+            resources.releaseOptional(t);
+        }
     }
     
 }

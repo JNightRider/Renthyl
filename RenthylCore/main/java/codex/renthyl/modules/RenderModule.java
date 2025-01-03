@@ -28,14 +28,12 @@
  */
 package codex.renthyl.modules;
 
-import codex.renthyl.Connectable;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.resources.ResourceUser;
-import codex.renthyl.resources.tickets.TicketCollection;
-import codex.renthyl.resources.tickets.TicketGroup;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketList;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -43,10 +41,10 @@ import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
+import codex.renthyl.resources.tickets.TicketGroup;
 
 /**
  *
@@ -54,23 +52,29 @@ import java.util.stream.Stream;
  */
 public abstract class RenderModule implements NewConnectable, ResourceUser, Savable {
     
-    private static final String MAIN_GROUP = "MAIN_GROUP";
+    protected static final String MAIN_GROUP = "MAIN_GROUP";
     
     protected FrameGraph frameGraph;
     protected String name;
     protected RenderContainer parent;
     protected final ModuleIndex index = new ModuleIndex();
-    protected final HashMap<String, TicketCollection> inputGroups = new HashMap<>();
-    protected final HashMap<String, TicketCollection> outputGroups = new HashMap<>();
+    protected final HashMap<String, TicketGroup> inputGroups = new HashMap<>();
+    protected final HashMap<String, TicketGroup> outputGroups = new HashMap<>();
     private BiConsumer<RenderContainer, RenderModule> connector;
     private int refs = 1; // start at one so this won't be temporally culled
     private int id = -1;
     
     public RenderModule() {
-        inputGroups.put(MAIN_GROUP, value);
-        outputGroups.put(MAIN_GROUP, value);
     }
     
+    @Override
+    public Iterator<ResourceTicket> getInputTickets() {
+        return ticketIterator(true, false);
+    }
+    @Override
+    public Iterator<ResourceTicket> getOutputTickets() {
+        return ticketIterator(false, true);
+    }
     @Override
     public ModuleIndex getIndex() {
         return index;
@@ -78,7 +82,7 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
     @Override
     public void countReferences() {
         refs = 0;
-        for (TicketCollection c : outputGroups.values()) {
+        for (TicketGroup c : outputGroups.values()) {
             refs += c.size();
         }
     }
@@ -106,17 +110,17 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
     }
     
     @Override
-    public <T> ResourceTicket<T> addInput(ResourceTicket<T> ticket) {
+    public <T> ResourceTicket<T> addInput(ResourceTicket ticket) {
         getMainInputGroup().add(ticket);
         return ticket;
     }
     @Override
-    public <T> ResourceTicket<T> addOutput(ResourceTicket<T> ticket) {
+    public <T> ResourceTicket<T> addOutput(ResourceTicket ticket) {
         getMainOutputGroup().add(ticket);
         return ticket;
     }
     @Override
-    public <T> TicketCollection<T> addInputGroup(TicketCollection<T> group) {
+    public <T, R extends TicketGroup<T>> R addInputGroup(R group) {
         if (inputGroups.put(group.getName(), group) != null) {
             throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\".");
         }
@@ -124,7 +128,7 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         return group;
     }
     @Override
-    public <T> TicketCollection<T> addOutputGroup(TicketCollection<T> group) {
+    public <T, R extends TicketGroup<T>> R addOutputGroup(R group) {
         if (outputGroups.put(group.getName(), group) != null) {
             throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\".");
         }
@@ -132,31 +136,30 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         return group;
     }
     @Override
-    public HashMap<String, TicketCollection> getInputGroups() {
+    public HashMap<String, TicketGroup> getInputGroups() {
         return inputGroups;
     }
     @Override
-    public HashMap<String, TicketCollection> getOutputGroups() {
+    public HashMap<String, TicketGroup> getOutputGroups() {
         return outputGroups;
     }
     @Override
-    public TicketCollection getMainInputGroup() {
+    public TicketGroup<Object> getMainInputGroup() {
         return inputGroups.get(MAIN_GROUP);
     }
     @Override
-    public TicketCollection getMainOutputGroup() {
+    public TicketGroup<Object> getMainOutputGroup() {
         return outputGroups.get(MAIN_GROUP);
+    }
+    @Override
+    public void setLayoutUpdateNeeded() {
+        if (frameGraph != null) {
+            frameGraph.setLayoutUpdateNeeded();
+        }
     }
     
     public int getId() {
         return id;
-    }
-        
-    private static ResourceTicket getTicketFromStream(Stream<ResourceTicket> stream, String name) {
-        return stream.filter(t -> name.equals(t.getName())).findFirst().orElse(null);
-    }
-    protected ResourceTicket[] getGroupArray(String name) {
-        return getGroup(name, true).getArray();
     }
     
     /**
@@ -167,7 +170,6 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
      */
     public void initializeModule(FrameGraph frameGraph) {
         if (this.frameGraph != null) {
-            System.out.println(getClass());
             throw new IllegalStateException("Module already initialized.");
         }
         if (name == null) {
@@ -176,6 +178,7 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         this.frameGraph = frameGraph;
         this.frameGraph.setLayoutUpdateNeeded();
         id = this.frameGraph.getNextId();
+        createMainGroups();
         initModule(this.frameGraph);
     }
     /**
@@ -186,7 +189,14 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
      * @param context
      * @param tpf 
      */
-    public void updateModule(FGRenderContext context, float tpf) {}
+    public void updateModule(FGRenderContext context, float tpf) {
+        for (TicketGroup g : inputGroups.values()) {
+            g.update();
+        }
+        for (TicketGroup g : outputGroups.values()) {
+            g.update();
+        }
+    }
     /**
      * Updates this module's index from the supplier.
      * 
@@ -220,18 +230,34 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
      * Cleans up this module from being attached to a FrameGraph.
      */
     public void cleanupModule() {
+        for (TicketGroup g : inputGroups.values()) {
+            g.detach();
+        }
+        for (TicketGroup g : outputGroups.values()) {
+            g.detach();
+        }
         id = -1;
         if (frameGraph != null) {
             frameGraph.setLayoutUpdateNeeded();
             cleanupModule(frameGraph);
-            for (TicketCollection g : inputGroups.values()) {
+            for (TicketGroup g : inputGroups.values()) {
                 g.disconnect();
             }
-            for (TicketCollection g : outputGroups.values()) {
+            for (TicketGroup g : outputGroups.values()) {
                 g.disconnect();
             }
+            outputGroups.clear();
+            inputGroups.clear();
             frameGraph = null;
         }
+    }
+    
+    /**
+     * Adds an input and an output group to the module to be main groups.
+     */
+    protected void createMainGroups() {
+        addInputGroup(new TicketList(MAIN_GROUP));
+        addOutputGroup(new TicketList(MAIN_GROUP));
     }
     
     /**

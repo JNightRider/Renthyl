@@ -11,6 +11,7 @@ import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -72,7 +73,7 @@ public class SimpleFrameGraph extends SimpleApplication {
         // Add a pass that will merge all the queues created by the previous pass into
         // a single queue that can easily be passed around. We pass "5" as the argument
         // because we want to merge 5 queues into one.
-        QueueMergePass merge = fg.add(new QueueMergePass(5));
+        QueueMergePass merge = fg.add(new QueueMergePass());
         
         // Add a pass that will render all geometries in a queue to a color texture and
         // a depth texture.
@@ -87,16 +88,8 @@ public class SimpleFrameGraph extends SimpleApplication {
         // queues created by the enqueue pass into a single queue. Each individual
         // queue is attached to a group called "Queues", and the geometries inside each
         // queue will maintain their correct order.
-        merge.makeAllGroupInput(enqueue, new String[]{"Opaque", "Sky", "Transparent", "Gui", "Translucent"}, "Queues");
-        
-        // Note: the above code is shorthand for:
-            // merge.makeInput(enqueue, "Opaque", "Queues[0]");
-            // merge.makeInput(enqueue, "Sky", "Queues[1]");
-            // merge.makeInput(enqueue, "Transparent", "Queues[2]");
-            // merge.makeInput(enqueue, "Gui", "Queues[3]");
-            // merge.makeInput(enqueue, "Translucent", "Queues[4]");
-        // The array syntax is used for accessing an individual ticket within a group of tickets.
-        // This method is harder to write, so obviously we prefer the shorthand!
+        merge.getInputGroup("Queues").makeInput(enqueue.getMainOutputGroup(),
+                TicketSelector.anyName("Opaque", "Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
         
         // Connect the merge pass to the geometry pass. This way, the geometry pass
         // will render from the merged queue created by the merge pass.

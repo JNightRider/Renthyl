@@ -28,12 +28,11 @@
  */
 package codex.renthyl.modules;
 
-import codex.renthyl.Connectable;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketGroup;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -76,6 +75,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     @Override
     public void updateModule(FGRenderContext context, float tpf) {
+        super.updateModule(context, tpf);
         for (R m : queue) {
             m.updateModule(context, tpf);
         }
@@ -379,15 +379,20 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param targetTicket
      * @param target 
      */
-    public void makeInternalInput(String sourceTicket, String targetTicket, Connectable target) {
-        ResourceTicket in = getInput(sourceTicket, true);
-        if (TicketGroup.isListTicket(targetTicket)) {
-            ResourceTicket t = target.addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
-            t.setSource(in);
-        } else {
-            ResourceTicket t = target.getInput(targetTicket, true);
-            t.setSource(in);
-        }
+    public void makeInternalInput(String sourceTicket, String targetTicket, NewConnectable target) {
+        makeInternalInput(TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket), target);
+    }
+    
+    /**
+     * Connects selected source (input) tickets from this container to the selected
+     * target (input) tickets from the target child Connectable.
+     * 
+     * @param sourceSelector
+     * @param targetSelector
+     * @param target 
+     */
+    public void makeInternalInput(TicketSelector sourceSelector, TicketSelector targetSelector, NewConnectable target) {
+        target.getMainInputGroup().makeInput(getMainInputGroup(), sourceSelector, targetSelector);
     }
     
     /**
@@ -398,16 +403,20 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param sourceTicket
      * @param targetTicket 
      */
-    public void makeInternalOutput(Connectable source, String sourceTicket, String targetTicket) {
-        ResourceTicket out = source.getOutput(sourceTicket, true);
-        if (TicketGroup.isListTicket(targetTicket)) {
-            ResourceTicket t = addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
-            t.setSource(out);
-            throw new UnsupportedOperationException("Internal connection to an output ticket list is not yet supported.");
-        } else {
-            ResourceTicket target = getOutput(targetTicket, true);
-            target.setSource(out);
-        }
+    public void makeInternalOutput(NewConnectable source, String sourceTicket, String targetTicket) {
+        makeInternalOutput(source, TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket));
+    }
+    
+    /**
+     * Connects the selected source (output) tickets from the source connectable
+     * to the selected target (output) tickets from this container.
+     * 
+     * @param source
+     * @param sourceSelector
+     * @param targetSelector 
+     */
+    public void makeInternalOutput(NewConnectable source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+        getMainOutputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
     }
     
     /**

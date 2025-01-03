@@ -10,13 +10,12 @@ import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.export.binary.BinaryLoader;
-import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
-import com.jme3.renderer.ViewPort;
 
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
@@ -96,15 +95,10 @@ public class Renthyl {
         
         fg.add(new ControlRenderPass());
         SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.add(new QueueMergePass(5));
+        QueueMergePass merge = fg.add(new QueueMergePass());
         OutputGeometryPass out = fg.add(new OutputGeometryPass());
         
-        merge.makeInput(enqueue, "Opaque", "Queues[0]");
-        merge.makeInput(enqueue, "Sky", "Queues[1]");
-        merge.makeInput(enqueue, "Transparent", "Queues[2]");
-        merge.makeInput(enqueue, "Gui", "Queues[3]");
-        merge.makeInput(enqueue, "Translucent", "Queues[4]");
-        
+        merge.makeInput(enqueue, TicketSelector.All, TicketSelector.All);
         out.makeInput(merge, "Result", "Geometry");
         
         return fg;
@@ -144,6 +138,11 @@ public class Renthyl {
         
     }
     
+    /**
+     * Gets the default job executor used when no other is specified.
+     * 
+     * @return 
+     */
     public DefaultJobExecutor getBaseExecutor() {
         return defaultExecutor;
     }
