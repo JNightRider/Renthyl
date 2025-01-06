@@ -28,10 +28,11 @@
  */
 package codex.renthyl.resources.tickets;
 
+import codex.renthyl.export.TicketIndex;
 import codex.renthyl.resources.ResourceView;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Objects;
 import jdk.internal.foreign.ResourceScopeImpl.ResourceList;
 
 /**
@@ -53,11 +54,11 @@ public class ResourceTicket <T> {
     private TicketGroup<T> group;
     private String name;
     private int localIndex;
-    private int exportGroupId = -1;
     private long objectId = -1;
     private boolean bound = false;
     private ResourceTicket<T> source;
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
+    private TicketIndex exportIndex;
     
     public ResourceTicket() {
         this(null, INVALID);
@@ -151,6 +152,20 @@ public class ResourceTicket <T> {
         this.group = group;
     }
     /**
+     * Sets the export index of this ticket.
+     * 
+     * @param exportIndex 
+     */
+    protected void setExportIndex(TicketIndex exportIndex) {
+        this.exportIndex = Objects.requireNonNull(exportIndex);
+    }
+    /**
+     * Clears the export index.
+     */
+    public void clearExportIndex() {
+        this.exportIndex = null;
+    }
+    /**
      * Sets the source ticket.
      * 
      * @param source 
@@ -202,16 +217,6 @@ public class ResourceTicket <T> {
      */
     public void setObjectId(long objectId) {
         this.objectId = objectId;
-    }
-    /**
-     * Sets the id of the group this ticket is exported with.
-     * <p>
-     * Called internally. Do not use.
-     * 
-     * @param exportGroupId 
-     */
-    public void setExportGroupId(int exportGroupId) {
-        this.exportGroupId = exportGroupId;
     }
     
     /**
@@ -300,11 +305,12 @@ public class ResourceTicket <T> {
         return targets;
     }
     /**
+     * Gets the export index of this ticket.
      * 
      * @return 
      */
-    public int getExportGroupId() {
-        return exportGroupId;
+    public TicketIndex getExportIndex() {
+        return exportIndex;
     }
     
     @Override

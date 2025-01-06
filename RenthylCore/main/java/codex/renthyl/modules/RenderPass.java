@@ -79,7 +79,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
     }
     
     @Override
-    public void initModule(FrameGraph frameGraph) {
+    public void initializeModule(FrameGraph frameGraph) {
         initialize(frameGraph);
     }
     @Override
@@ -89,9 +89,10 @@ public abstract class RenderPass extends RenderModule implements Savable {
     }
     @Override
     public void executeRender(FGRenderContext context) {
-        if (context.isAsync()) {
+        // permissions are always required
+        //if (context.isAsync()) {
             claimResourcePermissions();
-        }
+        //}
         execute(context);
         releaseAll();
         if (index.isMainThread()) {
@@ -104,7 +105,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
         frameBuffers.flush();
     }
     @Override
-    public void cleanupModule(FrameGraph frameGraph) {
+    public void cleanupModule() {
         cleanup(frameGraph);
         frameBuffers.clear();
         this.frameGraph = null;

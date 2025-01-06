@@ -28,114 +28,90 @@
  */
 package codex.renthyl.export;
 
+import codex.renthyl.modules.RenderModule;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Represents a connection of tickets between render passes.
  * 
  * @author codex
  */
-public class SavableConnection implements Savable {
+public abstract class SavableConnection implements Savable {
     
-    private int targetId, sourceId;
-    private String targetTicket, sourceTicket;
+    private int sourceModuleId = -1;
+    private int targetModuleId = -1;
+    private String sourceGroup, targetGroup;
     
-    /**
-     * Serialization only.
-     */
     public SavableConnection() {}
-    /**
-     * 
-     * @param targetId
-     * @param sourceId
-     * @param targetTicket
-     * @param sourceTicket 
-     */
-    public SavableConnection(int targetId, int sourceId, String targetTicket, String sourceTicket) {
-        this.targetId = targetId;
-        this.sourceId = sourceId;
-        this.targetTicket = targetTicket;
-        this.sourceTicket = sourceTicket;
+    
+    public void setSourceModuleId(int sourceModuleId) {
+        this.sourceModuleId = sourceModuleId;
+    }
+    public void setTargetModuleId(int targetModuleId) {
+        this.targetModuleId = targetModuleId;
+    }
+    public void setSourceGroup(String sourceGroup) {
+        this.sourceGroup = sourceGroup;
+    }
+    public void setTargetGroup(String targetGroup) {
+        this.targetGroup = targetGroup;
     }
     
-    /**
-     * 
-     * @param targetId 
-     */
-    public void setTargetId(int targetId) {
-        this.targetId = targetId;
+    public int getSourceModuleId() {
+        return sourceModuleId;
     }
-    /**
-     * 
-     * @param sourceId 
-     */
-    public void setSourceId(int sourceId) {
-        this.sourceId = sourceId;
+    public int getTargetModuleId() {
+        return targetModuleId;
     }
-    /**
-     * 
-     * @param targetTicket 
-     */
-    public void setTargetTicket(String targetTicket) {
-        this.targetTicket = targetTicket;
+    public String getSourceGroup() {
+        return sourceGroup;
     }
-    /**
-     * 
-     * @param sourceTicket 
-     */
-    public void setSourceTicket(String sourceTicket) {
-        this.sourceTicket = sourceTicket;
+    public String getTargetGroup() {
+        return targetGroup;
     }
     
-    /**
-     * 
-     * @return 
-     */
-    public int getTargetId() {
-        return targetId;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public int getSourceId() {
-        return sourceId;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public String getTargetTicket() {
-        return targetTicket;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public String getSourceTicket() {
-        return sourceTicket;
+    public <T extends SavableConnection> T getAs(Class<T> type) {
+        if (!type.isAssignableFrom(getClass())) {
+            throw new ClassCastException("Expected connection as " + type.getName()
+                    + " but received " + getClass().getName());
+        }
+        return (T)this;
     }
     
     @Override
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);
-        out.write(targetId, "inputId", -1);
-        out.write(sourceId, "outputId", -1);
-        out.write(targetTicket, "inputTicket", "");
-        out.write(sourceTicket, "outputTicket", "");
+        if (sourceModuleId < 0) {
+            throw new IOException("Source module not specified.");
+        }
+        if (targetModuleId < 0) {
+            throw new IOException("Target module not specified.");
+        }
+        Objects.requireNonNull(sourceGroup, "Source group not specified.");
+        Objects.requireNonNull(targetGroup, "Target group not specified.");
+        out.write(sourceModuleId, "sourceModuleId", 0);
+        out.write(targetModuleId, "targetModuleId", 0);
+        out.write(sourceGroup, "sourceGroup", RenderModule.MAIN_GROUP);
+        out.write(targetGroup, "targetGroup", RenderModule.MAIN_GROUP);
+        write(out);
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
-        targetId = in.readInt("inputId", -1);
-        sourceId = in.readInt("outputId", -1);
-        targetTicket = in.readString("inputTicket", "");
-        sourceTicket = in.readString("outputTicket", "");
+        sourceModuleId = in.readInt("sourceModuleId", 0);
+        targetModuleId = in.readInt("targetModuleId", 0);
+        sourceGroup = in.readString("sourceGroup", RenderModule.MAIN_GROUP);
+        targetGroup = in.readString("targetGroup", RenderModule.MAIN_GROUP);
+        read(in);
     }
+    
+    protected abstract void write(OutputCapsule out) throws IOException;
+    protected abstract void read(InputCapsule in) throws IOException;
     
 }

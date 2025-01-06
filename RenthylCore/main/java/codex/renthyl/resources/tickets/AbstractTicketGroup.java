@@ -1,22 +1,55 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ * Copyright (c) 2025, codex
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package codex.renthyl.resources.tickets;
 
-import codex.renthyl.modules.NewConnectable;
+import codex.renthyl.export.NamedTicketIndex;
+import codex.renthyl.export.TicketIndex;
 import java.util.Iterator;
+import codex.renthyl.modules.Connectable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
- *
+ * Basic implementation of a TicketGroup.
+ * 
  * @author codex
  * @param <T>
  */
 public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     
     protected final String name;
-    protected NewConnectable owner;
+    protected Connectable owner;
     private int connectedTickets = 0;
+    private final ArrayList<ResourceTicket<T>> tempTargets = new ArrayList<>();
 
     public AbstractTicketGroup(String name) {
         this.name = name;
@@ -27,11 +60,9 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         return name;
     }
     @Override
-    public void update() {}
-    @Override
-    public void attach(NewConnectable owner) {
-        if (owner != null) {
-            throw new IllegalStateException("Collection is already attached to a Connectable.");
+    public void attach(Connectable owner) {
+        if (this.owner != null) {
+            throw new IllegalStateException("Group is already attached to a Connectable.");
         }
         this.owner = owner;
         this.owner.setLayoutUpdateNeeded();
@@ -39,41 +70,33 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     @Override
     public void detach() {
         if (owner == null) {
-            throw new IllegalStateException("Collection is not attached to a Connectable.");
+            throw new IllegalStateException("Group is not attached to a Connectable.");
         }
         clear();
         owner = null;
     }
     @Override
     public void add(ResourceTicket<T> ticket) {
-        insert(ticket);
+        append(ticket);
     }
     @Override
     @SuppressWarnings("null")
     public void makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
-        // Implementation note:
-        // This is not implemented in the interface, because it uses a private helper method
-        // that I'd rather not have exposed to the public API.
-        Iterator<ResourceTicket<T>> sourceIt = source.iterator();
-        Iterator<ResourceTicket<T>> targetIt = iterator();
-        // I don't think I'll ever connect more than 1000 tickets, and this may save me later.
-        for (int i = 0;; i++) {
-            if (i >= 1000) {
-                throw new IndexOutOfBoundsException("An attempt was made at connecting more than 1000 tickets: aborting.");
+        targetSelector.selectFromOrElse(this, tempTargets, null);
+        int j = 0;
+        for (ResourceTicket<T> s : source) {
+            if (sourceSelector.select(s, j)) {
+                for (int i = 0; i < tempTargets.size(); i++) {
+                    ResourceTicket<T> t = tempTargets.get(i);
+                    if (t != null && sourceSelector.select(s, t, j) && targetSelector.select(t, s, i)) {
+                        t.setSource(s);
+                        tempTargets.set(i, null);
+                    }
+                }
             }
-            // find an acceptable source ticket to use
-            ResourceTicket<T> s = findNextAcceptableTicket(sourceIt, sourceSelector);
-            if (s == null) {
-                break;
-            }
-            // find a corresponding target ticket to use
-            ResourceTicket<T> t = findNextAcceptableTicket(targetIt, targetSelector);
-            if (t == null) {
-                break;
-            }
-            // connect found tickets to each other
-            t.setSource(s);
+            j++;
         }
+        tempTargets.clear();
     }
     @Override
     public void ticketSourceChanged(ResourceTicket<T> ticket, ResourceTicket<T> source) {
@@ -101,12 +124,46 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     public int getNumConnectedTickets() {
         return connectedTickets;
     }
+    @Override
+    public void applySavedConnections(Map<Integer, Connectable> registry, Collection<TicketIndex> indices) {
+        for (TicketIndex i : indices) {
+            Objects.requireNonNull(i.getSource(), "Connection source not defined.");
+            TicketSelector target = i.createSelector();
+            TicketSelector source = i.getSource().createSelector();
+            makeInput(i.getSource().getGroup(registry), source, target);
+        }
+    }
+    @Override
+    public void generateExportIndices(Consumer<TicketIndex> setup) {
+        for (ResourceTicket<T> t : getTickets()) {
+            NamedTicketIndex i = new NamedTicketIndex();
+            setup.accept(i);
+            t.setExportIndex(i);
+        }
+    }
     
-    protected ResourceTicket<T> insert(ResourceTicket ticket) {
+    /**
+     * Appends the ticket to the end of the {@link #getTickets() ticket
+     * collection}.
+     * 
+     * @param ticket
+     * @return 
+     */
+    protected ResourceTicket<T> append(ResourceTicket ticket) {
         getTickets().add(ticket);
         ticket.setGroup(this);
         return ticket;
     }
+    
+    /**
+     * Removes the ticket from the {@link #getTickets() ticket collection}.
+     * <p>
+     * The ticket's source, targets, and group are cleared if the ticket
+     * was part of the ticket collection.
+     * 
+     * @param ticket
+     * @return 
+     */
     protected boolean remove(ResourceTicket<T> ticket) {
         if (getTickets().remove(ticket)) {
             ticket.setSource(null);
@@ -116,6 +173,12 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         }
         return false;
     }
+    
+    /**
+     * Clears all tickets from the {@link #getTickets() ticket collection}.
+     * <p>
+     * Each ticket's source, targets, and group are cleared.
+     */
     protected void clear() {
         for (ResourceTicket<T> t : getTickets()) {
             t.setSource(null);
@@ -123,15 +186,6 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
             t.setGroup(null);
         }
         getTickets().clear();
-    }
-    protected ResourceTicket<T> findNextAcceptableTicket(Iterator<ResourceTicket<T>> it, TicketSelector selector) {
-        while (it.hasNext()) {
-            ResourceTicket<T> t = it.next();
-            if (selector.test(t)) {
-                return t;
-            }
-        }
-        return null;
     }
     
 }

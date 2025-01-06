@@ -2,19 +2,20 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package codex.renthyl.examples;
+package codex.renthyl.tests;
 
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
-import codex.renthyl.modules.Connectable;
 import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
@@ -33,8 +34,9 @@ public class SimpleFrameGraph extends SimpleApplication {
     @Override
     public void simpleInitApp() {
         
-        // Before anything else, initialize Renthyl.
-        Renthyl.initialize(this);
+        /*********
+         * Setup *
+         *********/
         
         // Create and attach a cube to the scene for the FrameGraph to render.
         Geometry cube = new Geometry("Cube", new Box(1, 1, 1));
@@ -43,9 +45,19 @@ public class SimpleFrameGraph extends SimpleApplication {
         cube.setMaterial(cubeMat);
         rootNode.attachChild(cube);
         
-        // Make the viewport's background not black so we know if FrameGraph
+        // Make the viewport's background not black so we know if the FrameGraph
         // is indeed rendering to the screen at all.
         viewPort.setBackgroundColor(ColorRGBA.DarkGray);
+        
+        // Increase the camera's speed.
+        flyCam.setMoveSpeed(10f);
+        
+        /**************
+         * FrameGraph *
+         **************/
+        
+        // Before anything else, initialize Renthyl.
+        Renthyl.initialize(this);
         
         // Declare a new FrameGraph and attach it to the main viewport.
         FrameGraph fg = new FrameGraph(assetManager);
@@ -84,11 +96,9 @@ public class SimpleFrameGraph extends SimpleApplication {
         
         // Connect the enqueue pass to the merge pass. In this case, we're telling
         // the merge pass to merge the opaque, sky, transparent, gui, and translucent
-        // queues created by the enqueue pass into a single queue. Each individual
-        // queue is attached to a group called "Queues", and the geometries inside each
-        // queue will maintain their correct order.
-        merge.getInputGroup("Queues").makeInput(enqueue.getMainOutputGroup(),
-                TicketSelector.anyName("Opaque", "Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
+        // queues created by the enqueue pass into a single queue.
+        merge.makeInput(enqueue.getMainOutputGroup(),
+                TicketSelector.names("Opaque", "Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
         
         // Connect the merge pass to the geometry pass. This way, the geometry pass
         // will render from the merged queue created by the merge pass.

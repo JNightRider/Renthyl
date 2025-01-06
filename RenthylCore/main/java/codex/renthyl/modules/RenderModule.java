@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, codex
+ * Copyright (c) 2025, codex
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -50,9 +50,9 @@ import codex.renthyl.resources.tickets.TicketGroup;
  *
  * @author codex
  */
-public abstract class RenderModule implements NewConnectable, ResourceUser, Savable {
+public abstract class RenderModule implements Connectable, ResourceUser, Savable {
     
-    protected static final String MAIN_GROUP = "MAIN_GROUP";
+    public static final String MAIN_GROUP = "MAIN_GROUP";
     
     protected FrameGraph frameGraph;
     protected String name;
@@ -62,7 +62,7 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
     protected final HashMap<String, TicketGroup> outputGroups = new HashMap<>();
     private BiConsumer<RenderContainer, RenderModule> connector;
     private int refs = 1; // start at one so this won't be temporally culled
-    private int id = -1;
+    private int exportId = -1;
     
     public RenderModule() {
     }
@@ -100,13 +100,13 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);
         out.write(name, "name", "RenderModule");
-        out.write(id, "exportId", -1);
+        out.write(exportId, "exportId", -1);
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
         name = in.readString("name", "RenderModule");
-        id = in.readInt("exportId", -1);
+        exportId = in.readInt("exportId", -1);
     }
     
     @Override
@@ -158,8 +158,11 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         }
     }
     
-    public int getId() {
-        return id;
+    public int getExportId() {
+        return exportId;
+    }
+    public void setExportId(int id) {
+        this.exportId = id;
     }
     
     /**
@@ -177,9 +180,8 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         }
         this.frameGraph = frameGraph;
         this.frameGraph.setLayoutUpdateNeeded();
-        id = this.frameGraph.getNextId();
         createMainGroups();
-        initModule(this.frameGraph);
+        //initModule(this.frameGraph);
     }
     /**
      * Updates the module before any rendering-related operations occur.
@@ -189,14 +191,7 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
      * @param context
      * @param tpf 
      */
-    public void updateModule(FGRenderContext context, float tpf) {
-        for (TicketGroup g : inputGroups.values()) {
-            g.update();
-        }
-        for (TicketGroup g : outputGroups.values()) {
-            g.update();
-        }
-    }
+    public void updateModule(FGRenderContext context, float tpf) {}
     /**
      * Updates this module's index from the supplier.
      * 
@@ -208,11 +203,17 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
         index.set(queues.add(this, parentThread));
     }
     /**
+     * Prepares the module for execution.
+     * 
+     * @param context 
+     */
+    public void prepareModuleRender(FGRenderContext context) {}
+    /**
      * Executes this module.
      * 
      * @param context 
      */
-    public void executeModuleRender(FGRenderContext context) {
+    public void executeRender(FGRenderContext context) {
         if (!isUsed()) {
             return;
         }
@@ -223,28 +224,19 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
      * 
      * @param context 
      */
-    public void resetModuleRender(FGRenderContext context) {
-        resetRender(context);
-    }
+    public void resetRender(FGRenderContext context) {}
     /**
      * Cleans up this module from being attached to a FrameGraph.
      */
     public void cleanupModule() {
-        for (TicketGroup g : inputGroups.values()) {
-            g.detach();
-        }
-        for (TicketGroup g : outputGroups.values()) {
-            g.detach();
-        }
-        id = -1;
         if (frameGraph != null) {
             frameGraph.setLayoutUpdateNeeded();
-            cleanupModule(frameGraph);
+            //cleanupModule(frameGraph);
             for (TicketGroup g : inputGroups.values()) {
-                g.disconnect();
+                g.detach();
             }
             for (TicketGroup g : outputGroups.values()) {
-                g.disconnect();
+                g.detach();
             }
             outputGroups.clear();
             inputGroups.clear();
@@ -255,53 +247,38 @@ public abstract class RenderModule implements NewConnectable, ResourceUser, Sava
     /**
      * Adds an input and an output group to the module to be main groups.
      */
-    protected void createMainGroups() {
-        addInputGroup(new TicketList(MAIN_GROUP));
-        addOutputGroup(new TicketList(MAIN_GROUP));
+    private void createMainGroups() {
+        if (!addInputGroup(createMainInputGroup(MAIN_GROUP)).getName().equals(MAIN_GROUP)) {
+            throw new IllegalStateException("Main input group's name must be \"" + MAIN_GROUP + "\"");
+        }
+        if (!addOutputGroup(createMainOutputGroup(MAIN_GROUP)).getName().equals(MAIN_GROUP)) {
+            throw new IllegalStateException("Main output group's name must be \"" + MAIN_GROUP + "\"");
+        }
     }
-    
     /**
-     * Initializes the RenderModule implementation.
+     * Creates a group to be used as the main input group.
      * <p>
-     * For most cases, use {@link #initializeModule(com.jme3.renderer.framegraph.FrameGraph)}
-     * instead.
+     * Implementation is required to use {@code name} as the
+     * name of the ticket group.
      * 
-     * @param frameGraph 
+     * @param name
+     * @return 
      */
-    protected abstract void initModule(FrameGraph frameGraph);
+    protected TicketGroup createMainInputGroup(String name) {
+        return new TicketList(name);
+    }
     /**
-     * Prepares the RenderModule implementation.
+     * Creates a group to be used as the main output group.
      * <p>
-     * For most cases, use
-     * {@link #prepareModuleRender(com.jme3.renderer.framegraph.FGRenderContext, com.jme3.renderer.framegraph.PassIndex)}
-     * instead.
+     * Implementation is required to use {@code name} as the
+     * name of the ticket group.
      * 
-     * @param context 
+     * @param name
+     * @return 
      */
-    protected abstract void prepareModuleRender(FGRenderContext context);
-    /**
-     * Executes the RenderModule implementation.
-     * <p>
-     * For most cases, use {@link #executeModuleRender(com.jme3.renderer.framegraph.FGRenderContext)}
-     * instead.
-     * 
-     * @param context 
-     */
-    protected abstract void executeRender(FGRenderContext context);
-    /**
-     * Resets the RenderModule after execution.
-     * 
-     * @param context 
-     */
-    protected abstract void resetRender(FGRenderContext context);
-    /**
-     * Cleans up the RenderModule implementation.
-     * <p>
-     * For most cases, use {@link #cleanupModule()} instead.
-     * 
-     * @param frameGraph 
-     */
-    protected abstract void cleanupModule(FrameGraph frameGraph);
+    protected TicketGroup createMainOutputGroup(String name) {
+        return new TicketList(name);
+    }
     
     /**
      * Called when all rendering is complete in a render frame this

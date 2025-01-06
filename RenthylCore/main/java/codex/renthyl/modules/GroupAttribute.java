@@ -33,7 +33,7 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.client.GraphTarget;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketArray;
 import com.jme3.export.InputCapsule;
@@ -68,7 +68,7 @@ public class GroupAttribute extends RenderPass {
     public static final String INPUT = "Input", OUTPUT = "Output";
     
     private int groupSize = 2;
-    private ArbitraryTicketList<Object> input;
+    private DynamicTicketList<Object> input;
     private TicketArray<Object> output;
     private final ArrayList<GraphSource> sources = new ArrayList<>(5);
     private final ArrayList<GraphTarget> targets = new ArrayList<>(5);
@@ -80,7 +80,7 @@ public class GroupAttribute extends RenderPass {
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        input = addInputGroup(new ArbitraryTicketList(INPUT));
+        input = addInputGroup(new DynamicTicketList(INPUT));
         output = addOutputGroup(new TicketArray(OUTPUT, groupSize));
     }
     @Override

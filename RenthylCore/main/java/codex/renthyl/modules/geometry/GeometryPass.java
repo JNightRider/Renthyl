@@ -32,6 +32,7 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
@@ -62,7 +63,7 @@ public class GeometryPass extends RenderPass {
     private ResourceTicket<Texture2D> inColor, inDepth, outColor, outDepth;
     private ResourceTicket<GeometryQueue> geometry;
     private TextureDef<Texture2D> colorDef, depthDef;
-    private GeometryRenderHandler geometryHandler;
+    private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
     
     public GeometryPass() {}
     
@@ -95,9 +96,9 @@ public class GeometryPass extends RenderPass {
         FrameBuffer fb = getFrameBuffer(context, 1);
         resources.acquireColorTarget(fb, outColor);
         resources.acquireDepthTarget(fb, outDepth);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
-        context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
+        //context.registerMode(RenderMode.background(ColorRGBA.BlackNoAlpha));
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
         context.renderTextures(resources.acquireOrElse(inColor, null), resources.acquireOrElse(inDepth, null));
         resources.acquire(geometry).render(context, geometryHandler);
     }

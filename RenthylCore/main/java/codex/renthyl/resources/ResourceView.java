@@ -112,6 +112,9 @@ public class ResourceView <T> {
         }
         ticket.clearBindFlag();
         if (!writeComplete.getAndSet(true)) {
+            if (!readLock.isHeldByCurrentThread()) {
+                throw new IllegalStateException("Read lock not acquired before releasing.");
+            }
             if (isReadConcurrent()) {
                 readCondition.signalAll();
             } else {

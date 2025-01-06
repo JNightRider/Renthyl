@@ -31,7 +31,6 @@ package codex.renthyl.modules;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -62,16 +61,18 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     
     @Override
-    public void initModule(FrameGraph frameGraph) {
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
         for (RenderModule m : queue) {
             m.initializeModule(frameGraph);
         }
     }
     @Override
-    public void cleanupModule(FrameGraph frameGraph) {
+    public void cleanupModule() {
         for (RenderModule m : queue) {
             m.cleanupModule();
         }
+        super.initializeModule(frameGraph);
     }
     @Override
     public void updateModule(FGRenderContext context, float tpf) {
@@ -89,6 +90,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     @Override
     public void prepareModuleRender(FGRenderContext context) {
+        super.prepareModuleRender(context);
         for (RenderModule m : queue) {
             // Checking for usage and culling states is critical. Niavely preparing modules
             // could lead to resources not fully being released which will result in an exception.
@@ -96,11 +98,6 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
                 m.prepareModuleRender(context);
             }
         }
-    }
-    @Override
-    public void executeRender(FGRenderContext context) {
-        // Nothing to do. Modules are executed via execution jobs instead of
-        // traversing the framegraph.
     }
     @Override
     public void resetRender(FGRenderContext context) {
@@ -379,7 +376,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param targetTicket
      * @param target 
      */
-    public void makeInternalInput(String sourceTicket, String targetTicket, NewConnectable target) {
+    public void makeInternalInput(String sourceTicket, String targetTicket, Connectable target) {
         makeInternalInput(TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket), target);
     }
     
@@ -391,7 +388,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param targetSelector
      * @param target 
      */
-    public void makeInternalInput(TicketSelector sourceSelector, TicketSelector targetSelector, NewConnectable target) {
+    public void makeInternalInput(TicketSelector sourceSelector, TicketSelector targetSelector, Connectable target) {
         target.getMainInputGroup().makeInput(getMainInputGroup(), sourceSelector, targetSelector);
     }
     
@@ -403,7 +400,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param sourceTicket
      * @param targetTicket 
      */
-    public void makeInternalOutput(NewConnectable source, String sourceTicket, String targetTicket) {
+    public void makeInternalOutput(Connectable source, String sourceTicket, String targetTicket) {
         makeInternalOutput(source, TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket));
     }
     
@@ -415,7 +412,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param sourceSelector
      * @param targetSelector 
      */
-    public void makeInternalOutput(NewConnectable source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+    public void makeInternalOutput(Connectable source, TicketSelector sourceSelector, TicketSelector targetSelector) {
         getMainOutputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
     }
     

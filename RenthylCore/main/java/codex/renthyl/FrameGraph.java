@@ -248,7 +248,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
         
         // reset
         context.popActiveModes();
-        root.resetModuleRender(context);
+        root.resetRender(context);
         pContext.getRenderObjects().clearReservations();
         resources.reset();
         asyncJobs.clear();

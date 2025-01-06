@@ -32,8 +32,9 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.resources.tickets.TicketList;
 
 /**
@@ -52,7 +53,7 @@ import codex.renthyl.resources.tickets.TicketList;
  */
 public class QueueMergePass extends RenderPass {
     
-    private ArbitraryTicketList<GeometryQueue> queues;
+    private DynamicTicketList<GeometryQueue> queues;
     private ResourceTicket<GeometryQueue> result;
     private final GeometryQueue target = new GeometryQueue();
 
@@ -63,9 +64,8 @@ public class QueueMergePass extends RenderPass {
         result = addOutput("Result");
     }
     @Override
-    protected void createMainGroups() {
-        queues = addInputGroup(new ArbitraryTicketList<>(MAIN_GROUP));
-        addOutputGroup(new TicketList(MAIN_GROUP));
+    protected TicketGroup createMainInputGroup(String name) {
+        return (queues = new DynamicTicketList<>(name));
     }
     @Override
     protected void prepare(FGRenderContext context) {

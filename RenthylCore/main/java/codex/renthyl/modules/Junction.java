@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, codex
+ * Copyright (c) 2025, codex
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,9 +32,9 @@ import codex.boost.export.SavableObject;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketList;
+import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -43,13 +43,11 @@ import com.jme3.export.OutputCapsule;
 import java.io.IOException;
 
 /**
- * Merges several inputs into one output by choosing one input to connect to
- * the output using a controllable index.
+ * Chooses one input resource to produce as its only output resource using
+ * a controllable index. All other resources are ignored.
  * <p>
- * Junction can either function as a set of individual inputs (group size is 1), or as a set of
- * group inputs (group size is greater than 1).
- * <p>
- * Static methods should be used to correctly reference inputs and outputs.
+ * Order of the input resources is entirely determined by what order the
+ * corresponding tickets are connected to this pass.
  * 
  * @author codex
  * @param <T>
@@ -58,7 +56,7 @@ public class Junction <T> extends RenderPass {
     
     public static final String OUTPUT = "Output";
     
-    private ArbitraryTicketList<T> input;
+    private DynamicTicketList<T> input;
     private ResourceTicket<T> output;
     private GraphSource<Integer> source;
     
@@ -67,9 +65,8 @@ public class Junction <T> extends RenderPass {
         output = addOutput(OUTPUT);
     }
     @Override
-    protected void createMainGroups() {
-        input = addInputGroup(new ArbitraryTicketList<>(MAIN_GROUP));
-        addOutputGroup(new TicketList(MAIN_GROUP));
+    protected TicketGroup createMainInputGroup(String name) {
+        return (input = new DynamicTicketList<>(name));
     }
     @Override
     public void updateModule(FGRenderContext context, float tpf) {
@@ -106,12 +103,27 @@ public class Junction <T> extends RenderPass {
         output.setSource(i < 0 || i >= input.size() ? null : input.select(TicketSelector.at(i)));
     }
     
+    /**
+     * Sets the source that determines the index.
+     * 
+     * @param source 
+     */
     public void setIndexSource(GraphSource<Integer> source) {
         this.source = source;
     }
+    /**
+     * 
+     * @return 
+     */
     public GraphSource<Integer> getIndexSource() {
         return source;
     }
+    /**
+     * Gets the number of inputs attached to this pass through
+     * the main input group.
+     * 
+     * @return 
+     */
     public int getLength() {
         return input.size();
     }

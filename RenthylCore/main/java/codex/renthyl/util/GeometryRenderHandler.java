@@ -31,7 +31,6 @@ package codex.renthyl.util;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.Visibility;
 import com.jme3.bounding.BoundingVolume;
-import com.jme3.renderer.Camera;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 
@@ -43,6 +42,9 @@ import com.jme3.scene.Spatial;
  */
 public interface GeometryRenderHandler {
     
+    /**
+     * 
+     */
     GeometryRenderHandler DEFAULT = (context, geom) -> context.getRenderManager().renderGeometry(geom);
     
     /**
@@ -54,13 +56,19 @@ public interface GeometryRenderHandler {
     public void renderGeometry(FGRenderContext context, Geometry geometry);
     
     /**
-     * Returns the visibility status of the volume.
+     * Evaluates the visibility status of the spatial when viewed
+     * through the {@link com.jme3.renderer.RenderManager#getCurrentCamera() current camera}.
+     * <p>
+     * If the queue from which the spatial is being tested is a "GUI" queue, the
+     * visibility checks must explicitely be handled as though the camera were
+     * in parallel projection mode (even though it may not be). This is a limitation
+     * of JME's queueing system that unfortunately carried over.
      * 
      * @param context
-     * @param spatial
-     * @param parent
-     * @param gui
-     * @return 
+     * @param spatial spatial to test visibility of
+     * @param parent visibility status of the parent under the same conditions
+     * @param gui true if the viewing condition is a GUI
+     * @return visibility status of the spatial
      */
     public default Visibility evaluateSpatialVisibility(FGRenderContext context, Spatial spatial, Visibility parent, boolean gui) {
         /*
@@ -81,12 +89,14 @@ public interface GeometryRenderHandler {
     }
     
     /**
-     * Returns the visibility status of the volume.
+     * Returns the visibility status of the volume when viewed through
+     * the {@link com.jme3.renderer.RenderManager#getCurrentCamera() current camera}.
      * 
      * @param context
      * @param volume
      * @param gui
      * @return 
+     * @see #evaluateSpatialVisibility(codex.renthyl.FGRenderContext, com.jme3.scene.Spatial, codex.renthyl.Visibility, boolean)
      */
     public default Visibility evaluateVolumeVisibility(FGRenderContext context, BoundingVolume volume, boolean gui) {
         if (!gui) {

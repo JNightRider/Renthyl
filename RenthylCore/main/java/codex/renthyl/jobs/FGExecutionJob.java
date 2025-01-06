@@ -33,7 +33,7 @@ public class FGExecutionJob implements Runnable, Iterable<RenderModule> {
             System.out.println("Job " + index + " profile:");
             for (RenderModule m : queue) {
                 long start = System.nanoTime();
-                m.executeModuleRender(context);
+                m.executeRender(context);
                 System.out.println("  " + m + ": " + ((double)Math.abs(System.nanoTime() - start) / 1000000.0) + "ms");
             }
             System.out.println("Job " + index + " took " + ((double)Math.abs(System.nanoTime() - jobStart) / 1000000.0) + "ms");
