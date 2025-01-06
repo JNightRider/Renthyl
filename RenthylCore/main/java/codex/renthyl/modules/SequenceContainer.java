@@ -11,7 +11,7 @@ import codex.renthyl.resources.tickets.TicketSelector;
  * @author codex
  * @param <T>
  */
-public class SequenceContainer <T extends RenderModule> extends RenderContainer<T> {
+public class SequenceContainer <T extends AbstractRenderModule> extends RenderContainer<T> {
     
     private final TicketSelector localSource, localTarget;
     private final TicketSelector globalSource, globalTarget;

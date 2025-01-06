@@ -53,7 +53,7 @@ import codex.renthyl.resources.tickets.TicketGroup;
  * 
  * @author codex
  */
-public abstract class RenderPass extends RenderModule implements Savable {
+public abstract class RenderPass extends AbstractRenderModule implements Savable {
     
     private final FrameBufferCache frameBuffers = new FrameBufferCache(
             new FrameBufferParameters(null, 1024, 1024, 1));
@@ -74,7 +74,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
         read(im.getCapsule(this));
     }
     @Override
-    public void traverse(Consumer<RenderModule> traverser) {
+    public void traverse(Consumer<AbstractRenderModule> traverser) {
         traverser.accept(this);
     }
     

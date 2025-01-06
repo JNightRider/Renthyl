@@ -28,7 +28,7 @@
  */
 package codex.renthyl.export;
 
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -97,8 +97,8 @@ public abstract class SavableConnection implements Savable {
         Objects.requireNonNull(targetGroup, "Target group not specified.");
         out.write(sourceModuleId, "sourceModuleId", 0);
         out.write(targetModuleId, "targetModuleId", 0);
-        out.write(sourceGroup, "sourceGroup", RenderModule.MAIN_GROUP);
-        out.write(targetGroup, "targetGroup", RenderModule.MAIN_GROUP);
+        out.write(sourceGroup, "sourceGroup", AbstractRenderModule.MAIN_GROUP);
+        out.write(targetGroup, "targetGroup", AbstractRenderModule.MAIN_GROUP);
         write(out);
     }
     @Override
@@ -106,8 +106,8 @@ public abstract class SavableConnection implements Savable {
         InputCapsule in = im.getCapsule(this);
         sourceModuleId = in.readInt("sourceModuleId", 0);
         targetModuleId = in.readInt("targetModuleId", 0);
-        sourceGroup = in.readString("sourceGroup", RenderModule.MAIN_GROUP);
-        targetGroup = in.readString("targetGroup", RenderModule.MAIN_GROUP);
+        sourceGroup = in.readString("sourceGroup", AbstractRenderModule.MAIN_GROUP);
+        targetGroup = in.readString("targetGroup", AbstractRenderModule.MAIN_GROUP);
         read(in);
     }
     

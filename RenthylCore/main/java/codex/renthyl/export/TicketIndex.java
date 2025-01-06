@@ -6,7 +6,7 @@ package codex.renthyl.export;
 
 import codex.boost.export.SavableObject;
 import codex.renthyl.modules.Connectable;
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketGroup;
 import codex.renthyl.resources.tickets.TicketSelector;
@@ -37,7 +37,7 @@ public abstract class TicketIndex implements Savable {
         assert moduleId >= 0 : "Connectable ID not specified.";
         Objects.requireNonNull(groupName, "Group name not specified.");
         out.write(moduleId, "moduleId", 0);
-        out.write(groupName, "groupName", RenderModule.MAIN_GROUP);
+        out.write(groupName, "groupName", AbstractRenderModule.MAIN_GROUP);
         out.write(source, "source", null);
         write(out);
     }
@@ -45,7 +45,7 @@ public abstract class TicketIndex implements Savable {
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
         moduleId = in.readInt("moduleId", 0);
-        groupName = in.readString("groupName", RenderModule.MAIN_GROUP);
+        groupName = in.readString("groupName", AbstractRenderModule.MAIN_GROUP);
         source = SavableObject.readSavable(in, "source", TicketIndex.class, null);
         read(in);
     }

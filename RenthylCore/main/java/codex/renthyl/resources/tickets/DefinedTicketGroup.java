@@ -29,7 +29,7 @@
 package codex.renthyl.resources.tickets;
 
 import codex.renthyl.definitions.ResourceDef;
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.resources.ResourceUser;
 import java.util.Collection;

@@ -30,7 +30,7 @@ package codex.renthyl.export;
 
 import codex.boost.export.SavableObject;
 import codex.renthyl.modules.Connectable;
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketGroup;
 import com.jme3.export.InputCapsule;
@@ -58,10 +58,10 @@ public class ModuleGraphData implements Savable {
     private static final ArrayList<TicketIndex> DEF_INDICES = new ArrayList<>(0);
     private static int nextModuleId = 0;
     
-    private RenderModule rootModule;
+    private AbstractRenderModule rootModule;
     
     public ModuleGraphData() {}
-    public ModuleGraphData(RenderModule root) {
+    public ModuleGraphData(AbstractRenderModule root) {
         this.rootModule = root;
     }
 
@@ -72,12 +72,12 @@ public class ModuleGraphData implements Savable {
         }
         // extract connections
         final ArrayList<SavableConnection> connections = new ArrayList<>();
-        final LinkedList<RenderModule> members = new LinkedList<>();
+        final LinkedList<AbstractRenderModule> members = new LinkedList<>();
         rootModule.traverse(new ModuleTreeExtractor(members));
         // descend the queue, so that output ids can be reset in the same pass
         final ArrayList<TicketIndex> targetIndices = new ArrayList<>();
-        for (Iterator<RenderModule> it = members.descendingIterator(); it.hasNext();) {
-            RenderModule m = it.next();
+        for (Iterator<AbstractRenderModule> it = members.descendingIterator(); it.hasNext();) {
+            AbstractRenderModule m = it.next();
             // generate export indices for input groups
             for (TicketGroup<Object> g : m.getInputGroups().values()) {
                 g.generateExportIndices(i -> {
@@ -118,7 +118,7 @@ public class ModuleGraphData implements Savable {
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
-        rootModule = SavableObject.readSavable(in, "root", RenderModule.class, null);
+        rootModule = SavableObject.readSavable(in, "root", AbstractRenderModule.class, null);
         final ArrayList<TicketIndex> indices = in.readSavableArrayList("targetIndices", DEF_INDICES);
         final HashMap<Integer, Connectable> registry = new HashMap<>();
         final HashMap<String, List<TicketIndex>> indexMap = new HashMap<>();
@@ -142,13 +142,13 @@ public class ModuleGraphData implements Savable {
         registry.clear();
     }
     
-    public void setRootModule(RenderModule rootModule) {
+    public void setRootModule(AbstractRenderModule rootModule) {
         this.rootModule = rootModule;
     }
-    public RenderModule getRootModule() {
+    public AbstractRenderModule getRootModule() {
         return rootModule;
     }
-    public <T extends RenderModule> T getRootModule(Class<T> requiredType) {
+    public <T extends AbstractRenderModule> T getRootModule(Class<T> requiredType) {
         if (rootModule != null && !requiredType.isAssignableFrom(rootModule.getClass())) {
             throw new ClassCastException("Module tree root is a " + rootModule.getClass().getName()
                     + " when required as a " + requiredType.getName());
@@ -156,21 +156,21 @@ public class ModuleGraphData implements Savable {
         return (T)rootModule;
     }
     
-    private static class ModuleTreeExtractor implements Consumer<RenderModule> {
+    private static class ModuleTreeExtractor implements Consumer<AbstractRenderModule> {
         
-        private final LinkedList<RenderModule> members;
+        private final LinkedList<AbstractRenderModule> members;
         
-        public ModuleTreeExtractor(LinkedList<RenderModule> members) {
+        public ModuleTreeExtractor(LinkedList<AbstractRenderModule> members) {
             this.members = members;
         }
         
         @Override
-        public void accept(RenderModule m) {
+        public void accept(AbstractRenderModule m) {
             m.setExportId(nextModuleId++);
             members.add(m);
         }
         
-        public LinkedList<RenderModule> getMembers() {
+        public LinkedList<AbstractRenderModule> getMembers() {
             return members;
         }
     

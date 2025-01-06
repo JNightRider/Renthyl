@@ -50,7 +50,7 @@ import java.util.function.Function;
  * @author codex
  * @param <R>
  */
-public class RenderContainer <R extends RenderModule> extends RenderModule implements Iterable<R> {
+public class RenderContainer <R extends RenderModule> extends AbstractRenderModule implements Iterable<R> {
 
     protected final ArrayList<R> queue = new ArrayList<>();
     protected Consumer<R> moduleInitializer;
@@ -149,16 +149,12 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
             m.traverse(traverser);
         }
     }
-    @Override
-    public void appendProjectName(String projectName) {
-        super.appendProjectName(projectName);
-        for (R m : queue) {
-            m.appendProjectName(projectName);
-        }
-    }
     
     /**
      * Adds the module at the index.
+     * <p>
+     * If {@code index} is negative, the module will be appended
+     * to the end of this container's queue.
      * 
      * @param <T>
      * @param module
@@ -184,7 +180,6 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
             if (moduleInitializer != null) {
                 moduleInitializer.accept(module);
             }
-            module.applyConnector(this);
             return module;
         }
         throw new IllegalArgumentException(module + " cannot be added to " + this + ".");
@@ -199,35 +194,6 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      */
     public <T extends R> T add(T module) {
         return add(module, queue.size());
-    }
-    
-    /**
-     * Adds the module at the index.
-     * 
-     * @param <T>
-     * @param module
-     * @param index
-     * @param name name to be assigned to the module
-     * @return 
-     */
-    public <T extends R> T add(T module, int index, String name) {
-        T m = add(module, index);
-        m.setName(name);
-        return m;
-    }
-    
-    /**
-     * Adds the module to the end of this container.
-     * 
-     * @param <T>
-     * @param module
-     * @param name
-     * @return 
-     */
-    public <T extends R> T add(T module, String name) {
-        T m = add(module, queue.size());
-        m.setName(name);
-        return m;
     }
     
     /**
@@ -269,7 +235,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
                 add(module);
             }
             if (i > 0) {
-                array[i].makeInput(array[i-1], source, target);
+                module.makeInput(array[i-1], source, target);
             }
         }
         return array;
