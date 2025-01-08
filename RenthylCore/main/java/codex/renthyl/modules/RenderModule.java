@@ -6,6 +6,7 @@ package codex.renthyl.modules;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
+import codex.renthyl.export.Exportable;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.resources.ResourceUser;
 import com.jme3.export.Savable;
@@ -17,7 +18,7 @@ import java.util.function.Consumer;
  * 
  * @author codex
  */
-public interface RenderModule extends Connectable, ResourceUser, Savable {
+public interface RenderModule extends Connectable, ResourceUser, Savable, Exportable {
     
     /**
      * Called when the module is first attached to a {@link FrameGraph}.

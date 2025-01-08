@@ -198,11 +198,13 @@ public abstract class AbstractRenderModule implements RenderModule {
         }
     }
     
-    public int getExportId() {
-        return exportId;
-    }
+    @Override
     public void setExportId(int id) {
         this.exportId = id;
+    }
+    @Override
+    public int getExportId() {
+        return exportId;
     }
     
     /**

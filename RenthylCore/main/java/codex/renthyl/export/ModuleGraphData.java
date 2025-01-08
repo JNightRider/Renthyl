@@ -31,6 +31,7 @@ package codex.renthyl.export;
 import codex.boost.export.SavableObject;
 import codex.renthyl.modules.Connectable;
 import codex.renthyl.modules.AbstractRenderModule;
+import codex.renthyl.modules.RenderModule;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketGroup;
 import com.jme3.export.InputCapsule;
@@ -40,7 +41,6 @@ import com.jme3.export.OutputCapsule;
 import com.jme3.export.Savable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -72,12 +72,12 @@ public class ModuleGraphData implements Savable {
         }
         // extract connections
         final ArrayList<SavableConnection> connections = new ArrayList<>();
-        final LinkedList<AbstractRenderModule> members = new LinkedList<>();
+        final LinkedList<RenderModule> members = new LinkedList<>();
         rootModule.traverse(new ModuleTreeExtractor(members));
         // descend the queue, so that output ids can be reset in the same pass
         final ArrayList<TicketIndex> targetIndices = new ArrayList<>();
-        for (Iterator<AbstractRenderModule> it = members.descendingIterator(); it.hasNext();) {
-            AbstractRenderModule m = it.next();
+        for (Iterator<RenderModule> it = members.descendingIterator(); it.hasNext();) {
+            RenderModule m = it.next();
             // generate export indices for input groups
             for (TicketGroup<Object> g : m.getInputGroups().values()) {
                 g.generateExportIndices(i -> {
@@ -156,21 +156,21 @@ public class ModuleGraphData implements Savable {
         return (T)rootModule;
     }
     
-    private static class ModuleTreeExtractor implements Consumer<AbstractRenderModule> {
+    private static class ModuleTreeExtractor implements Consumer<RenderModule> {
         
-        private final LinkedList<AbstractRenderModule> members;
+        private final LinkedList<RenderModule> members;
         
-        public ModuleTreeExtractor(LinkedList<AbstractRenderModule> members) {
+        public ModuleTreeExtractor(LinkedList<RenderModule> members) {
             this.members = members;
         }
         
         @Override
-        public void accept(AbstractRenderModule m) {
+        public void accept(RenderModule m) {
             m.setExportId(nextModuleId++);
             members.add(m);
         }
         
-        public LinkedList<AbstractRenderModule> getMembers() {
+        public LinkedList<RenderModule> getMembers() {
             return members;
         }
     

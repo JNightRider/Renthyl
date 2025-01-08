@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, codex
+ * Copyright (c) 2025, codex
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -59,8 +59,8 @@ public class RenderLoop <T extends AbstractRenderModule> extends RenderContainer
     }
     
     @Override
-    public void initModule(FrameGraph frameGraph) {
-        super.initModule(frameGraph);
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
         builder.initLoop(this);
     }
     @Override

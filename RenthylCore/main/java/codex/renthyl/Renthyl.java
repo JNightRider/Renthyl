@@ -20,6 +20,11 @@ import com.jme3.renderer.RenderManager;
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
  * <p>
+ * To use Renthyl features, first {@link #initialize(com.jme3.app.Application) initialize} Renthyl.
+ * <p>
+ * <strong>Make contributions or submit bug reports at the Renthyl repository on GitHub:</strong>
+ * <em>https://github.com/codex128/Renthyl</em>
+ * <p>
  * <strong>To learn how to use Renthyl, visit the Renthyl wiki on GitHub:</strong><br>
  * <em>https://github.com/codex128/Renthyl/wiki/0.-Welcome!</em>
  * <p>
@@ -31,7 +36,7 @@ import com.jme3.renderer.RenderManager;
  * 
  * @author codex
  */
-public class Renthyl {
+public final class Renthyl {
     
     /**
      * Name of the Renthyl library.
@@ -74,7 +79,7 @@ public class Renthyl {
     }
     
     /**
-     * Returns the Renthyl instance.
+     * Returns the main Renthyl instance.
      * 
      * @return 
      */
@@ -83,7 +88,8 @@ public class Renthyl {
     }
     
     /**
-     * Creates a simple forward-style FrameGraph.
+     * Creates a simple forward-style FrameGraph that emulates
+     * JMonkeyEngine's default forward renderer.
      * 
      * @param assetManager
      * @return 
@@ -98,7 +104,7 @@ public class Renthyl {
         QueueMergePass merge = fg.add(new QueueMergePass());
         OutputGeometryPass out = fg.add(new OutputGeometryPass());
         
-        merge.makeInput(enqueue, TicketSelector.All, TicketSelector.All);
+        merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
         out.makeInput(merge, "Result", "Geometry");
         
         return fg;
@@ -128,7 +134,7 @@ public class Renthyl {
         RenderManager rm = app.getRenderManager();
         rm.registerContext(FrameGraph.CONTEXT_TYPE, new FGPipelineContext(this));
         
-        // attach app state
+        // attach app state to listen for app destruction
         app.getStateManager().attach(new AppDestroyState());
         
         // register loaders and locators
