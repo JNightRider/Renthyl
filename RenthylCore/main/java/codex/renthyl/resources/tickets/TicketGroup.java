@@ -76,11 +76,12 @@ public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T
     public void detach();
     
     /**
-     * Adds the given ticket to this group.
+     * Adds a new ticket with {@code name} to this group.
      * 
-     * @param ticket 
+     * @param name
+     * @return new ticket
      */
-    public void add(ResourceTicket<T> ticket);
+    public ResourceTicket<T> add(String name);
     
     /**
      * Gets all tickets in this group.
@@ -96,8 +97,9 @@ public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T
      * @param source
      * @param sourceSelector
      * @param targetSelector 
+     * @return the number of connections made as a result of this call
      */
-    public void makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector);
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector);
     
     /**
      * Gets the number of tickets in the group that have a

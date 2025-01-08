@@ -33,6 +33,7 @@ import codex.renthyl.resources.tickets.TicketSelector;
 import java.util.Iterator;
 import java.util.Map;
 import codex.renthyl.resources.tickets.TicketGroup;
+import codex.renthyl.resources.tickets.TicketSignature;
 
 /**
  * An object that can be connected to other Connectables by
@@ -51,20 +52,20 @@ public interface Connectable extends LayoutMember {
      * {@link #getMainInputGroup()}.
      * 
      * @param <T>
-     * @param ticket
+     * @param name
      * @return added ticket
      */
-    public <T> ResourceTicket<T> addInput(ResourceTicket ticket);
+    public ResourceTicket addInput(String name);
     
     /**
      * Adds the ticket to the main output group returned by
      * {@link #getMainOutputGroup()}.
      * 
      * @param <T>
-     * @param ticket
+     * @param name
      * @return added ticket
      */
-    public <T> ResourceTicket<T> addOutput(ResourceTicket ticket);
+    public ResourceTicket addOutput(String name);
     
     /**
      * Adds and attaches the group as input.
@@ -117,30 +118,6 @@ public interface Connectable extends LayoutMember {
     /*******************
      * Implemented API *
      *******************/
-    
-    /**
-     * Creates a new ticket with the given name and adds it to
-     * the main input group.
-     * 
-     * @param <T>
-     * @param name
-     * @return created ticket
-     */
-    public default <T> ResourceTicket<T> addInput(String name) {
-        return addInput(new ResourceTicket(name));
-    }
-    
-    /**
-     * Creates a new ticket with the given name and adds it to
-     * the main output group.
-     * 
-     * @param <T>
-     * @param name
-     * @return 
-     */
-    public default <T> ResourceTicket<T> addOutput(String name) {
-        return addOutput(new ResourceTicket(name));
-    }
     
     /**
      * Gets the named input group.
@@ -222,36 +199,34 @@ public interface Connectable extends LayoutMember {
      * Connects the named target ticket from the main input group to the
      * named source ticket from the given Connectable's main output group.
      * 
-     * @param connectable
      * @param source
-     * @param target 
+     * @param sourceSelector
+     * @param targetSelector 
      */
-    public default void makeInput(Connectable connectable, String source, String target) {
-        getMainInputGroup().makeInput(connectable.getMainOutputGroup(), source, target);
-    }
-    
-    /**
-     * Connects the selected target tickets from the main input group to
-     * the selected source tickets from the given Connectable's main output group.
-     * 
-     * @param connectable
-     * @param source
-     * @param target 
-     */
-    public default void makeInput(Connectable connectable, TicketSelector source, TicketSelector target) {
-        getMainInputGroup().makeInput(connectable.getMainOutputGroup(), source, target);
+    public default void makeInput(Connectable source, String sourceSelector, String targetSelector) {
+        getMainInputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
     }
     
     /**
      * Connects the selected target tickets from the main input group to
      * the selected source tickets from the given source group.
      * 
-     * @param sourceGroup
      * @param source
-     * @param target 
+     * @param sourceSelector
+     * @param targetSelector 
      */
-    public default void makeInput(TicketGroup sourceGroup, TicketSelector source, TicketSelector target) {
-        getMainInputGroup().makeInput(sourceGroup, source, target);
+    public default void makeInput(TicketGroup source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+        getMainInputGroup().makeInput(source, sourceSelector, targetSelector);
+    }
+    
+    /**
+     * 
+     * @param source
+     * @param sourceSig
+     * @param targetSig 
+     */
+    public default void makeInput(Connectable source, TicketSignature sourceSig, TicketSignature targetSig) {
+        targetSig.getGroupOf(this).makeInput(sourceSig.getGroupOf(source), sourceSig, targetSig);
     }
     
     /**

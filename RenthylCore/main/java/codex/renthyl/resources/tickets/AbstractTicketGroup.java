@@ -49,7 +49,6 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     protected final String name;
     protected Connectable owner;
     private int connectedTickets = 0;
-    private final ArrayList<ResourceTicket<T>> tempTargets = new ArrayList<>();
 
     public AbstractTicketGroup(String name) {
         this.name = name;
@@ -76,27 +75,28 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         owner = null;
     }
     @Override
-    public void add(ResourceTicket<T> ticket) {
-        append(ticket);
+    public ResourceTicket<T> add(String name) {
+        return append(new ResourceTicket(this, name));
     }
     @Override
     @SuppressWarnings("null")
-    public void makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
-        targetSelector.selectFromOrElse(this, tempTargets, null);
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
         int j = 0;
-        for (ResourceTicket<T> s : source) {
-            if (sourceSelector.select(s, j)) {
-                for (int i = 0; i < tempTargets.size(); i++) {
-                    ResourceTicket<T> t = tempTargets.get(i);
-                    if (t != null && sourceSelector.select(s, t, j) && targetSelector.select(t, s, i)) {
+        int connections = 0;
+        for (ResourceTicket<T> t : this) {
+            if (targetSelector.select(t, j)) {
+                int i = 0;
+                for (ResourceTicket<T> s : source) {
+                    if (sourceSelector.select(s, t, i++) && targetSelector.select(t, s, j)) {
                         t.setSource(s);
-                        tempTargets.set(i, null);
+                        connections++;
+                        break;
                     }
                 }
             }
             j++;
         }
-        tempTargets.clear();
+        return connections;
     }
     @Override
     public void ticketSourceChanged(ResourceTicket<T> ticket, ResourceTicket<T> source) {
@@ -151,7 +151,6 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
      */
     protected ResourceTicket<T> append(ResourceTicket ticket) {
         getTickets().add(ticket);
-        ticket.setGroup(this);
         return ticket;
     }
     
@@ -168,7 +167,6 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         if (getTickets().remove(ticket)) {
             ticket.setSource(null);
             ticket.clearAllTargets();
-            ticket.setGroup(null);
             return true;
         }
         return false;
@@ -183,7 +181,6 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         for (ResourceTicket<T> t : getTickets()) {
             t.setSource(null);
             t.clearAllTargets();
-            t.setGroup(null);
         }
         getTickets().clear();
     }

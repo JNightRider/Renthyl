@@ -61,7 +61,7 @@ public class DefinedTicketArray <T, D extends ResourceDef<T>> extends TicketArra
         return defs.get(i);
     }
     @Override
-    public void add(ResourceTicket<T> ticket, D def) {
+    public ResourceTicket<T> add(String name, D def) {
         throw new UnsupportedOperationException("Tickets cannot be added to this group.");
     }
     

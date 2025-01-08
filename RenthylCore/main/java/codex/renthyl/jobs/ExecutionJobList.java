@@ -30,7 +30,7 @@ package codex.renthyl.jobs;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.modules.ModuleIndex;
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -66,7 +66,7 @@ public class ExecutionJobList {
      * @param index
      * @return assigned queue index (do not use resulting object)
      */
-    public ModuleIndex add(RenderModule module, int index) {
+    public ModuleIndex add(AbstractRenderModule module, int index) {
         FGExecutionJob job;
         if (index == 0) {
             job = mainJob;

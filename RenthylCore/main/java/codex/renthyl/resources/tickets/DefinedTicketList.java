@@ -57,12 +57,12 @@ public class DefinedTicketList <T, D extends ResourceDef<T>> extends TicketList<
         return defs.get(i);
     }
     @Override
-    public void add(ResourceTicket<T> ticket, D def)  {
+    public ResourceTicket<T> add(String name, D def)  {
         getDefs().add(def);
-        super.add(ticket);
+        return super.add(name);
     }
     @Override
-    public void add(ResourceTicket<T> ticket) {
+    public ResourceTicket<T> add(String name) {
         throw new UnsupportedOperationException("Tickets must be added along with a definition.");
     }
     

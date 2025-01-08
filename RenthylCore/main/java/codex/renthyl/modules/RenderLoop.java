@@ -43,7 +43,7 @@ import java.io.IOException;
  * @author codex
  * @param <T>
  */
-public class RenderLoop <T extends RenderModule> extends RenderContainer<T> {
+public class RenderLoop <T extends AbstractRenderModule> extends RenderContainer<T> {
     
     private LoopBuilder<T> builder;
     private GraphSource<Integer> iterationSource;

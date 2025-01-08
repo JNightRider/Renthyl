@@ -54,17 +54,17 @@ public class TicketArray <T> extends AbstractTicketGroup<T> {
     
     private void fillArray(int size) {
         for (int i = 0; i < size; i++) {
-            append(new ResourceTicket<>(name + "[" + i + "]"));
+            append(new ResourceTicket<>(this, name + "[" + i + "]"));
         }
     }
     private void fillArray(String... tickets) {
         for (String ticket : tickets) {
-            append(new ResourceTicket<>(ticket));
+            append(new ResourceTicket<>(this, ticket));
         }
     }
     
     @Override
-    public void add(ResourceTicket<T> ticket) {
+    public ResourceTicket<T> add(String name) {
         throw new UnsupportedOperationException("Tickets cannot be added to this group.");
     }
     @Override

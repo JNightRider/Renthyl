@@ -9,7 +9,7 @@ package codex.renthyl.modules;
  * @author codex
  * @param <T>
  */
-public interface LoopBuilder <T extends RenderModule> {
+public interface LoopBuilder <T extends AbstractRenderModule> {
     
     public void initLoop(RenderLoop<T> loop);
     

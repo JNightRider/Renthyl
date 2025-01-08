@@ -111,7 +111,7 @@ public class ResourceList {
      ******************************/
     
     /**
-     * Creates a new resource view.
+     * Creates a new resource view and adds it to the view list.
      * 
      * @param <T>
      * @param producer
@@ -119,10 +119,31 @@ public class ResourceList {
      * @param ticket
      * @return 
      */
-    private <T> ResourceView<T> create(ResourceUser producer, ResourceDef<T> def, ResourceTicket ticket) {
-        ResourceView res = new ResourceView<>(producer, def, ticket);
-        res.getTicket().setLocalIndex(add(res));
-        return res;
+    private <T> ResourceView<T> create(ResourceUser user, ResourceDef<T> def, String name) {
+        if (nextSlot >= resources.size()) {
+            // add resource to end of list
+            ResourceView res = new ResourceView(user, def, name, resources.size());
+            resources.add(res);
+            nextSlot++;
+            return res;
+        } else {
+            // Insert resource into available slot.
+            // Note: storing and finding the first empty slot is not necessary
+            // for the current implementation. In fact, it is mostly left over
+            // from a previous implementation. I probably won't remove it because
+            // this case should theoretically never occur anyway, and I may need
+            // it in the future.
+            int i = nextSlot;
+            ResourceView res = new ResourceView(user, def, name, i);
+            resources.set(i, res);
+            // find next available slot
+            while (++nextSlot < resources.size()) {
+                if (resources.get(nextSlot) == null) {
+                    break;
+                }
+            }
+            return res;
+        }
     }
     private <T> ResourceView<T> locate(ResourceTicket<T> ticket) {
         return locate(ticket, true);
@@ -147,46 +168,26 @@ public class ResourceList {
                 return res;
             }
             if (failOnMiss) {
-                throw new NullPointerException(ticket+" points to null resource.");
+                throw new NullPointerException(ticket + " points to null resource.");
             }
         }
         if (failOnMiss) {
-            throw new IndexOutOfBoundsException(ticket+" is out of bounds for size "+resources.size());
+            throw new IndexOutOfBoundsException(ticket + " is out of bounds for size "+resources.size());
         }
         return null;
     }
     private ResourceView fastLocate(ResourceTicket ticket) {
+        // Niavely fetches the resource without checking for potentially annoying
+        // errors. I would avoid using this for most circumstances.
         return resources.get(ticket.getWorldIndex());
     }
-    private int add(ResourceView res) {
-        assert res != null;
-        if (nextSlot >= resources.size()) {
-            // add resource to end of list
-            resources.add(res);
-            nextSlot++;
-            return resources.size()-1;
-        } else {
-            // Insert resource into available slot.
-            // Note: storing and finding the first empty slot is not necessary
-            // for the current implementation. In fact, it is mostly left over
-            // from a previous implementation. I probably won't remove it because
-            // this case should theoretically never occur anyway, and I may need
-            // it in the future.
-            int i = nextSlot;
-            resources.set(i, res);
-            // find next available slot
-            while (++nextSlot < resources.size()) {
-                if (resources.get(nextSlot) == null) {
-                    break;
-                }
-            }
-            return i;
-        }
-    }
     private ResourceView remove(int index) {
+        // It is faster and less error-prone to simply switch out the resource
+        // at the index with null. Future references to that index will result 
+        // in an error instead of accidentally fetching an unexpected resource.
         ResourceView prev = resources.set(index, null);
         if (prev != null && prev.isReferenced()) {
-            throw new IllegalStateException("Cannot remove "+prev+" because it is referenced.");
+            throw new IllegalStateException("Cannot remove " + prev + " because it is referenced.");
         }
         nextSlot = Math.min(nextSlot, index);
         return prev;
@@ -214,33 +215,38 @@ public class ResourceList {
      * The resulting {@link ResourceView} is essentially a promise of an actual concrete
      * object on demand. ResourceViews are used by resource management to schedule where
      * objects should used, and how objects can be reallocated. ResourceViews cannot be 
-     * accessed directly, but can be referenced by {@link ResourceTicket}s.
+     * accessed directly, but can be referenced by {@link ResourceTicket ResourceTickets}.
      * <p>
      * If the resource is only intended to be used internally by the ResourceUser,
      * and not shared with other users, it is critical that
-     * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket) declareTemporary}
-     * be used instead.
+     * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket)
+     * declareTemporary} be used instead.
      * <p>
      * If the resource does not require intensive allocation management, consider using
-     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) declarePrimitive}
-     * instead.
+     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     * declarePrimitive} instead.
      * <p>
      * <em>Note: passing {@code null} as the resource definition marks the resource
      * as primitive. This technique was deprecated because it was too vague. Older versions
      * may still pass {@code null} to declare primitive resources, but
-     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) declarePrimitive}
-     * should be preferred.</em>
+     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     * declarePrimitive} should be preferred.</em>
      * 
      * @param <T>
      * @param producer author of the resource responsible for the initial acquirement
      * @param def defines resource behavior and reallocation policies
-     * @param store stores indexing information, and can be used later to retrieve the created resource
+     * @param ticket stores indexing information, and can be used later to retrieve the created resource
      * @return given resource ticket
      */
-    public <T> ResourceTicket<T> declare(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> store) {
-        ResourceView<T> resource = create(producer, def, store);
-        if (cap != null) cap.declareResource(resource.getIndex(), store.getName());
-        return resource.getTicket().copyIndexTo(store);
+    public <T> ResourceTicket<T> declare(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> ticket) {
+        if (ticket.isBindFlagSet()) {
+            throw new IllegalStateException("Cannot declare with " + ticket + " because it is already bound.");
+        }
+        ResourceView resource = create(producer, def, ticket.getName());
+        ticket.setBindFlag();
+        if (cap != null) cap.declareResource(resource.getIndex(), ticket.getName());
+        ticket.setLocalIndex(resource.getIndex());
+        return ticket;
     }
     
     /**
@@ -249,7 +255,7 @@ public class ResourceList {
      * Primitive resource views directly contain the resource without involving
      * the {@link RenderObjectMap} for allocation management. This is a much more
      * niave method of handling resources, but it can often be faster for
-     * low-impact resources that don't have much to gain much from reallocation.
+     * low-impact resources that don't gain much from reallocation.
      * 
      * @param <T>
      * @param producer
@@ -267,7 +273,8 @@ public class ResourceList {
      * participate in or affect culling. This is suitable for resources that
      * require allocation management but are not shared with other passes.
      * <p>
-     * Attempting to reference a temporary resource will result in an exception.
+     * Attempting to {@link #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.tickets.ResourceTicket)
+     * reference} a temporary resource will result in an exception.
      * 
      * @param <T>
      * @param producer
@@ -290,10 +297,8 @@ public class ResourceList {
      * Reserves the object at the ticket's {@link ResourceTicket#getObjectId() object ID},
      * if valid.
      * <p>
-     * Reserving an object guarantees that the object cannot be reallocated by
-     * something else at the time this process would need it (defined by the pass
-     * index). Any allocation request that overlaps the specified index is
-     * denied.
+     * Reverving an object greatly increases the chances that {@link #acquire(codex.renthyl.resources.tickets.ResourceTicket)
+     * acquiring} will return the reserved object.
      * <p>
      * Tickets save the ID of the last object they were involved in acquiring.
      * 
@@ -303,7 +308,8 @@ public class ResourceList {
     public void reserve(ModuleIndex passIndex, ResourceTicket ticket) {
         if (ticket.getObjectId() >= 0) {
             map.reserve(ticket.getObjectId(), passIndex);
-            ticket.copyObjectTo(locate(ticket).getTicket());
+            //ticket.copyObjectTo(locate(ticket).getTicket());
+            locate(ticket).setObjectId(ticket.getObjectId());
         }
     }
     
@@ -670,7 +676,7 @@ public class ResourceList {
             map.allocate(resource, frameGraph.isAsync());
         }
         if (cap != null) cap.acquireResource(resource.getIndex(), ticket.getName());
-        resource.getTicket().copyObjectTo(ticket);
+        ticket.setObjectId(resource.getObjectId());
         return resource.getResource();
     }
     
@@ -956,7 +962,7 @@ public class ResourceList {
             throw new IllegalStateException("Target resource must be virtual to accept modification.");
         }
         // copy over object id so that specific allocation will target the correct resource
-        source.getTicket().copyObjectTo(target.getTicket());
+        target.setObjectId(source.getObjectId());
         // release the resource
         if (!release(sourceTicket)) {
             throw new IllegalStateException(source + " must be fully released to modify.");
@@ -966,7 +972,7 @@ public class ResourceList {
             throw new NullPointerException("Unable to complete modification of " + source + " to " + target);
         }
         // copy the object id to the target ticket provided by the user
-        target.getTicket().copyObjectTo(targetTicket);
+        targetTicket.setObjectId(target.getObjectId());
         return target.getResource();
     }
     
@@ -1014,7 +1020,7 @@ public class ResourceList {
      * @see #release(codex.renthyl.resources.ResourceTicket) 
      */
     protected boolean release(ResourceView resource, ResourceTicket ticket) {
-        if (cap != null) cap.releaseResource(resource.getIndex(), resource.getTicket().getName());
+        if (cap != null) cap.releaseResource(resource.getIndex(), resource.getName());
         if (!resource.release(this, ticket)) {
             if (cap != null && resource.getObject() != null) {
                 cap.releaseObject(resource.getObject().getId());
