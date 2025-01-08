@@ -36,7 +36,7 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
     }
     @Override
     public T[] applyDirectResource(Object resource) {
-        Class component = resource.getClass().componentType();
+        Class component = resource.getClass().getComponentType();
         if (component != null && type.isAssignableFrom(component)) {
             T[] array = (T[])resource;
             if (array.length >= size) {
