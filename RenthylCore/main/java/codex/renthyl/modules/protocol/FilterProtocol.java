@@ -4,16 +4,33 @@
  */
 package codex.renthyl.modules.protocol;
 
-import codex.renthyl.resources.tickets.TicketSelector;
+import codex.renthyl.resources.tickets.TicketSignature;
 
 /**
  *
  * @author codex
  */
-public interface FilterProtocol extends ModuleProtocol {
+public interface FilterProtocol extends SignatureProtocol {
     
-    public TicketSelector getInputColor();
-    public TicketSelector getInputDepth();
-    public TicketSelector getResult();
+    /**
+     * Gets a signature pointing to the filter's input scene color.
+     * 
+     * @return 
+     */
+    public TicketSignature getRenderedSceneColor();
+    
+    /**
+     * Gets a signature pointing to the filter's input scene depth.
+     * 
+     * @return 
+     */
+    public TicketSignature getRenderedSceneDepth();
+    
+    /**
+     * Gets a signature pointing to the filter's result.
+     * 
+     * @return 
+     */
+    public TicketSignature getFilteredResult();
     
 }

@@ -226,7 +226,7 @@ public class RenderObjectMap {
     private <T> boolean allocateSpecificSync(ResourceView<T> resource, boolean ignoreReservations) {
         GraphEventCapture cap = context.getEventCapture();
         ResourceDef<T> def = resource.getDefinition();
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
@@ -347,7 +347,7 @@ public class RenderObjectMap {
     private <T> boolean allocateSpecificAsync(ResourceView<T> resource, boolean ignoreReservations) {
         GraphEventCapture cap = context.getEventCapture();
         ResourceDef<T> def = resource.getDefinition();
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
@@ -411,7 +411,7 @@ public class RenderObjectMap {
      * @param resource 
      */
     public void dispose(ResourceView resource) {
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id >= 0) {
             RenderObject obj = objectMap.remove(id);
             if (obj != null) {

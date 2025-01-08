@@ -51,7 +51,7 @@ public class ResourceTicket <T> {
     public static final String RESERVED = "#";
     public static final int INVALID = -1, FORCE_INVALID = -2;
     
-    private TicketGroup<T> group;
+    private final TicketGroup<T> group;
     private String name;
     private int localIndex;
     private long objectId = -1;
@@ -60,15 +60,12 @@ public class ResourceTicket <T> {
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
     private TicketIndex exportIndex;
     
-    public ResourceTicket() {
-        this(null, INVALID);
-    }
     public ResourceTicket(String name) {
-        this(name, INVALID);
+        this(null, name);
     }
-    public ResourceTicket(String name, int index) {
+    public ResourceTicket(TicketGroup<T> group, String name) {
+        this.group = group;
         this.name = name;
-        this.localIndex = index;
     }
     
     /**
@@ -118,39 +115,6 @@ public class ResourceTicket <T> {
         targets.clear();
     }
     
-    /**
-     * Copies this ticket's resource index to the target ticket.
-     * 
-     * @param target
-     * @return 
-     */
-    public ResourceTicket<T> copyIndexTo(ResourceTicket<T> target) {
-        if (target == null) {
-            target = new ResourceTicket();
-        }
-        return target.setLocalIndex(localIndex);
-    }
-    /**
-     * Copies this ticket's object ID to the target ticket.
-     * 
-     * @param target
-     * @return 
-     */
-    public ResourceTicket<T> copyObjectTo(ResourceTicket<T> target) {
-        if (target == null) {
-            target = new ResourceTicket();
-        }
-        target.setObjectId(objectId);
-        return target;
-    }
-    
-    /**
-     * 
-     * @param group 
-     */
-    protected void setGroup(TicketGroup<T> group) {
-        this.group = group;
-    }
     /**
      * Sets the export index of this ticket.
      * 

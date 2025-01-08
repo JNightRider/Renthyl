@@ -29,7 +29,6 @@
 package codex.renthyl.resources.tickets;
 
 import java.util.Collection;
-import java.util.function.Predicate;
 
 /**
  * Interface for selecting tickets from a group.
@@ -47,7 +46,7 @@ public interface TicketSelector {
      * tickets from a collection without an {@code other} ticket to compare with.
      * 
      * @param ticket ticket to select
-     * @param other ticket to compare with (usually for connecting)
+     * @param other ticket to compare with (usually for connecting, may be null)
      * @param index index of the ticket to select
      * @return true if the ticket is selected by this selector.
      */
@@ -58,13 +57,14 @@ public interface TicketSelector {
      * @param ticket
      * @param index
      * @return 
+     * @see #select(codex.renthyl.resources.tickets.ResourceTicket, int)
      */
     public default boolean select(ResourceTicket ticket, int index) {
         return TicketSelector.this.select(ticket, null, index);
     }
     
     /**
-     * Returns the first selected ticket in the collection.
+     * Returns the first selected ticket in the iteration.
      * 
      * @param <T>
      * @param tickets
@@ -73,7 +73,7 @@ public interface TicketSelector {
     public default <T> ResourceTicket<T> selectFrom(Iterable<ResourceTicket<T>> tickets) {
         int i = 0;
         for (ResourceTicket<T> t : tickets) {
-            if (TicketSelector.this.select(t, i++)) {
+            if (select(t, i++)) {
                 return t;
             }
         }
@@ -100,30 +100,45 @@ public interface TicketSelector {
     }
     
     /**
+     * Adds all selected tickets from {@code tickets} to {@code selected}.
+     * <p>
+     * When a ticket is rejected by this selector, {@code orElse} is added
+     * to {@code selected} instead.
      * 
      * @param <T>
-     * @param <R>
      * @param tickets
      * @param selected
-     * @param orElse
-     * @return 
+     * @param orElse value added to {@code selected} when a ticket is rejected
+     * @return the number of tickets selected
      */
-    public default <T, R extends Collection<ResourceTicket<T>>> R selectFromOrElse(Iterable<ResourceTicket<T>> tickets, R selected, ResourceTicket<T> orElse) {
+    public default <T> int selectFrom(Iterable<ResourceTicket<T>> tickets, Collection<ResourceTicket<T>> selected, ResourceTicket<T> orElse) {
         int i = 0;
+        int select = 0;
         for (ResourceTicket t : tickets) {
             if (TicketSelector.this.select(t, i++)) {
                 selected.add(t);
+                select++;
             } else {
                 selected.add(orElse);
             }
         }
-        return selected;
+        return select;
     }
     
     /**
      * Selector that selects all tickets.
      */
     public static final TicketSelector All = (t, o, i) -> true;
+    
+    /**
+     * Selector that rejects all tickets.
+     */
+    public static final TicketSelector None = (t, o, i) -> false;
+    
+    /**
+     * Selector that selects only the first ticket (at index zero).
+     */
+    public static final TicketSelector First = new IndexBetweenSelector(0, 1);
     
     /**
      * Creates a selector that selects only the given ticket.
@@ -150,8 +165,8 @@ public interface TicketSelector {
      * @param name
      * @return 
      */
-    public static TicketSelector name(String name) {
-        return (t, o, i) -> name.equals(t.getName());
+    public static NameSelector name(String name) {
+        return new NameSelector(name);
     }
     /**
      * Creates a selector that selects tickets with a name equal
@@ -172,14 +187,6 @@ public interface TicketSelector {
      */
     public static TicketSelector namesMatch() {
         return (t, o, i) -> o == null || t.getName().equals(o.getName());
-    }
-    /**
-     * Creates a selector that selects only the first ticket (index 0).
-     * 
-     * @return 
-     */
-    public static TicketSelector first() {
-        return new IndexBetweenSelector(0, 1);
     }
     /**
      * Creates a selector that selects only the ticket at the index.
@@ -265,6 +272,24 @@ public interface TicketSelector {
         };
     }
     
+    public static class NameSelector implements TicketSelector {
+        
+        private final String name;
+
+        public NameSelector(String name) {
+            this.name = name;
+        }
+        
+        @Override
+        public boolean select(ResourceTicket ticket, ResourceTicket other, int index) {
+            return name.equals(ticket.getName());
+        }
+        
+        public String getName() {
+            return name;
+        }
+        
+    }
     public static class AnyNameSelector implements TicketSelector {
         
         private final String[] names;
@@ -310,15 +335,12 @@ public interface TicketSelector {
         @Override
         public boolean select(ResourceTicket ticket, ResourceTicket other, int index) {
             int trueCount = 0;
-            int falseCount = 0;
-            for (TicketSelector s : delegates) {
-                if (s.select(ticket, other, index)) {
+            for (TicketSelector d : delegates) {
+                if (d.select(ticket, other, index)) {
                     trueCount++;
-                } else {
-                    falseCount++;
                 }
             }
-            return evaluateCounts(trueCount, falseCount);
+            return evaluateCounts(trueCount, delegates.length-trueCount);
         }
         
         protected abstract boolean evaluateCounts(int trueCount, int falseCount);

@@ -51,9 +51,9 @@ import java.util.function.Consumer;
  * modules, without first having to ensure that the group has the correct number
  * of tickets to handle them.
  * <p>
- * This also has the ability to "forward" its tickets to other ArbitraryTicketLists.
+ * This also has the ability to "forward" its tickets to other DynamicTicketLists.
  * This is useful, for example, if a RenderContainer wishes to wrap an
- * ArbitraryTicketList argument for an internal module (to improve API), and then 
+ * DynamicTicketList argument for an internal module (to improve API), and then 
  * forward the list to the internal module.
  * 
  * @author codex
@@ -63,6 +63,7 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
     
     private final ArrayList<ResourceTicket<T>> tickets = new ArrayList<>();
     private final ArrayList<DynamicTicketList<T>> targets = new ArrayList<>();
+    private int maxElements = -1;
     private long nextTicketId = 0;
     
     public DynamicTicketList(String name) {
@@ -70,7 +71,12 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
     }
     
     @Override
-    public void add(ResourceTicket<T> ticket) {
+    public void detach() {
+        super.detach();
+        targets.clear();
+    }
+    @Override
+    public ResourceTicket<T> add(String name) {
         throw new UnsupportedOperationException("Tickets cannot be directly added to this group.");
     }
     @Override
@@ -78,16 +84,27 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
         return tickets;
     }
     @Override
-    public void makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
         int i = 0;
+        int connections = 0;
         for (ResourceTicket<T> s : source) {
-            if (sourceSelector.select(s, i++)) {
-                TicketSelector selector = TicketSelector.is(createAndInsertTicket(s));
-                for (DynamicTicketList<T> f : targets) {
-                    f.makeInput(this, selector, targetSelector);
+            if (maxElements >= 0 && tickets.size() >= maxElements) {
+                break;
+            }
+            if (sourceSelector.select(s, i)) {
+                ResourceTicket t = createTicket();
+                if (sourceSelector.select(s, t, i) && targetSelector.select(t, s, tickets.size())) {
+                    append(t).setSource(s);
+                    connections++;
+                    TicketSelector selector = TicketSelector.is(t);
+                    for (DynamicTicketList<T> f : targets) {
+                        f.makeInput(this, selector, TicketSelector.All);
+                    }
                 }
             }
+            i++;
         }
+        return connections;
     }
     @Override
     public void ticketSourceChanged(ResourceTicket<T> ticket, ResourceTicket<T> source) {
@@ -144,10 +161,58 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
         return false;
     }
     
-    protected ResourceTicket<T> createAndInsertTicket(ResourceTicket<T> source) {
-        ResourceTicket<T> t = append(new ResourceTicket<>(name + ":" + nextTicketId++));
+    /**
+     * Sets the maximum tickets that can be in this group at once before
+     * further additions are rejected.
+     * <p>
+     * Tickets are not automatically removed if {@code maxElements}
+     * is set below the current number of tickets, however, no more
+     * tickets can be added. If {@code maxElements} is negative, the
+     * number of tickets is unbounded.
+     * <p>
+     * To trim the number of tickets to the current maximum, use
+     * {@link #trimToMaxElements()}.
+     * <p>
+     * default=-1 (no bound)
+     * 
+     * @param maxElements 
+     */
+    public void setMaxElements(int maxElements) {
+        this.maxElements = maxElements;
+    }
+    
+    /**
+     * Gets the maximum number of tickets that can be added to this group.
+     * 
+     * @return
+     * @see #setMaxElements(int)
+     */
+    public int getMaxElements() {
+        return maxElements;
+    }
+    
+    /**
+     * Removes tickets from the end of this group's collection until
+     * the number of tickets is less that or equal to the current
+     * maximum elements.
+     * 
+     * @see #setMaxElements(int)
+     */
+    public void trimToMaxElements() {
+        if (maxElements >= 0) {
+            for (int i = tickets.size()-1; i >= maxElements; i--) {
+                tickets.get(i).setSource(null);
+            }
+        }
+    }
+    
+    protected ResourceTicket<T> createAndAppendTicket(ResourceTicket<T> source) {
+        ResourceTicket<T> t = append(createTicket());
         t.setSource(source);
         return t;
+    }
+    protected ResourceTicket<T> createTicket() {
+        return new ResourceTicket<>(this, name + ":" + nextTicketId++);
     }
     
     public static class ListTicketIndex extends TicketIndex {
@@ -169,7 +234,7 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
         }
         @Override
         public TicketSelector createSelector() {
-            return TicketSelector.first();
+            return TicketSelector.First;
         }
         
     }

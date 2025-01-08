@@ -53,8 +53,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ResourceView <T> {
     
     private final ResourceUser producer;
+    private final String name;
+    private final int index;
     private final ResourceDef<T> def;
-    private final ResourceTicket<T> ticket;
     private final TimeFrame lifetime;
     private final LinkedList<ResourceView> dependencies = new LinkedList<>();
     private final AtomicBoolean writeComplete = new AtomicBoolean(false);
@@ -62,22 +63,18 @@ public class ResourceView <T> {
     private final ReentrantLock readLock = new ReentrantLock();
     private final Condition readCondition = readLock.newCondition();
     private RenderObject object;
+    private long objectId = -1;
     private T resource;
     private boolean temporary = false;
     private boolean undefined = false;
     
-    /**
-     * 
-     * @param producer
-     * @param def
-     * @param declaringTicket 
-     */
-    public ResourceView(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> declaringTicket) {
+    public ResourceView(ResourceUser producer, ResourceDef<T> def, String name, int index/*, ResourceTicket<T> declaringTicket*/) {
         this.producer = producer;
         this.def = def;
-        this.ticket = new ResourceTicket<>(declaringTicket.getName());
+        this.name = name;
+        this.index = index;
         this.lifetime = new TimeFrame(this.producer.getIndex(), 0);
-        declaringTicket.setBindFlag();
+        //declaringTicket.setBindFlag();
     }
     
     /**
@@ -224,7 +221,15 @@ public class ResourceView <T> {
         this.object = object;
         this.resource = resource;
         this.object.acquire();
-        ticket.setObjectId(this.object.getId());
+        //ticket.setObjectId(this.object.getId());
+        setObjectId(this.object.getId());
+    }
+    /**
+     * 
+     * @param objectId 
+     */
+    public void setObjectId(long objectId) {
+        this.objectId = objectId;
     }
     /**
      * Directly sets the raw resource held by this render resource.
@@ -268,20 +273,30 @@ public class ResourceView <T> {
         return producer;
     }
     /**
+     * Gets the name of this resource view.
+     * <p>
+     * The name is determined by the name of this view's declaring ticket.
+     * 
+     * @return 
+     */
+    public String getName() {
+        return name;
+    }
+    /**
+     * Gets the index of this resource view in the {@link ResourceList}.
+     * 
+     * @return 
+     */
+    public int getIndex() {
+        return index;
+    }
+    /**
      * Gets the resource definition.
      * 
      * @return 
      */
     public ResourceDef<T> getDefinition() {
         return def;
-    }
-    /**
-     * Gets the resource ticket.
-     * 
-     * @return 
-     */
-    public ResourceTicket<T> getTicket() {
-        return ticket;
     }
     /**
      * Gets the lifetime of this resource in render pass indices.
@@ -300,6 +315,14 @@ public class ResourceView <T> {
         return object;
     }
     /**
+     * Gets the target object id.
+     * 
+     * @return 
+     */
+    public long getObjectId() {
+        return objectId;
+    }
+    /**
      * Gets the list of resources this resource depends on.
      * 
      * @return 
@@ -314,14 +337,6 @@ public class ResourceView <T> {
      */
     public T getResource() {
         return resource;
-    }
-    /**
-     * Gets the index of this resource.
-     * 
-     * @return 
-     */
-    public int getIndex() {
-        return ticket.getWorldIndex();
     }
     /**
      * Gets the number of references to this resource, not including
@@ -428,7 +443,7 @@ public class ResourceView <T> {
     
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "["+producer+", "+ticket+"]";
+        return getClass().getSimpleName() + "["+producer+", \""+name+"\"]";
     }
     
 }

@@ -73,17 +73,13 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
         super.read(im);
         read(im.getCapsule(this));
     }
-    @Override
-    public void traverse(Consumer<AbstractRenderModule> traverser) {
-        traverser.accept(this);
-    }
     
     @Override
     public void initializeModule(FrameGraph frameGraph) {
         initialize(frameGraph);
     }
     @Override
-    public void prepareModuleRender(FGRenderContext context) {
+    public void prepareRender(FGRenderContext context) {
         resources = context.getResources();
         prepare(context);
     }

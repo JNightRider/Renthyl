@@ -29,7 +29,6 @@
 package codex.renthyl.resources.tickets;
 
 import codex.renthyl.definitions.ResourceDef;
-import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.resources.ResourceUser;
 import java.util.Collection;
@@ -60,24 +59,11 @@ public interface DefinedTicketGroup <T, D extends ResourceDef<T>> extends Ticket
     /**
      * Adds a ticket along with its definition.
      * 
-     * @param ticket
-     * @param def 
-     */
-    public void add(ResourceTicket<T> ticket, D def);
-    
-    /**
-     * Creates and adds a new ticket with the name along with
-     * its definition.
-     * 
      * @param name
-     * @param def
-     * @return 
+     * @param def 
+     * @return  
      */
-    public default ResourceTicket<T> add(String name, D def) {
-        ResourceTicket<T> t = new ResourceTicket<>(name);
-        add(t, def);
-        return t;
-    }
+    public ResourceTicket<T> add(String name, D def);
     
     /**
      * {@link ResourceList#declare(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.tickets.ResourceTicket)

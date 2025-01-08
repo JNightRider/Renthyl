@@ -89,13 +89,13 @@ public class RenderContainer <R extends RenderModule> extends AbstractRenderModu
         }
     }
     @Override
-    public void prepareModuleRender(FGRenderContext context) {
-        super.prepareModuleRender(context);
+    public void prepareRender(FGRenderContext context) {
+        super.prepareRender(context);
         for (RenderModule m : queue) {
             // Checking for usage and culling states is critical. Niavely preparing modules
             // could lead to resources not fully being released which will result in an exception.
             if (!context.isTemporalCulling() || context.getFrameGraph().isLayoutUpdateNeeded() || m.isUsed()) {
-                m.prepareModuleRender(context);
+                m.prepareRender(context);
             }
         }
     }
@@ -281,12 +281,8 @@ public class RenderContainer <R extends RenderModule> extends AbstractRenderModu
      * @return true only if the module was removed
      */
     public boolean remove(R module) {
-        if (module.getParent() == this && queue.remove(module)) {
-            module.setParent(null);
-            module.cleanupModule();
-            return true;
-        }
-        return false;
+        int i = queue.indexOf(module);
+        return remove(i) != null;
     }
     
     /**

@@ -4,32 +4,55 @@
  */
 package codex.renthyl.modules;
 
-import codex.renthyl.resources.tickets.TicketSelector;
+import codex.renthyl.FrameGraph;
 
 /**
  *
  * @author codex
  * @param <T>
  */
-public class SequenceContainer <T extends AbstractRenderModule> extends RenderContainer<T> {
-    
-    private final TicketSelector localSource, localTarget;
-    private final TicketSelector globalSource, globalTarget;
-
-    public SequenceContainer(TicketSelector localSource, TicketSelector localTarget, TicketSelector globalSource, TicketSelector globalTarget) {
-        this.localSource = localSource;
-        this.localTarget = localTarget;
-        this.globalSource = globalSource;
-        this.globalTarget = globalTarget;
-    }
+public abstract class SequenceContainer <T extends RenderModule> extends GenerativeContainer<T> {
     
     @Override
-    public <R extends T> R add(R module, int index) {
-        super.add(module);
-        if (index > 0) {
-            T prev = queue.get(index - 1);
-        }
-        return module;
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
+        connectContainer();
     }
+    @Override
+    protected void memberAdded(T module, int index) {
+        if (index > 0) {
+            T prev = queue.get(index-1);
+            connectMembers(prev, module);
+        } else {
+            connectToContainerInput(module);
+        }
+        if (index < queue.size()-1) {
+            T next = queue.get(index+1);
+            connectMembers(module, next);
+        } else {
+            connectToContainerOutput(module);
+        }
+    }
+    @Override
+    protected void memberRemoved(int index) {
+        if (queue.isEmpty()) {
+            connectContainer();
+            return;
+        }
+        if (index == 0) {
+            connectToContainerInput(queue.get(index));
+        }
+        if (index == queue.size()) {
+            connectToContainerOutput(queue.get(index-1));
+        }
+        if (queue.size() >= 2 && index > 0 && index < queue.size()) {
+            connectMembers(queue.get(index-1), queue.get(index));
+        }
+    }
+    
+    protected abstract void connectMembers(T source, T target);
+    protected abstract void connectToContainerInput(T target);
+    protected abstract void connectToContainerOutput(T source);
+    protected abstract void connectContainer();
     
 }

@@ -31,19 +31,15 @@ package codex.renthyl.modules;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceUser;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketList;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
-import com.jme3.export.Savable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import codex.renthyl.resources.tickets.TicketGroup;
 
 /**
@@ -60,7 +56,6 @@ public abstract class AbstractRenderModule implements RenderModule {
     protected final ModuleIndex index = new ModuleIndex();
     protected final HashMap<String, TicketGroup> inputGroups = new HashMap<>();
     protected final HashMap<String, TicketGroup> outputGroups = new HashMap<>();
-    private BiConsumer<RenderContainer, AbstractRenderModule> connector;
     private int refs = 1; // start at one so this won't be temporally culled
     private int exportId = -1;
     
@@ -110,14 +105,12 @@ public abstract class AbstractRenderModule implements RenderModule {
     }
     
     @Override
-    public <T> ResourceTicket<T> addInput(ResourceTicket ticket) {
-        getMainInputGroup().add(ticket);
-        return ticket;
+    public ResourceTicket addInput(String name) {
+        return getMainInputGroup().add(name);
     }
     @Override
-    public <T> ResourceTicket<T> addOutput(ResourceTicket ticket) {
-        getMainOutputGroup().add(ticket);
-        return ticket;
+    public ResourceTicket addOutput(String name) {
+        return getMainOutputGroup().add(name);
     }
     @Override
     public <T, R extends TicketGroup<T>> R addInputGroup(R group) {
@@ -178,7 +171,7 @@ public abstract class AbstractRenderModule implements RenderModule {
         index.set(queues.add(this, parentThread));
     }
     @Override
-    public void prepareModuleRender(FGRenderContext context) {}
+    public void prepareRender(FGRenderContext context) {}
     @Override
     public void executeRender(FGRenderContext context) {
         if (!isUsed()) {

@@ -43,7 +43,6 @@ import codex.renthyl.jobs.JobEventHandler;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.modules.RenderThread;
 import com.jme3.asset.AssetManager;
 import com.jme3.opencl.CommandQueue;
@@ -59,6 +58,7 @@ import java.util.logging.Logger;
 import codex.renthyl.jobs.FGJobExecutor;
 import codex.renthyl.modules.LayoutMember;
 import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.RenderPass;
 import java.util.LinkedList;
 
 /**
@@ -227,7 +227,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
             jobList.flush();
             root.queueModule(context, jobList, ModuleIndex.MAIN_THREAD);
         }
-        root.prepareModuleRender(context);
+        root.prepareRender(context);
         resources.applyFutureReferences();
         
         // cull modules and resources
