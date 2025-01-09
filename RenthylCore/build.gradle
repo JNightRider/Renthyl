@@ -17,3 +17,45 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "com.github.codex128:Boost:1.2.3"
 }
+
+task copyJavadoc(dependsOn: javadoc) {
+    
+}
+
+// remove the generated javadocs in the /docs folder
+task cleanJavadoc(type: Delete) {
+    delete "$projectDir/docs/javadoc/"
+}
+
+clean {
+    dependsOn cleanJavadoc
+}
+
+build {
+    dependsOn copyJavadoc
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+javadoc {
+    failOnError = false
+}
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
+
