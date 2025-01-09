@@ -62,6 +62,9 @@ publishing {
             from components.java
             artifact sourcesJar
             artifact javadocJar
+            groupId = 'com.github.codex128'
+            artifactId = 'renthyl-rendering-library'
+            version = '1.2.2'
         }
     }
 }
