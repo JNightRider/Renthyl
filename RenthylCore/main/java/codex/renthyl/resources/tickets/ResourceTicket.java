@@ -33,7 +33,6 @@ import codex.renthyl.resources.ResourceView;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Objects;
-import jdk.internal.foreign.ResourceScopeImpl.ResourceList;
 
 /**
  * References a {@link RenderResource} by index.
