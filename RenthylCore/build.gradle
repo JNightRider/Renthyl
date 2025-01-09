@@ -1,8 +1,12 @@
 
-apply plugin: "java"
-apply plugin: "maven"
+plugins {
+    id 'buildlogic.java-application-conventions'
+    id 'java-library'
+    id 'maven-publish'
+}
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven { url "https://jitpack.io" }
 }
@@ -23,6 +27,7 @@ dependencies {
     implementation "com.github.codex128:Boost:$boost"
 }
 
+/*
 java {
     withJavadocJar()
     withSourcesJar()
@@ -37,13 +42,12 @@ task javadocJar(type: Jar) {
     from javadoc
     archiveClassifier = "javadoc"
 }
+*/
 
 publishing {
     publications {
         maven(MavenPublication) {
             from components.java
-            artifact sourcesJar
-            artifact javadocJar
         }
     }
 }
