@@ -12,14 +12,26 @@ repositories {
 }
 
 project.ext {
-    jme = '3.8.0-alpha2'
-    boost = '1.2.3'
+    jmeVer = '3.8.0-alpha2' 
 }
 
 dependencies {
-    implementation "org.jmonkeyengine:jme3-core:$jme"
-    implementation "org.jmonkeyengine:jme3-lwjgl3:$jme"
-    implementation "com.github.codex128:Boost:$boost"
+    implementation "org.jmonkeyengine:jme3-core:$jmeVer"
+    implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
+    implementation "com.github.codex128:Boost:1.2.3"
+}
+
+// remove the generated javadocs in the /docs folder
+task cleanJavadoc(type: Delete) {
+    delete "$projectDir/docs/javadoc/"
+}
+
+clean {
+    dependsOn cleanJavadoc
+}
+
+build {
+    
 }
 
 task sourcesJar(type: Jar) {
@@ -38,7 +50,7 @@ javadoc {
 
 publishing {
     publications {
-        library(MavenPublication) {
+        MyPublication(MavenPublication) {
             from components.java
             artifact sourcesJar
             artifact javadocJar
