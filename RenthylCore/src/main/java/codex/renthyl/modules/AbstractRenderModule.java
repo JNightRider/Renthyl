@@ -173,12 +173,7 @@ public abstract class AbstractRenderModule implements RenderModule {
     @Override
     public void prepareRender(FGRenderContext context) {}
     @Override
-    public void executeRender(FGRenderContext context) {
-        if (!isUsed()) {
-            return;
-        }
-        executeRender(context);
-    }
+    public void executeRender(FGRenderContext context) {}
     @Override
     public void resetRender(FGRenderContext context) {}
     @Override

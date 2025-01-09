@@ -6,6 +6,7 @@ MaterialDef TextureTransfer {
         Vector2 Scale : 1.0 1.0
         Float AlphaDiscard
         Boolean Debug
+        Boolean VisualizeAsDepth
     }
 
     Technique {

@@ -99,6 +99,8 @@ public class GeometryPass extends RenderPass {
         //context.registerMode(RenderMode.background(ColorRGBA.BlackNoAlpha));
         context.registerMode(RenderMode.frameBuffer(fb));
         context.clearBuffers();
+        //System.out.println(inColor.getWorldIndex() + "   " + inColor.getLocalIndex());
+        //System.out.println(resources.acquireOrElse(inColor, null) + "    " + resources.acquireOrElse(inDepth, null));
         context.renderTextures(resources.acquireOrElse(inColor, null), resources.acquireOrElse(inDepth, null));
         resources.acquire(geometry).render(context, geometryHandler);
     }

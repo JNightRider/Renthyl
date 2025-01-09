@@ -76,15 +76,18 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
     
     @Override
     public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
         initialize(frameGraph);
     }
     @Override
     public void prepareRender(FGRenderContext context) {
+        super.prepareRender(context);
         resources = context.getResources();
         prepare(context);
     }
     @Override
     public void executeRender(FGRenderContext context) {
+        super.executeRender(context);
         // permissions are always required
         //if (context.isAsync()) {
             claimResourcePermissions();

@@ -52,7 +52,7 @@ public class ResourceTicket <T> {
     
     private final TicketGroup<T> group;
     private String name;
-    private int localIndex;
+    private int localIndex = -1;
     private long objectId = -1;
     private boolean bound = false;
     private ResourceTicket<T> source;
@@ -170,6 +170,7 @@ public class ResourceTicket <T> {
      * @return 
      */
     public ResourceTicket<T> setLocalIndex(int index) {
+        System.out.println("set local index of " + name + " to " + index);
         this.localIndex = index;
         return this;
     }
