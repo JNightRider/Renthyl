@@ -21,31 +21,9 @@ dependencies {
     implementation "com.github.codex128:Boost:1.2.3"
 }
 
-// remove the generated javadocs in the /docs folder
-task cleanJavadoc(type: Delete) {
-    delete "$projectDir/docs/javadoc/"
-}
-
-clean {
-    dependsOn cleanJavadoc
-}
-
-build {
-    
-}
-
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allJava
-    archiveClassifier = 'sources'
-}
-
-task javadocJar(type: Jar) {
-    from javadoc
-    archiveClassifier = 'javadoc'
-}
-
-javadoc {
-    failOnError = false
+java {
+    withJavadocJar()
+    withSourcesJar()
 }
 
 publishing {
@@ -57,4 +35,9 @@ publishing {
         }
     }
 }
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
 
