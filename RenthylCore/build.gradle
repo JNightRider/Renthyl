@@ -1,20 +1,18 @@
 
+
+
 plugins {
     id 'buildlogic.java-application-conventions'
     id 'java-library'
     id 'maven-publish'
+    id 'signing'
 }
 
 repositories {
-    mavenLocal()
     mavenCentral()
-    maven { url "https://jitpack.io" }
+    jcenter()
+	maven { url "https://jitpack.io" }
 }
-
-group = 'com.github.codex128'
-version = '1.2.2'
-sourceCompatibility = 1.8 // java 8
-targetCompatibility = 1.8
 
 project.ext {
     jmeVer = '3.8.0-alpha2'
@@ -27,29 +25,44 @@ dependencies {
     implementation "com.github.codex128:Boost:$boost"
 }
 
-/*
-java {
-    withJavadocJar()
-    withSourcesJar()
+task copyJavadoc(dependsOn: javadoc) {
+    
 }
 
-task sourcesJar(Type: Jar) {
+// remove the generated javadocs in the /docs folder
+task cleanJavadoc(type: Delete) {
+    delete "$projectDir/docs/javadoc/"
+}
+
+clean {
+    dependsOn cleanJavadoc
+}
+
+build {
+    dependsOn copyJavadoc
+}
+
+task sourcesJar(type: Jar) {
     from sourceSets.main.allJava
-    archiveClassifier = "sources"
+    archiveClassifier = 'sources'
 }
 
 task javadocJar(type: Jar) {
     from javadoc
-    archiveClassifier = "javadoc"
+    archiveClassifier = 'javadoc'
 }
-*/
+
+javadoc {
+    failOnError = false
+}
 
 publishing {
     publications {
-        maven(MavenPublication) {
+        MyPublication(MavenPublication) {
             from components.java
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
-
 
