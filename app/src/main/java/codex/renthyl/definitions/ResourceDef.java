@@ -1,0 +1,208 @@
+/*
+ * Copyright (c) 2024, codex
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package codex.renthyl.definitions;
+
+import java.util.function.Consumer;
+
+/**
+ * Manages the behavior of a {@link ResourceView}, especially for creation,
+ * reallocation, and disposal of related raw resources.
+ * 
+ * @author codex
+ * @param <T>
+ */
+public interface ResourceDef <T> {
+    
+    /**
+     * Creates a new resources from scratch.
+     * 
+     * @return 
+     */
+    public T createResource();
+    
+    /**
+     * Checks if the resource can be directly allocated to this definition's
+     * {@link ResourceView} as is.
+     * <p>
+     * For reallocation, direct "as is" resources are preferred over indirect
+     * resources. Usually because direct resources are specifically designed
+     * for whatever task.
+     * 
+     * @param resource
+     * @return the resource if approved, otherwise null
+     */
+    public T applyDirectResource(Object resource);
+    
+    /**
+     * Repurposes the given resource for allocation to this definition's
+     * {@link ResourceView}.
+     * <p>
+     * An indirect resource usually does not exactly match the type of this
+     * definition, but does contain the necessary components.
+     * 
+     * @param resource
+     * @return repurposed resource, or null if the given resource is not usable.
+     */
+    public T applyIndirectResource(Object resource);
+    
+    /**
+     * Gets the tag object associated with the resource this definition represents.
+     * <p>
+     * The tag can be used to narrow reallocation scope. Only
+     * {@link codex.renthyl.resources.RenderObject RenderObjects} that have an
+     * {@link #isEquivalentTag(java.lang.Object) equivalent} tag to this can be reallocated.
+     * RenderObjects derive their tags from the resource definitions used to create them.
+     * 
+     * @return resource tag (may be null)
+     */
+    public default Object getResourceTag() {
+        return null;
+    }
+    
+    /**
+     * 
+     * 
+     * @param tag
+     * @return 
+     */
+    public default boolean isEquivalentTag(Object tag) {
+        Object t = getResourceTag();
+        return t == tag || (t != null && t.equals(tag));
+    }
+    
+    /**
+     * Returns the number of frames which the resource must be
+     * static (unused throughout rendering) before it is disposed.
+     * <p>
+     * If negative, the default timeout value will be used instead.
+     * 
+     * @return static timeout duration
+     */
+    public default int getStaticTimeout() {
+        return -1;
+    }
+    
+    /**
+     * Gets the Consumer used to dispose of a resource.
+     * 
+     * @return resource disposer, or null
+     */
+    public default Consumer<T> getDisposalMethod() {
+        return null;
+    }
+    
+    /**
+     * Returns true if resources can be reallocated to this definition.
+     * 
+     * @return 
+     */
+    public default boolean isUseExisting() {
+        return true;
+    }
+    
+    /**
+     * Returns true if reallocation of this definition's resource is allowed
+     * casually without a specific object id.
+     * 
+     * @return 
+     */
+    public default boolean isAllowCasualAllocation() {
+        return true;
+    }
+    
+    /**
+     * Returns true if reserving this definition's resource is allowed.
+     * 
+     * @return 
+     */
+    public default boolean isAllowReservations() {
+        return true;
+    }
+    
+    /**
+     * Returns true if the resource should be disposed after being
+     * released and having no users.
+     * 
+     * @return 
+     */
+    public default boolean isDisposeOnRelease() {
+        return false;
+    }
+    
+    /**
+     * Returns true if the resource can be read concurrently.
+     * 
+     * @return 
+     */
+    public default boolean isReadConcurrent() {
+        return true;
+    }
+    
+    /**
+     * Returns true if the definition allows allocation of
+     * indirect resources.
+     * <p>
+     * This has the same effect as always returning null for
+     * {@link #applyIndirectResource(java.lang.Object)}, but this method
+     * allows certain checks to be skipped if false is returned.
+     * <p>
+     * Note that this hint only applies to casual allocations.
+     * If a specific object id is presented, then applying an indirect
+     * resource will still be attempted if applying directly fails.
+     * However, those cases shuold be relatively rare.
+     * <p>
+     * default=false
+     * 
+     * @return 
+     */
+    public default boolean isAllowIndirectResources() {
+        return false;
+    }
+    
+    /**
+     * Returns true if console debugging should be enabled
+     * for this definition.
+     * 
+     * @return 
+     */
+    public default boolean isDebugEnabled() {
+        return false;
+    }
+    
+    /**
+     * Disposes the resource using the disposal method, if not null.
+     * 
+     * @param resource 
+     */
+    public default void dispose(T resource) {
+        Consumer<T> d = getDisposalMethod();
+        if (d != null) d.accept(resource);
+    }
+    
+}
