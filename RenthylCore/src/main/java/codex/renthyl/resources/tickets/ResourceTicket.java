@@ -170,7 +170,6 @@ public class ResourceTicket <T> {
      * @return 
      */
     public ResourceTicket<T> setLocalIndex(int index) {
-        System.out.println("set local index of " + name + " to " + index);
         this.localIndex = index;
         return this;
     }

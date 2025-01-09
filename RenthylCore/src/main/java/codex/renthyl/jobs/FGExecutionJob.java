@@ -29,14 +29,9 @@ public class FGExecutionJob implements Runnable, Iterable<AbstractRenderModule> 
     @Override
     public void run() {
         try {
-            long jobStart = System.nanoTime();
-            System.out.println("Job " + index + " profile:");
             for (AbstractRenderModule m : queue) {
-                long start = System.nanoTime();
                 m.executeRender(context);
-                System.out.println("  " + m + ": " + ((double)Math.abs(System.nanoTime() - start) / 1000000.0) + "ms");
             }
-            System.out.println("Job " + index + " took " + ((double)Math.abs(System.nanoTime() - jobStart) / 1000000.0) + "ms");
             events.complete();
         } catch (Exception ex) {
             events.interrupt();
