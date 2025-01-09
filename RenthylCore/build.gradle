@@ -4,6 +4,7 @@
 plugins {
     id 'buildlogic.java-application-conventions'
     id 'java-library'
+    id 'maven-publish'
     id 'signing'
 }
 
@@ -21,7 +22,7 @@ project.ext {
 dependencies {
     implementation "org.jmonkeyengine:jme3-core:$jmeVer"
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
-    implementation "com.github.codex128:Boost:$boost"
+    implementation "com.github.codex128:Boost:$boostVer"
 }
 
 task copyJavadoc(dependsOn: javadoc) {
