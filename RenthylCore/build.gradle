@@ -1,6 +1,9 @@
 
 plugins {
     id 'buildlogic.java-application-conventions'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
 }
 
 repositories {
