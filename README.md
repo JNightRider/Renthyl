@@ -1,8 +1,5 @@
 Renthyl is a modular FrameGraph-based rendering pipeline designed with efficiency in mind.
 
-:warning: **Warning!** :warning:<br>
-Renthyl is still under development and should not be used for production yet. It additionally uses libraries that have not been deployed.
-
 ## Features
 
 * Allows for the use of modern rendering paradigms, such as deferred and forward++.
@@ -16,15 +13,9 @@ Renthyl is still under development and should not be used for production yet. It
 
 ## Get Started
 
-1. Download Renthyl (including assets).
+1. Clone the repository and run the gradle wrapper.
 
-2. Download dependencies
-   * [JMonkeyEngine](https://github.com/codex128/jmonkeyengine/tree/pipelineApi) (experimental branch).
-   * [Boost](https://github.com/codex128/Boost) (master branch)
-   * [RenthylPlus](https://github.com/codex128/RenthylPlus) (optional, master branch)
-   * Java JDK8
-
-3. Initialize Renthyl in your JMonkeyEngine application.
+2. Initialize Renthyl in your JMonkeyEngine application.
    
 ```java
 Renthyl.initialize(application);
@@ -32,8 +23,8 @@ FrameGraph fg = Renthyl.forward(assetManager);
 viewPort.setPipeline(fg);
 ```
 
-4. Run the project.
+3. Run the project.
 
 ## Learn Renthyl
 
-A full guide on how to effectively use Renthyl can be found at this repository's [wiki](https://github.com/codex128/FrameGraph/wiki).
+A full guide on how to use Renthyl can be found at this repository's [wiki](https://github.com/codex128/FrameGraph/wiki).
