@@ -59,12 +59,12 @@ javadoc {
 publishing {
     publications {
         MyPublication(MavenPublication) {
-            from components.java
-            artifact sourcesJar
-            artifact javadocJar
             groupId = 'com.github.codex128'
             artifactId = 'renthyl-rendering-library'
             version = '1.2.2'
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
         }
     }
 }
