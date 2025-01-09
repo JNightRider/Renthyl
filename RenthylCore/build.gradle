@@ -1,9 +1,7 @@
 
 plugins {
-    id 'buildlogic.java-application-conventions'
-    id 'java-library'
+    id 'java'
     id 'maven-publish'
-    id 'signing'
 }
 
 repositories {
@@ -11,14 +9,20 @@ repositories {
     maven { url "https://jitpack.io" }
 }
 
+group = 'com.github.codex128'
+version = '1.2.2'
+sourceCompatibility = 1.8 // java 8
+targetCompatibility = 1.8
+
 project.ext {
-    jmeVer = '3.8.0-alpha2' 
+    jmeVer = '3.8.0-alpha2'
+    boostVer = '1.2.3'
 }
 
 dependencies {
     implementation "org.jmonkeyengine:jme3-core:$jmeVer"
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
-    implementation "com.github.codex128:Boost:1.2.3"
+    implementation "com.github.codex128:Boost:$boost"
 }
 
 java {
@@ -28,14 +32,10 @@ java {
 
 publishing {
     publications {
-        MyPublication(MavenPublication) {
+        maven(MavenPublication) {
             from components.java
         }
     }
-}
-
-signing {
-    sign publishing.publications.mavenJava
 }
 
 
