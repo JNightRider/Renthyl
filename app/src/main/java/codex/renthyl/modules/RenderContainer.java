@@ -28,12 +28,10 @@
  */
 package codex.renthyl.modules;
 
-import codex.renthyl.Connectable;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.TicketGroup;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -52,7 +50,7 @@ import java.util.function.Function;
  * @author codex
  * @param <R>
  */
-public class RenderContainer <R extends RenderModule> extends RenderModule implements Iterable<R> {
+public class RenderContainer <R extends RenderModule> extends AbstractRenderModule implements Iterable<R> {
 
     protected final ArrayList<R> queue = new ArrayList<>();
     protected Consumer<R> moduleInitializer;
@@ -63,19 +61,22 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     
     @Override
-    public void initModule(FrameGraph frameGraph) {
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
         for (RenderModule m : queue) {
             m.initializeModule(frameGraph);
         }
     }
     @Override
-    public void cleanupModule(FrameGraph frameGraph) {
+    public void cleanupModule() {
         for (RenderModule m : queue) {
             m.cleanupModule();
         }
+        super.initializeModule(frameGraph);
     }
     @Override
     public void updateModule(FGRenderContext context, float tpf) {
+        super.updateModule(context, tpf);
         for (R m : queue) {
             m.updateModule(context, tpf);
         }
@@ -88,15 +89,16 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
         }
     }
     @Override
-    public void prepareModuleRender(FGRenderContext context) {
+    public void prepareRender(FGRenderContext context) {
+        super.prepareRender(context);
         for (RenderModule m : queue) {
+            // Checking for usage and culling states is critical. Niavely preparing modules
+            // could lead to resources not fully being released which will result in an exception.
             if (!context.isTemporalCulling() || context.getFrameGraph().isLayoutUpdateNeeded() || m.isUsed()) {
-                m.prepareModuleRender(context);
+                m.prepareRender(context);
             }
         }
     }
-    @Override
-    public void executeRender(FGRenderContext context) {}
     @Override
     public void resetRender(FGRenderContext context) {
         for (RenderModule m : queue) {
@@ -117,7 +119,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
     }
     @Override
     public boolean isUsed() {
-        // if executing a container becomes heavy on its own, change this to
+        // If executing a container becomes heavy on its own, change this to
         // check isUsed() for each contained module.
         return !queue.isEmpty();
     }
@@ -147,21 +149,17 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
             m.traverse(traverser);
         }
     }
-    @Override
-    public void appendProjectName(String projectName) {
-        super.appendProjectName(projectName);
-        for (R m : queue) {
-            m.appendProjectName(projectName);
-        }
-    }
     
     /**
      * Adds the module at the index.
+     * <p>
+     * If {@code index} is negative, the module will be appended
+     * to the end of this container's queue.
      * 
      * @param <T>
      * @param module
      * @param index
-     * @return 
+     * @return the added module
      */
     public <T extends R> T add(T module, int index) {
         Objects.requireNonNull(module, "Cannot add null module.");
@@ -182,7 +180,6 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
             if (moduleInitializer != null) {
                 moduleInitializer.accept(module);
             }
-            module.applyConnector(this);
             return module;
         }
         throw new IllegalArgumentException(module + " cannot be added to " + this + ".");
@@ -197,35 +194,6 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      */
     public <T extends R> T add(T module) {
         return add(module, queue.size());
-    }
-    
-    /**
-     * Adds the module at the index.
-     * 
-     * @param <T>
-     * @param module
-     * @param index
-     * @param name name to be assigned to the module
-     * @return 
-     */
-    public <T extends R> T add(T module, int index, String name) {
-        T m = add(module, index);
-        m.setName(name);
-        return m;
-    }
-    
-    /**
-     * Adds the module to the end of this container.
-     * 
-     * @param <T>
-     * @param module
-     * @param name
-     * @return 
-     */
-    public <T extends R> T add(T module, String name) {
-        T m = add(module, queue.size());
-        m.setName(name);
-        return m;
     }
     
     /**
@@ -267,7 +235,7 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
                 add(module);
             }
             if (i > 0) {
-                array[i].makeInput(array[i-1], source, target);
+                module.makeInput(array[i-1], source, target);
             }
         }
         return array;
@@ -313,12 +281,8 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @return true only if the module was removed
      */
     public boolean remove(R module) {
-        if (module.getParent() == this && queue.remove(module)) {
-            module.setParent(null);
-            module.cleanupModule();
-            return true;
-        }
-        return false;
+        int i = queue.indexOf(module);
+        return remove(i) != null;
     }
     
     /**
@@ -375,14 +339,19 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param target 
      */
     public void makeInternalInput(String sourceTicket, String targetTicket, Connectable target) {
-        ResourceTicket in = getInput(sourceTicket, true);
-        if (TicketGroup.isListTicket(targetTicket)) {
-            ResourceTicket t = target.addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
-            t.setSource(in);
-        } else {
-            ResourceTicket t = target.getInput(targetTicket, true);
-            t.setSource(in);
-        }
+        makeInternalInput(TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket), target);
+    }
+    
+    /**
+     * Connects selected source (input) tickets from this container to the selected
+     * target (input) tickets from the target child Connectable.
+     * 
+     * @param sourceSelector
+     * @param targetSelector
+     * @param target 
+     */
+    public void makeInternalInput(TicketSelector sourceSelector, TicketSelector targetSelector, Connectable target) {
+        target.getMainInputGroup().makeInput(getMainInputGroup(), sourceSelector, targetSelector);
     }
     
     /**
@@ -394,15 +363,19 @@ public class RenderContainer <R extends RenderModule> extends RenderModule imple
      * @param targetTicket 
      */
     public void makeInternalOutput(Connectable source, String sourceTicket, String targetTicket) {
-        ResourceTicket out = source.getOutput(sourceTicket, true);
-        if (TicketGroup.isListTicket(targetTicket)) {
-            ResourceTicket t = addTicketListEntry(TicketGroup.extractGroupName(targetTicket));
-            t.setSource(out);
-            throw new UnsupportedOperationException("Internal connection to an output ticket list is not yet supported.");
-        } else {
-            ResourceTicket target = getOutput(targetTicket, true);
-            target.setSource(out);
-        }
+        makeInternalOutput(source, TicketSelector.name(sourceTicket), TicketSelector.name(targetTicket));
+    }
+    
+    /**
+     * Connects the selected source (output) tickets from the source connectable
+     * to the selected target (output) tickets from this container.
+     * 
+     * @param source
+     * @param sourceSelector
+     * @param targetSelector 
+     */
+    public void makeInternalOutput(Connectable source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+        getMainOutputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
     }
     
     /**

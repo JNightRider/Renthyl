@@ -31,12 +31,14 @@ package codex.renthyl.resources;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.debug.GraphEventCapture;
-import codex.renthyl.debug.ResourceWatcher;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.util.ArrayIterator;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
-import com.jme3.texture.Texture3D;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 
 /**
@@ -91,27 +93,57 @@ public class ResourceList {
     private int textureBinds = 0;
     
     /**
-     * 
-     * @param frameGraph 
+     * Stores tickets that will require unbinding at reset, but will
+     * not otherwise be accessible.
      */
+    private final LinkedList<ResourceTicket> endangeredTickets = new LinkedList<>();
+    
     public ResourceList(FrameGraph frameGraph) {
         this(frameGraph, INITIAL_SIZE);
     }
-    
-    /**
-     * 
-     * @param frameGraph
-     * @param initialListSize 
-     */
     public ResourceList(FrameGraph frameGraph, int initialListSize) {
         this.frameGraph = frameGraph;
         this.resources = new ArrayList<>(initialListSize);
     }
     
-    private <T> ResourceView<T> create(ResourceUser producer, ResourceDef<T> def, String name) {
-        ResourceView res = new ResourceView<>(producer, def, new ResourceTicket<>(name));
-        res.getTicket().setLocalIndex(add(res));
-        return res;
+    /******************************
+     * Private management methods *
+     ******************************/
+    
+    /**
+     * Creates a new resource view and adds it to the view list.
+     * 
+     * @param <T>
+     * @param producer
+     * @param def
+     * @param ticket
+     * @return 
+     */
+    private <T> ResourceView<T> create(ResourceUser user, ResourceDef<T> def, String name) {
+        if (nextSlot >= resources.size()) {
+            // add resource to end of list
+            ResourceView res = new ResourceView(user, def, name, resources.size());
+            resources.add(res);
+            nextSlot++;
+            return res;
+        } else {
+            // Insert resource into available slot.
+            // Note: storing and finding the first empty slot is not necessary
+            // for the current implementation. In fact, it is mostly left over
+            // from a previous implementation. I probably won't remove it because
+            // this case should theoretically never occur anyway, and I may need
+            // it in the future.
+            int i = nextSlot;
+            ResourceView res = new ResourceView(user, def, name, i);
+            resources.set(i, res);
+            // find next available slot
+            while (++nextSlot < resources.size()) {
+                if (resources.get(nextSlot) == null) {
+                    break;
+                }
+            }
+            return res;
+        }
     }
     private <T> ResourceView<T> locate(ResourceTicket<T> ticket) {
         return locate(ticket, true);
@@ -126,7 +158,7 @@ public class ResourceList {
         final int i = ticket.getWorldIndex();
         if (i < 0) {
             if (failOnMiss) {
-                throw new NullPointerException(ticket+" does not point to any resource (negative index).");
+                throw new NullPointerException(ticket + " does not point to any resource (negative index).");
             }
             return null;
         }
@@ -136,46 +168,26 @@ public class ResourceList {
                 return res;
             }
             if (failOnMiss) {
-                throw new NullPointerException(ticket+" points to null resource.");
+                throw new NullPointerException(ticket + " points to null resource.");
             }
         }
         if (failOnMiss) {
-            throw new IndexOutOfBoundsException(ticket+" is out of bounds for size "+resources.size());
+            throw new IndexOutOfBoundsException(ticket + " is out of bounds for size "+resources.size());
         }
         return null;
     }
     private ResourceView fastLocate(ResourceTicket ticket) {
+        // Niavely fetches the resource without checking for potentially annoying
+        // errors. I would avoid using this for most circumstances.
         return resources.get(ticket.getWorldIndex());
     }
-    private int add(ResourceView res) {
-        assert res != null;
-        if (nextSlot >= resources.size()) {
-            // add resource to end of list
-            resources.add(res);
-            nextSlot++;
-            return resources.size()-1;
-        } else {
-            // Insert resource into available slot.
-            // Note: storing and finding the first empty slot is not necessary
-            // for the current implementation. In fact, it is mostly left over
-            // from a previous implementation. I probably won't remove it because
-            // this case should theoretically never occur anyway, and I may need
-            // it in the future.
-            int i = nextSlot;
-            resources.set(i, res);
-            // find next available slot
-            while (++nextSlot < resources.size()) {
-                if (resources.get(nextSlot) == null) {
-                    break;
-                }
-            }
-            return i;
-        }
-    }
     private ResourceView remove(int index) {
+        // It is faster and less error-prone to simply switch out the resource
+        // at the index with null. Future references to that index will result 
+        // in an error instead of accidentally fetching an unexpected resource.
         ResourceView prev = resources.set(index, null);
         if (prev != null && prev.isReferenced()) {
-            throw new IllegalStateException("Cannot remove "+prev+" because it is referenced.");
+            throw new IllegalStateException("Cannot remove " + prev + " because it is referenced.");
         }
         nextSlot = Math.min(nextSlot, index);
         return prev;
@@ -193,40 +205,48 @@ public class ResourceList {
         return ResourceTicket.validate(ticket);
     }
     
+    /****************
+     * Declarations *
+     ****************/
+    
     /**
      * Declares a new resource view.
      * <p>
      * The resulting {@link ResourceView} is essentially a promise of an actual concrete
      * object on demand. ResourceViews are used by resource management to schedule where
      * objects should used, and how objects can be reallocated. ResourceViews cannot be 
-     * accessed directly, but can be referenced by {@link ResourceTicket}s.
+     * accessed directly, but can be referenced by {@link ResourceTicket ResourceTickets}.
      * <p>
      * If the resource is only intended to be used internally by the ResourceUser,
      * and not shared with other users, it is critical that
-     * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket) declareTemporary}
-     * be used instead.
+     * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket)
+     * declareTemporary} be used instead.
      * <p>
      * If the resource does not require intensive allocation management, consider using
-     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) declarePrimitive}
-     * instead.
+     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     * declarePrimitive} instead.
      * <p>
      * <em>Note: passing {@code null} as the resource definition marks the resource
      * as primitive. This technique was deprecated because it was too vague. Older versions
      * may still pass {@code null} to declare primitive resources, but
-     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket) declarePrimitive}
-     * should be preferred.</em>
+     * {@link #declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     * declarePrimitive} should be preferred.</em>
      * 
      * @param <T>
      * @param producer author of the resource responsible for the initial acquirement
      * @param def defines resource behavior and reallocation policies
-     * @param store stores indexing information, and can be used later to retrieve the created resource
+     * @param ticket stores indexing information, and can be used later to retrieve the created resource
      * @return given resource ticket
      */
-    public <T> ResourceTicket<T> declare(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> store) {
-        String name = (store != null ? store.getName() : null);
-        ResourceView<T> resource = create(producer, def, name);
-        if (cap != null) cap.declareResource(resource.getIndex(), name);
-        return resource.getTicket().copyIndexTo(store);
+    public <T> ResourceTicket<T> declare(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> ticket) {
+        if (ticket.isBindFlagSet()) {
+            throw new IllegalStateException("Cannot declare with " + ticket + " because it is already bound.");
+        }
+        ResourceView resource = create(producer, def, ticket.getName());
+        ticket.setBindFlag();
+        if (cap != null) cap.declareResource(resource.getIndex(), ticket.getName());
+        ticket.setLocalIndex(resource.getIndex());
+        return ticket;
     }
     
     /**
@@ -235,7 +255,7 @@ public class ResourceList {
      * Primitive resource views directly contain the resource without involving
      * the {@link RenderObjectMap} for allocation management. This is a much more
      * niave method of handling resources, but it can often be faster for
-     * low-impact resources that don't have much to gain much from reallocation.
+     * low-impact resources that don't gain much from reallocation.
      * 
      * @param <T>
      * @param producer
@@ -253,7 +273,8 @@ public class ResourceList {
      * participate in or affect culling. This is suitable for resources that
      * require allocation management but are not shared with other passes.
      * <p>
-     * Attempting to reference a temporary resource will result in an exception.
+     * Attempting to {@link #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.tickets.ResourceTicket)
+     * reference} a temporary resource will result in an exception.
      * 
      * @param <T>
      * @param producer
@@ -264,17 +285,20 @@ public class ResourceList {
     public <T> ResourceTicket<T> declareTemporary(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> store) {
         store = declare(producer, def, store);
         locate(store).setTemporary(true);
+        endangeredTickets.add(store);
         return store;
     }
+    
+    /****************
+     * Reservations *
+     ****************/
     
     /**
      * Reserves the object at the ticket's {@link ResourceTicket#getObjectId() object ID},
      * if valid.
      * <p>
-     * Reserving an object guarantees that the object cannot be reallocated by
-     * something else at the time this process would need it (defined by the pass
-     * index). Any allocation request that overlaps the specified index is
-     * denied.
+     * Reverving an object greatly increases the chances that {@link #acquire(codex.renthyl.resources.tickets.ResourceTicket)
+     * acquiring} will return the reserved object.
      * <p>
      * Tickets save the ID of the last object they were involved in acquiring.
      * 
@@ -284,7 +308,8 @@ public class ResourceList {
     public void reserve(ModuleIndex passIndex, ResourceTicket ticket) {
         if (ticket.getObjectId() >= 0) {
             map.reserve(ticket.getObjectId(), passIndex);
-            ticket.copyObjectTo(locate(ticket).getTicket());
+            //ticket.copyObjectTo(locate(ticket).getTicket());
+            locate(ticket).setObjectId(ticket.getObjectId());
         }
     }
     
@@ -301,6 +326,31 @@ public class ResourceList {
         }
     }
     
+    /**
+     * Makes reservations at the index for each {@link RenderObject} referenced by the tickets.
+     * 
+     * @param passIndex
+     * @param tickets 
+     * @see #reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket)
+     */
+    public void reserve(ModuleIndex passIndex, Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
+            reserve(passIndex, t);
+        }
+    }
+    
+    /**************
+     * References *
+     **************/
+    
+    /**
+     * References the resource at the index.
+     * 
+     * @param index
+     * @param user
+     * @param ticket
+     * @param optional 
+     */
     private void reference(ModuleIndex index, String user, ResourceTicket ticket, boolean optional) {
         boolean sync = !frameGraph.isAsync();
         if (optional && sync && !ResourceTicket.validate(ticket)) {
@@ -308,7 +358,7 @@ public class ResourceList {
         }
         ResourceView resource = locate(ticket, sync);
         if (resource != null) {
-            resource.reference(index);
+            resource.reference(index, ticket);
             if (cap != null) cap.referenceResource(resource.getIndex(), ticket.getName());
         } else {
             // save for later, since the resource hasn't been declared yet
@@ -346,6 +396,34 @@ public class ResourceList {
     }
     
     /**
+     * References resources associated with the tickets.
+     * 
+     * @param passIndex render pass index
+     * @param user
+     * @param tickets 
+     * @see #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    public void reference(ModuleIndex passIndex, String user, ResourceTicket... tickets) {
+        for (ResourceTicket t : tickets) {
+            reference(passIndex, user, t, false);
+        }
+    }
+    
+    /**
+     * References resources associated with the tickets.
+     * 
+     * @param passIndex render pass index
+     * @param user
+     * @param tickets 
+     * @see #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    public void reference(ModuleIndex passIndex, String user, Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
+            reference(passIndex, user, t, false);
+        }
+    }
+    
+    /**
      * References the resource associated with the ticket if the ticket is
      * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) valid}.
      * 
@@ -356,20 +434,6 @@ public class ResourceList {
      */
     public void referenceOptional(ModuleIndex passIndex, String user, ResourceTicket ticket) {
         reference(passIndex, user, ticket, true);
-    }
-    
-    /**
-     * References resources associated with the tickets.
-     * 
-     * @param passIndex render pass index
-     * @param user
-     * @param tickets 
-     * @see #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
-     */
-    public void reference(ModuleIndex passIndex, String user, ResourceTicket... tickets) {
-        for (ResourceTicket t : tickets) {
-            reference(passIndex, user, t, false);
-        }
     }
     
     /**
@@ -389,16 +453,24 @@ public class ResourceList {
     }
     
     /**
-     * Attaches the watcher to the resource view.
+     * References resources associated with the tickets.
      * <p>
-     * The watcher receives notifications on events.
+     * Tickets that are {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}
+     * will be skipped.
      * 
-     * @param ticket
-     * @param watcher 
+     * @param passIndex render pass index
+     * @param user
+     * @param tickets 
      */
-    public void watch(ResourceTicket ticket, ResourceWatcher watcher) {
-        locate(ticket).setWatcher(watcher);
+    public void referenceOptional(ModuleIndex passIndex, String user, Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
+            reference(passIndex, user, t, true);
+        }
     }
+    
+    /***************************
+     * Miscellaneous functions *
+     ***************************/
     
     /**
      * Gets the definition of the resource view associated with the ticket.
@@ -434,9 +506,9 @@ public class ResourceList {
      */
     public void setUndefined(ResourceTicket ticket) {
         ResourceView resource = locate(ticket);
-        resource.setUndefined();
+            resource.setUndefined();
         if (cap != null) cap.setResourceUndefined(resource.getIndex(), ticket.getName());
-    }
+        }
     
     /**
      * Marks each resource view associated with the tickets as undefined.
@@ -445,6 +517,18 @@ public class ResourceList {
      * @see #setUndefined(codex.renthyl.resources.ResourceTicket) 
      */
     public void setUndefined(ResourceTicket... tickets) {
+        for (ResourceTicket t : tickets) {
+            setUndefined(t);
+        }
+    }
+    
+    /**
+     * Marks each resource view associated with the tickets as undefined.
+     * 
+     * @param tickets 
+     * @see #setUndefined(codex.renthyl.resources.ResourceTicket) 
+     */
+    public void setUndefined(Iterable<? extends ResourceTicket> tickets) {
         for (ResourceTicket t : tickets) {
             setUndefined(t);
         }
@@ -504,51 +588,48 @@ public class ResourceList {
         return true;
     }
     
+    /********************* 
+     * Thread scheduling *
+     *********************/
+    
     /**
-     * Forces the current thread to wait until the resource view at the ticket is
-     * available for reading, or until a timeout occurs.
-     * <p>
-     * A resource becomes available for reading after being released by the declaring pass.
-     * Then all waiting passes may access it for reading only.
-     * <p>
-     * The operation is skipped without an exception being thrown if the ticket is
-     * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}.
+     * Claims write permissions for the resource at the ticket
+     * if the ticket is valid.
+     * 
+     * @param ticket 
+     */
+    public void claimWritePermissions(ResourceTicket ticket) {
+        if (ResourceTicket.validate(ticket)) {
+            fastLocate(ticket).claimWritePermissions();
+        }
+    }
+    
+    /**
+     * Causes the current thread to wait until the resource at the ticket may
+     * be accessed for reading.
      * 
      * @param ticket ticket to locate resource with
-     * @param thread current thread
      * @param timeoutMillis milliseconds to wait before an exception is thrown
      */
-    public void waitForReadPermission(ResourceTicket ticket, int thread, long timeoutMillis) {
+    public void waitForReadPermission(ResourceTicket ticket, long timeoutMillis) {
         if (ResourceTicket.validate(ticket)) {
-            // wait for resource to become available to this context
-            long start = System.currentTimeMillis();
-            ResourceView res;
-            // TODO: determine why not locating the resource on each try results in timeouts
-            while (!(res = fastLocate(ticket)).isReadAvailable()) {
-                if (System.currentTimeMillis()-start >= timeoutMillis) {
-                    throw new IllegalStateException("Thread "+thread+": Resource at "+ticket+" was assumed"
-                            + " unreachable after "+timeoutMillis+" milliseconds.");
-                }
-            }
-            // Claim read permissions. For resources that are read concurrent, this won't matter.
-            if (!res.claimReadPermissions()) {
-                waitForReadPermission(ticket, thread);
+            try {
+                fastLocate(ticket).waitForReadPermissions(timeoutMillis);
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Resource unreachable at " + ticket, ex);
             }
         }
     }
     
     /**
-     * Forces the current thread to wait until the resource view at the ticket
-     * is available for reading, or until a timeout occurs.
-     * <p>
-     * A timeout occurs after {@link #WAIT_TIMEOUT} milliseconds.
+     * Causes the current thread to wait until the resource at the ticket may
+     * be accessed for reading.
      * 
      * @param ticket
-     * @param thread 
      * @see #waitForReadPermission(codex.renthyl.resources.ResourceTicket, int, long) 
      */
-    public void waitForReadPermission(ResourceTicket ticket, int thread) {
-        waitForReadPermission(ticket, thread, WAIT_TIMEOUT);
+    public void waitForReadPermission(ResourceTicket ticket) {
+        waitForReadPermission(ticket, WAIT_TIMEOUT);
     }
     
     /**
@@ -568,6 +649,10 @@ public class ResourceList {
         return false;
     }
     
+    /*************
+     * Acquiring *
+     *************/
+    
     /**
      * Acquires the object held by the given resource.
      * <p>
@@ -585,13 +670,13 @@ public class ResourceList {
      */
     protected <T> T acquire(ResourceView<T> resource, ResourceTicket<T> ticket) {
         if (!resource.isUsed()) {
-            throw new IllegalStateException(resource+" was unexpectedly acquired.");
+            throw new IllegalStateException(resource + " was unexpectedly acquired.");
         }
         if (resource.isVirtual()) {
             map.allocate(resource, frameGraph.isAsync());
         }
         if (cap != null) cap.acquireResource(resource.getIndex(), ticket.getName());
-        resource.getTicket().copyObjectTo(ticket);
+        ticket.setObjectId(resource.getObjectId());
         return resource.getResource();
     }
     
@@ -643,60 +728,102 @@ public class ResourceList {
     }
     
     /**
-     * Acquires textures and assigns them as color targets to the framebuffer.
-     * <p>
-     * If a texture is already assigned to the framebuffer at the same color target index,
-     * then nothing will be changed at that index.
-     * <p>
-     * Existing texture targets beyond the number of tickets passed will be removed.
+     * 
+     * @param <T>
+     * @param fbo
+     * @param texArray
+     * @param tickets
+     * @param length length of the ticket iterable
+     * @return 
+     * @see #acquire(codex.renthyl.resources.tickets.ResourceTicket)
+     * @see #acquireColorTargets(com.jme3.texture.FrameBuffer, com.jme3.texture.Texture..., codex.renthyl.resources.tickets.ResourceTicket...)
+     */
+    protected <T extends Texture> T[] acquireColorTargets(FrameBuffer fbo, T[] texArray, Iterable<ResourceTicket<T>> tickets, int length) {
+        if (length == 0) {
+            fbo.clearColorTargets();
+            fbo.setUpdateNeeded();
+            return texArray;
+        }
+        while (length < fbo.getNumColorTargets()) {
+            fbo.removeColorTarget(fbo.getNumColorTargets()-1);
+            fbo.setUpdateNeeded();
+        }
+        int i = 0;
+        for (ResourceTicket<T> t : tickets) {
+            if (i < fbo.getNumColorTargets()) {
+                T tex = replaceColorTarget(fbo, t, i);
+                if (texArray != null) {
+                    texArray[i] = tex;
+                }
+            } else {
+                T tex = acquire(t);
+                if (texArray != null) {
+                    texArray[i] = tex;
+                }
+                fbo.addColorTarget(FrameBuffer.FrameBufferTarget.newTarget(tex));
+                fbo.setUpdateNeeded();
+                if (cap != null) cap.bindTexture(t.getWorldIndex(), t.getName());
+                textureBinds++;
+            }
+            i++;
+        }
+        return texArray;
+    }
+    
+    /**
      * 
      * @param fbo framebuffer to assign color targets to
      * @param tickets tickets referencing resource views
      * @see #acquire(codex.renthyl.resources.ResourceTicket)
+     * @see #acquireColorTargets(com.jme3.texture.FrameBuffer, com.jme3.texture.Texture..., codex.renthyl.resources.tickets.ResourceTicket...)
      */
-    public void acquireColorTargets(FrameBuffer fbo, ResourceTicket<? extends Texture>... tickets) {
-        acquireColorTargets(fbo, null, tickets);
+    public void acquireColorTargets(FrameBuffer fbo, ResourceTicket... tickets) {
+        acquireColorTargets(fbo, null, new ArrayIterator<>(tickets), tickets.length);
     }
     
     /**
      * Acquires textures and assigns them as color targets to the framebuffer.
      * <p>
-     * Acquired textures are stored in the given texture array.
+     * If a texture is already assigned to the framebuffer at the same color target index,
+     * then nothing will be changed at that index. Existing texture targets beyond the number
+     * of tickets passed will be removed.
+     * <p>
+     * Acquired textures are stored in the texture array, if not null.
      * 
      * @param fbo framebuffer to assign color targets to
      * @param texArray array to populate with acquired textures, or null
      * @param tickets array of tickets referencing resource views (must be same length as {@code texArray})
-     * @return populated texture array
+     * @return populated texture array, or null if a null array was passed
      * @see #acquire(codex.renthyl.resources.ResourceTicket) 
      */
-    public Texture[] acquireColorTargets(FrameBuffer fbo, Texture[] texArray, ResourceTicket<? extends Texture>[] tickets) {
-        if (tickets.length == 0) {
-            fbo.clearColorTargets();
-            fbo.setUpdateNeeded();
-            return texArray;
-        }
-        while (tickets.length < fbo.getNumColorTargets()) {
-            fbo.removeColorTarget(fbo.getNumColorTargets()-1);
-            fbo.setUpdateNeeded();
-        }
-        int i = 0;
-        for (int n = Math.min(fbo.getNumColorTargets(), tickets.length); i < n; i++) {
-            Texture t = replaceColorTarget(fbo, tickets[i], i);
-            if (texArray != null) {
-                texArray[i] = t;
-            }
-        }
-        for (; i < tickets.length; i++) {
-            Texture t = acquire(tickets[i]);
-            if (texArray != null) {
-                texArray[i] = t;
-            }
-            fbo.addColorTarget(FrameBuffer.FrameBufferTarget.newTarget(t));
-            fbo.setUpdateNeeded();
-            if (cap != null) cap.bindTexture(tickets[i].getWorldIndex(), tickets[i].getName());
-            textureBinds++;
-        }
-        return texArray;
+    public Texture[] acquireColorTargets(FrameBuffer fbo, Texture[] texArray, ResourceTicket... tickets) {
+        return acquireColorTargets(fbo, texArray, new ArrayIterator<>(tickets), tickets.length);
+    }
+    
+    /**
+     * 
+     * @param <T>
+     * @param fbo
+     * @param tickets 
+     * @see #acquire(codex.renthyl.resources.tickets.ResourceTicket)
+     * @see #acquireColorTargets(com.jme3.texture.FrameBuffer, com.jme3.texture.Texture..., codex.renthyl.resources.tickets.ResourceTicket...)
+     */
+    public <T extends Texture> void acquireColorTargets(FrameBuffer fbo, Collection<ResourceTicket<T>> tickets) {
+        acquireColorTargets(fbo, null, tickets, tickets.size());
+    }
+    
+    /**
+     * 
+     * @param <T>
+     * @param fbo
+     * @param texArray
+     * @param tickets
+     * @return 
+     * @see #acquire(codex.renthyl.resources.tickets.ResourceTicket)
+     * @see #acquireColorTargets(com.jme3.texture.FrameBuffer, com.jme3.texture.Texture..., codex.renthyl.resources.tickets.ResourceTicket...)
+     */
+    public <T extends Texture> T[] acquireColorTargets(FrameBuffer fbo, T[] texArray, Collection<ResourceTicket<T>> tickets) {
+        return acquireColorTargets(fbo, texArray, tickets, tickets.size());
     }
     
     /**
@@ -797,6 +924,59 @@ public class ResourceList {
     }
     
     /**
+     * Transfers the resource associated with {@code from} to the ResourceView
+     * associated with {@code to}. This operation is intended to replace the initial
+     * {@link #acquire(codex.renthyl.resources.ResourceTicket) acquire} call for the
+     * target ResourceView.
+     * <p>
+     * In order for a transfer to be successful:
+     * <ul>
+     *   <li>Both tickets must be valid and point to existing ResourceViews.</li>
+     *   <li>The source ResourceView must not be {@link #isVirtual(codex.renthyl.resources.ResourceTicket, boolean) virtual}.</li>
+     *   <li>The target ResourceView must be virtual.</li>
+     *   <li>The source ResourceView must be {@link ResourceView#isPartiallyReleased() partially released}.</li>
+     *   <li>The transfering object must not be destroyed by the source ResourceView's definition.</li>
+     *   <li>The transfering object must not be {@link #setConstant(codex.renthyl.resources.ResourceTicket) constant}.</li>
+     *   <li>The target ResourceView's definition must not reject the object.</li>
+     * </ul>
+     * Otherwise an exception will be thrown. This method automatically releases
+     * the {@code from} ticket from the source ResourceView, after which the resource
+     * is expected to be {@link ResourceView#isFullyReleased() fully released}.
+     * <p>
+     * Because this method fails when an adverse situation arises rather than deferring
+     * as {@link #acquire(codex.renthyl.resources.ResourceTicket) acquiring} would do,
+     * this method ignores reservations held to the transfering object.
+     * 
+     * @param <T>
+     * @param sourceTicket represents the ResourceView to transfer from
+     * @param targetTicket represents the ResourceView to transfer to
+     * @return the transfered resource
+     */
+    public <T> T modify(ResourceTicket sourceTicket, ResourceTicket<T> targetTicket) {
+        ResourceView source = locate(sourceTicket);
+        ResourceView<T> target = locate(targetTicket);
+        if (source.isVirtual()) {
+            throw new IllegalStateException("Source resource must not be virtual to accept modification.");
+        }
+        if (!target.isVirtual()) {
+            throw new IllegalStateException("Target resource must be virtual to accept modification.");
+        }
+        // copy over object id so that specific allocation will target the correct resource
+        target.setObjectId(source.getObjectId());
+        // release the resource
+        if (!release(sourceTicket)) {
+            throw new IllegalStateException(source + " must be fully released to modify.");
+        }
+        // immediately acquire the resource again
+        if (!map.allocateSpecific(target, frameGraph.isAsync(), true)) {
+            throw new NullPointerException("Unable to complete modification of " + source + " to " + target);
+        }
+        // copy the object id to the target ticket provided by the user
+        targetTicket.setObjectId(target.getObjectId());
+        return target.getResource();
+    }
+    
+    /**
      * Returns true if the resource view associated with the ticket
      * is available for {@link #acquire(codex.renthyl.resources.ResourceTicket) acquiring}.
      * 
@@ -828,78 +1008,104 @@ public class ResourceList {
         locate(ticket).setPrimitive(value);
     }
     
+    /*************
+     * Releasing *
+     *************/
+    
+    /**
+     * 
+     * @param resource
+     * @param ticket
+     * @return 
+     * @see #release(codex.renthyl.resources.ResourceTicket) 
+     */
+    protected boolean release(ResourceView resource, ResourceTicket ticket) {
+        if (cap != null) cap.releaseResource(resource.getIndex(), resource.getName());
+        if (!resource.release(this, ticket)) {
+            if (cap != null && resource.getObject() != null) {
+                cap.releaseObject(resource.getObject().getId());
+            }
+            remove(resource.getIndex());
+            if (!resource.isVirtual() && !resource.isUndefined()) {
+                ResourceDef def = resource.getDefinition();
+                if (def != null && def.isDisposeOnRelease()) {
+                    map.dispose(resource);
+                }
+            }
+        }
+        return resource.isFullyReleased();
+    }
+    
     /**
      * Releases the resource view from use.
      * <p>
      * It is critical that entities that {@link #declare(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket) declare}
      * or {@link #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) reference}
      * a resource also release it once finished with it. Entities that declare a resource
-     * should not release a resource without first acquiring it.
+     * should not release a resource without first {@link #acquire(codex.renthyl.resources.ResourceTicket) acquiring} it.
      * <p>
-     * {@link #declareTemporary(codex.renthyl.resources.ResourceUser, codex.renthyl.definitions.ResourceDef, codex.renthyl.resources.ResourceTicket) temporary resources}
-     * do not require releasing.
-     * <p>
-     * Once fully released from use by all declaring and referencing entities, the
+     * Once {@link ResourceView#isFullyReleased() fully released} from use by all declaring and referencing entities, the
      * resource view is destroyed and, if the resource view was not
      * {@link ResourceView#isPrimitive() primitive}, the associated object becomes
      * available for reallocation.
      * <p>
-     * An exception is thrown if the given ticket is {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}.
+     * An exception is thrown if the given ticket is
+     * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}.
      * <p>
      * <em>Note: {@link codex.renthyl.modules.RenderPass RenderPass} automatically releases
-     * resources associated with registered input and output tickets.</em>
-     * 
-     * @param ticket 
-     */
-    public void release(ResourceTicket ticket) {
-        ResourceView resource = locate(ticket);
-        if (cap != null) cap.releaseResource(resource.getIndex(), ticket.getName());
-        if (!resource.release()) {
-            if (cap != null && resource.getObject() != null) {
-                cap.releaseObject(resource.getObject().getId());
-            }
-            remove(ticket.getWorldIndex());
-            if (!resource.isVirtual() && !resource.isUndefined()) {
-                ResourceDef def = resource.getDefinition();
-                if (def != null && def.isDisposeOnRelease()) {
-                    if (!resource.isPrimitive()) {
-                        map.dispose(resource);
-                    } else {
-                        resource.getDefinition().dispose(resource.getResource());
-                    }
-                }
-                resource.setObject(null);
-            }
-        }
-    }
-    
-    /**
-     * Releases the resource view from use only if the ticket is {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) valid}.
-     * <p>
-     * An exception is not thrown if the ticket is invalid.
+     * resources associated with registered input and output tickets, however, multiple
+     * release calls with the same ticket are handled gracefully.</em>
      * 
      * @param ticket
-     * @return 
-     * @see #release(codex.renthyl.resources.ResourceTicket) 
+     * @return true if the resource view has been fully released
      */
-    public boolean releaseOptional(ResourceTicket ticket) {
-        if (ResourceTicket.validate(ticket)) {
-            release(ticket);
-            return true;
+    public boolean release(ResourceTicket ticket) {
+        ResourceView resource = locate(ticket);
+        if (ticket.pollBindFlag()) {
+            release(resource, ticket);
         }
-        return false;
+        return resource.isFullyReleased();
     }
     
     /**
      * Releases the resource views use.
      * 
-     * @param tickets 
+     * @param tickets
      * @see #release(codex.renthyl.resources.ResourceTicket) 
      */
     public void release(ResourceTicket... tickets) {
         for (ResourceTicket t : tickets) {
+                release(t);
+            }
+        }
+    
+    /**
+     * Releases the resource views use.
+     * 
+     * @param tickets
+     * @see #release(codex.renthyl.resources.ResourceTicket) 
+     */
+    public void release(Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
             release(t);
         }
+    }
+    
+    /**
+     * Releases the resource view from use only if the ticket is
+     * {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) valid}.
+     * <p>
+     * An exception is not thrown if the ticket is invalid.
+     * 
+     * @param ticket
+     * @return true if the resource view was fully released and the ticket is valid
+     * @see #release(codex.renthyl.resources.ResourceTicket) 
+     */
+    public boolean releaseOptional(ResourceTicket ticket) {
+        if (ResourceTicket.validate(ticket)) {
+            return release(ticket);
+        }
+        return false;
     }
     
     /**
@@ -912,6 +1118,21 @@ public class ResourceList {
      * @see #release(codex.renthyl.resources.ResourceTicket) 
      */
     public void releaseOptional(ResourceTicket... tickets) {
+        for (ResourceTicket t : tickets) {
+            releaseOptional(t);
+        }
+    }
+    
+    /**
+     * Releases the resources obtained by the tickets.
+     * <p>
+     * Tickets that are {@link ResourceTicket#validate(codex.renthyl.resources.ResourceTicket) invalid}
+     * are skipped without throwing an exception.
+     * 
+     * @param tickets 
+     * @see #release(codex.renthyl.resources.ResourceTicket) 
+     */
+    public void releaseOptional(Iterable<? extends ResourceTicket> tickets) {
         for (ResourceTicket t : tickets) {
             releaseOptional(t);
         }
@@ -945,6 +1166,10 @@ public class ResourceList {
         map.cache(cache, res.getObject().getId(), key);
     }
     
+    /******************
+     * Pipeline calls *
+     ******************/
+    
     /**
      * Prepares this resource list for rendering.
      * <p>
@@ -970,13 +1195,12 @@ public class ResourceList {
      * Applies all missed references.
      */
     public void applyFutureReferences() {
+        // apply registered future references
         for (FutureReference ref : futureRefs) {
-            if (!ref.optional || ResourceTicket.validate(ref.ticket)) {
-                if (!ResourceTicket.validate(ref.ticket)) {
-                    throw new NullPointerException(ref.ticket+" from "+ref.user+" is invalid.");
-                }
-                locate(ref.ticket).reference(ref.index);
+            if (!ref.optional && !ResourceTicket.validate(ref.ticket)) {
+                throw new NullPointerException(ref.ticket + " from " + ref.user + " is invalid.");
             }
+            locate(ref.ticket).reference(ref.index, ref.ticket);
         }
         futureRefs.clear();
     }
@@ -1004,6 +1228,7 @@ public class ResourceList {
                 remove(resource.getIndex());
                 continue;
             }
+            // make sure this hasn't been culled already
             if (!user.isUsed()) {
                 continue;
             }
@@ -1011,7 +1236,9 @@ public class ResourceList {
             // If the user is found to not produce used resources, dereference
             // all incoming resources and remove all outgoing resources.
             if (!user.isUsed()) {
-                for (ResourceTicket t : user.getInputTickets()) {
+                for (Iterator<ResourceTicket> it = user.getInputTickets(); it.hasNext();) {
+                    ResourceTicket t = it.next();
+                    t.clearBindFlag();
                     // make sure the resource still exists
                     if (!ResourceTicket.validate(t)) {
                         continue;
@@ -1019,13 +1246,14 @@ public class ResourceList {
                     ResourceView r = locate(t);
                     // If the resource is found to no longer be referenced by
                     // anything, queue the resource.
-                    r.drop();
-                    if (!r.isReferenced()) {
+                    if (!r.cull()) {
                         cull.addLast(r);
                     }
                 }
                 // remove output resource views
-                for (ResourceTicket t : user.getOutputTickets()) {
+                for (Iterator<ResourceTicket> it = user.getOutputTickets(); it.hasNext();) {
+                    ResourceTicket t = it.next();
+                    t.clearBindFlag();
                     if (!t.hasSource()) {
                         remove(t.getLocalIndex());
                     }
@@ -1035,9 +1263,12 @@ public class ResourceList {
     }
     
     /**
-     * Clears the resource list.
+     * Resets the resource list.
      */
-    public void clear() {
+    public void reset() {
+        for (ResourceTicket t : endangeredTickets) {
+            t.clearBindFlag();
+        }
         int size = resources.size();
         resources.clear();
         nextSlot = 0;
@@ -1065,6 +1296,10 @@ public class ResourceList {
     public int getObjectCacheSize() {
         return cache.size();
     }
+    
+    /***********
+     * Classes *
+     ***********/
     
     /**
      * Represents a reference to a resource that will exist in the future.

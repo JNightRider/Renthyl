@@ -71,6 +71,9 @@ public class RenderObjectMap {
         return create(def, def.createResource());
     }
     private <T> RenderObject<T> create(ResourceDef<T> def, T value) {
+        if (value == null) {
+            throw new NullPointerException("Object created by definition cannot be null.");
+        }
         RenderObject obj = new RenderObject(def, value, staticTimeout);
         objectMap.put(obj.getId(), obj);
         return obj;
@@ -107,6 +110,34 @@ public class RenderObjectMap {
         }
     }
     /**
+     * Allocates the specific render object that is associated with the
+     * resource view.
+     * 
+     * @param <T>
+     * @param resource resource to allocate to
+     * @param async true to run asynchronous threadsafe operations
+     * @param ignoreReservations if true, reservations on the object will be ignored
+     * @return true if the resource was allocated to
+     */
+    public <T> boolean allocateSpecific(ResourceView<T> resource, boolean async, boolean ignoreReservations) {
+        if (resource.isUndefined()) {
+            throw new IllegalArgumentException("Cannot allocate object to an undefined resource.");
+        }
+        totalAllocations++;
+        ResourceDef<T> def = resource.getDefinition();
+        if (def == null) {
+            throw new NullPointerException("Resource definition cannot be null in this context.");
+        }
+        if (def.isUseExisting()) {
+            if (async) {
+                return allocateSpecificAsync(resource, ignoreReservations);
+            } else {
+                return allocateSpecificSync(resource, ignoreReservations);
+            }
+        }
+        return false;
+    }
+    /**
      * Allocates a render object from the object cache.
      * <p>
      * If the resource view's definition does not approve the object selected
@@ -127,11 +158,11 @@ public class RenderObjectMap {
         }
         ResourceDef<T> def = resource.getDefinition();
         T r = def.applyDirectResource(obj.getObject());
-        if (r == null) {
+        if (r == null && def.isAllowIndirectResources()) {
             r = def.applyIndirectResource(resource);
-            if (r == null) {
-                throw new NullPointerException("Allocation from cache denied by resource definition.");
-            }
+        }
+        if (r == null) {
+            throw new NullPointerException("Allocation from cache denied by resource definition.");
         }
         resource.setObject(obj, r);
         objectMap.put(obj.getId(), obj);
@@ -150,7 +181,7 @@ public class RenderObjectMap {
         }
         if (def.isUseExisting()) {
             // first try allocating a specific object, which is much faster
-            if (allocateSpecificSync(resource)) {
+            if (allocateSpecificSync(resource, false)) {
                 return;
             }
             // find object to allocate
@@ -192,17 +223,17 @@ public class RenderObjectMap {
                 resource.getIndex(), resource.getResource().getClass().getSimpleName());
         objectsCreated++;
     }
-    private <T> boolean allocateSpecificSync(ResourceView<T> resource) {
+    private <T> boolean allocateSpecificSync(ResourceView<T> resource, boolean ignoreReservations) {
         GraphEventCapture cap = context.getEventCapture();
         ResourceDef<T> def = resource.getDefinition();
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
         if (obj != null && def.isEquivalentTag(obj.getTag())) {
             if (cap != null) cap.attemptReallocation(id, resource.getIndex());
             if (isAvailable(obj) && (obj.claimReservation(resource.getProducer().getIndex())
-                    || !obj.isReservedWithin(resource.getLifeTime()))) {
+                    || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime()))) {
                 // reserved object is only applied if it is accepted by the definition
                 T r = def.applyDirectResource(obj.getObject());
                 if (r == null) {
@@ -230,7 +261,7 @@ public class RenderObjectMap {
         ResourceDef<T> def = resource.getDefinition();
         if (def.isUseExisting()) {
             // first try allocating a specific object, which is much faster
-            if (allocateSpecificAsync(resource)) {
+            if (allocateSpecificAsync(resource, false)) {
                 return;
             }
             // find object to allocate
@@ -313,10 +344,10 @@ public class RenderObjectMap {
                 resource.getIndex(), resource.getResource().getClass().getSimpleName());
         objectsCreated++;
     }
-    private <T> boolean allocateSpecificAsync(ResourceView<T> resource) {
+    private <T> boolean allocateSpecificAsync(ResourceView<T> resource, boolean ignoreReservations) {
         GraphEventCapture cap = context.getEventCapture();
         ResourceDef<T> def = resource.getDefinition();
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
@@ -327,7 +358,7 @@ public class RenderObjectMap {
                 // start object inspection to avoid thread build up on a single object
                 obj.startInspect();
                 if (obj.claimReservation(resource.getProducer().getIndex())
-                        || !obj.isReservedWithin(resource.getLifeTime())) {
+                        || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime())) {
                     // reserved object is only applied if it is accepted by the definition
                     T r = def.applyDirectResource(obj.getObject());
                     if (r == null) {
@@ -380,7 +411,7 @@ public class RenderObjectMap {
      * @param resource 
      */
     public void dispose(ResourceView resource) {
-        long id = resource.getTicket().getObjectId();
+        long id = resource.getObjectId();
         if (id >= 0) {
             RenderObject obj = objectMap.remove(id);
             if (obj != null) {

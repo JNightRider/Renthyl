@@ -31,10 +31,9 @@ package codex.renthyl.modules;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceList;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.resources.TicketGroup;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.util.MappedCache;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -43,20 +42,21 @@ import com.jme3.export.Savable;
 import com.jme3.texture.FrameBuffer;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.IntFunction;
+import codex.renthyl.resources.tickets.TicketGroup;
 
 /**
  * Modular rendering process for a {@link FrameGraph}.
  * 
  * @author codex
  */
-public abstract class RenderPass extends RenderModule implements Savable {
+public abstract class RenderPass extends AbstractRenderModule implements Savable {
     
-    private final LinkedList<PassFrameBuffer> frameBuffers = new LinkedList<>();
+    private final FrameBufferCache frameBuffers = new FrameBufferCache(
+            new FrameBufferParameters(null, 1024, 1024, 1));
     protected ResourceList resources;
     
     @Override
@@ -73,43 +73,41 @@ public abstract class RenderPass extends RenderModule implements Savable {
         super.read(im);
         read(im.getCapsule(this));
     }
-    @Override
-    public void traverse(Consumer<RenderModule> traverser) {
-        traverser.accept(this);
-    }
     
     @Override
-    public void initModule(FrameGraph frameGraph) {
+    public void initializeModule(FrameGraph frameGraph) {
         initialize(frameGraph);
     }
     @Override
-    public void prepareModuleRender(FGRenderContext context) {
+    public void prepareRender(FGRenderContext context) {
         resources = context.getResources();
         prepare(context);
     }
     @Override
     public void executeRender(FGRenderContext context) {
-        if (context.isAsync()) {
-            waitToExecute();
-        }
+        // permissions are always required
+        //if (context.isAsync()) {
+            claimResourcePermissions();
+        //}
         execute(context);
         releaseAll();
         if (index.isMainThread()) {
-            context.popRenderSettings();
+            context.popActiveModes();
         }
     }
     @Override
     public void resetRender(FGRenderContext context) {
         reset(context);
+        frameBuffers.flush();
     }
     @Override
-    public void cleanupModule(FrameGraph frameGraph) {
+    public void cleanupModule() {
         cleanup(frameGraph);
-        inputs.clear();
-        outputs.clear();
-        groups.clear();
+        frameBuffers.clear();
         this.frameGraph = null;
     }
+    @Override
+    public void renderingComplete() {}
     
     /**
      * Initializes the pass.
@@ -150,23 +148,6 @@ public abstract class RenderPass extends RenderModule implements Savable {
     protected abstract void cleanup(FrameGraph frameGraph);
     
     /**
-     * Called when all rendering is complete in a rendering frame this pass
-     * participated in.
-     */
-    @Override
-    public void renderingComplete() {
-        for (Iterator<PassFrameBuffer> it = frameBuffers.iterator(); it.hasNext();) {
-            PassFrameBuffer fb = it.next();
-            if (!fb.used) {
-                fb.dispose();
-                it.remove();
-            } else {
-                fb.used = false;
-            }
-        }
-    }
-    
-    /**
      * Declares a new resource using a registered ticket.
      * 
      * @param <T>
@@ -201,6 +182,16 @@ public abstract class RenderPass extends RenderModule implements Savable {
         return tickets;
     }
     /**
+     * 
+     * @param tickets
+     * @see ResourceList#declarePrimitive(codex.renthyl.resources.ResourceUser, codex.renthyl.resources.ResourceTicket)
+     */
+    protected void declarePrimitive(Iterable<? extends ResourceTicket> tickets) {
+        for (ResourceTicket t : tickets) {
+            resources.declarePrimitive(this, t);
+        }
+    }
+    /**
      * Declares a new temporary resource using an unregistered ticket.
      * 
      * @param <T>
@@ -231,6 +222,15 @@ public abstract class RenderPass extends RenderModule implements Savable {
         resources.reserve(index, tickets);
     }
     /**
+     * Reserves each RenderObject associated with the tickets.
+     * 
+     * @param tickets
+     * @see ResourceList#reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void reserve(Iterable<? extends ResourceTicket> tickets) {
+        resources.reserve(index, tickets);
+    }
+    /**
      * References the resource associated with the ticket.
      * 
      * @param ticket 
@@ -246,6 +246,15 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
      */
     protected void reference(ResourceTicket... tickets) {
+        resources.reference(index, name, tickets);
+    }
+    /**
+     * References each resource associated with the tickets.
+     * 
+     * @param tickets 
+     * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void reference(Iterable<? extends ResourceTicket> tickets) {
         resources.reference(index, name, tickets);
     }
     /**
@@ -265,20 +274,34 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
      */
     protected void referenceOptional(ResourceTicket... tickets) {
-        for (ResourceTicket t : tickets) {
-            referenceOptional(t);
-        }
+        resources.referenceOptional(index, name, tickets);
+    }
+    /**
+     * Optionally references each resource associated with the tickets.
+     * 
+     * @param tickets 
+     * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     */
+    protected void referenceOptional(Iterable<? extends ResourceTicket> tickets) {
+        resources.referenceOptional(index, name, tickets);
     }
     
     /**
-     * Forces this thread to wait until all inputs are available for this pass.
+     * Claims read and write permissions for input and output resources,
+     * respectively, before exiting.
      * <p>
-     * An incoming resource is deemed ready when {@link com.jme3.renderer.framegraph.ResourceView#claimReadPermissions()
-     * read permissions are claimed}.
+     * The current thread is blocked until the necessary permissions are acquired.
      */
-    public void waitToExecute() {
-        for (ResourceTicket t : inputs) {
-            resources.waitForReadPermission(t, index.threadIndex);
+    public void claimResourcePermissions() {
+        for (TicketGroup<Object> g : outputGroups.values()) {
+            for (ResourceTicket t : g.getTickets()) {
+                resources.claimWritePermissions(t);
+            }
+        }
+        for (TicketGroup<Object> g : inputGroups.values()) {
+            for (ResourceTicket t : g.getTickets()) {
+                resources.waitForReadPermission(t);
+            }
         }
     }
     
@@ -286,16 +309,60 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a set of resources from a ticket group and stores them in the array.
      * 
      * @param <T>
-     * @param name
+     * @param group
      * @param array
      * @return 
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket) 
      */
-    protected <T> T[] acquireArray(String name, T[] array) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquire(tickets[i]);
+    protected <T> T[] acquireArray(TicketGroup<T> group, T[] array) {
+        int i = 0;
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquire(t);
+        }
+        return array;
+    }
+    /**
+     * Acquires a set of resources from a ticket group and stores them in an
+     * array created by the function.
+     * 
+     * @param <T>
+     * @param group
+     * @param func
+     * @return 
+     */
+    protected <T> T[] acquireArray(TicketGroup<T> group, IntFunction<T[]> func) {
+        int i = 0;
+        T[] array = func.apply(group.size());
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquire(t);
+        }
+        return array;
+    }
+    /**
+     * Acquires a set of resources from a ticket group and stores them in the array.
+     * <p>
+     * Tickets that are invalid will acquire {@code val} instead.
+     * 
+     * @param <T>
+     * @param group
+     * @param array
+     * @param val
+     * @return 
+     * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
+     */
+    protected <T> T[] acquireArrayOrElse(TicketGroup<T> group, T[] array, T val) {
+        int i = 0;
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquireOrElse(t, val);
         }
         return array;
     }
@@ -303,63 +370,23 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a set of resources from a ticket group and stores them in an
      * array created by the function.
      * <p>
-     * The function is expected to create an array of the given length.
-     * 
-     * @param <T>
-     * @param name
-     * @param func
-     * @return created array
-     * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket) 
-     */
-    protected <T> T[] acquireArray(String name, Function<Integer, T[]> func) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        T[] array = func.apply(tickets.length);
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquire(tickets[i]);
-        }
-        return array;
-    }
-    /**
-     * Acquires a set of resources from a ticket group and stores them in
-     * the array.
-     * <p>
      * Tickets that are invalid will acquire {@code val}.
      * 
      * @param <T>
-     * @param name
-     * @param array
-     * @param val
-     * @return 
-     * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
-     */
-    protected <T> T[] acquireArrayOrElse(String name, T[] array, T val) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquireOrElse(tickets[i], val);
-        }
-        return array;
-    }
-    /**
-     * Acquires a set of resources from a ticket group and stores them in an
-     * array created by the function.
-     * <p>
-     * Tickets that are invalid will acquire {@code val}.
-     * 
-     * @param <T>
-     * @param name
+     * @param group
      * @param func
      * @param val
      * @return 
      * @see ResourceList#acquireOrElse(codex.renthyl.resources.ResourceTicket, java.lang.Object) 
      */
-    protected <T> T[] acquireArrayOrElse(String name, Function<Integer, T[]> func, T val) {
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        T[] array = func.apply(tickets.length);
-        int n = Math.min(array.length, tickets.length);
-        for (int i = 0; i < n; i++) {
-            array[i] = resources.acquireOrElse(tickets[i], val);
+    protected <T> T[] acquireArrayOrElse(TicketGroup<T> group, IntFunction<T[]> func, T val) {
+        int i = 0;
+        T[] array = func.apply(group.size());
+        for (ResourceTicket<T> t : group.getTickets()) {
+            if (i >= array.length) {
+                break;
+            }
+            array[i++] = resources.acquireOrElse(t, val);
         }
         return array;
     }
@@ -368,15 +395,14 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * 
      * @param <T>
      * @param <R>
-     * @param name group name
+     * @param group
      * @param collection list to store resources in (or null to create a new {@link LinkedList}).
      * @return given list
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
      */
-    protected <T, R extends Collection<T>> R acquireList(String name, R collection) {
+    protected <T, R extends Collection<T>> R acquireList(TicketGroup<T> group, R collection) {
         Objects.requireNonNull(collection, "Collection to store acquired resources cannot be null.");
-        ResourceTicket<T>[] tickets = getGroup(name).getArray();
-        for (ResourceTicket<T> t : tickets) {
+        for (ResourceTicket<T> t : group.getTickets()) {
             T res = resources.acquireOrElse(t, null);
             if (res != null) collection.add(res);
         }
@@ -386,12 +412,12 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * Acquires a list of resources from a ticket group and stores them in the given list.
      * 
      * @param <T>
-     * @param name group name
+     * @param group
      * @return given list
      * @see ResourceList#acquire(codex.renthyl.resources.ResourceTicket)
      */
-    protected <T> LinkedList<T> acquireList(String name) {
-        return acquireList(name, new LinkedList<>());
+    protected <T> Collection<T> acquireList(TicketGroup<T> group) {
+        return acquireList(group, new LinkedList<>());
     }
     
     /**
@@ -402,39 +428,12 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see ResourceList#release(codex.renthyl.resources.ResourceTicket) 
      */
     protected void releaseAll() {
-        for (ResourceTicket t : inputs) {
-            resources.releaseOptional(t);
+        for (TicketGroup g : inputGroups.values()) {
+            g.releaseAll(resources);
         }
-        for (ResourceTicket t : outputs) {
-            resources.releaseOptional(t);
+        for (TicketGroup g : outputGroups.values()) {
+            g.releaseAll(resources);
         }
-    }
-    
-    /**
-     * Removes all members of the named group from the input and output lists.
-     * 
-     * @param <T>
-     * @param name
-     * @return 
-     */
-    protected <T> ResourceTicket<T>[] removeGroup(String name) {
-        TicketGroup<T> group = groups.remove(name);
-        if (group == null) {
-            return null;
-        }
-        // Once we determine which list group members were added to, we only
-        // need to remove from that list for future members.
-        byte state = 0;
-        if (group.isList()) state = 1;
-        for (ResourceTicket<T> t : group.getArray()) {
-            if (state >= 0 && inputs.remove(t)) {
-                state = 1;
-            }
-            if (state <= 0 && outputs.remove(t)) {
-                state = -1;
-            }
-        }
-        return group.getArray();
     }
     
     /**
@@ -446,38 +445,19 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * <p>
      * If the event capturer is not null, an event will be logged for debugging.
      * 
-     * @param cap graph event capturer for debugging (may be null)
      * @param tag tag (name) requirement for returned FrameBuffer (may be null)
      * @param width width requirement for returned FrameBuffer
      * @param height height requirement for returned FrameBuffer
      * @param samples samples requirement for returned FrameBuffer
      * @return FrameBuffer matching given width, height, and samples
      */
-    protected FrameBuffer getFrameBuffer(GraphEventCapture cap, Object tag, int width, int height, int samples) {
-        if (tag == null) {
-            tag = PassFrameBuffer.DEF_TAG;
-        }
-        for (PassFrameBuffer fb : frameBuffers) {
-            if (fb.qualifies(tag, width, height, samples)) {
-                return fb.use();
-            }
-        }
-        PassFrameBuffer fb = new PassFrameBuffer(tag, width, height, samples);
-        frameBuffers.add(fb);
-        if (cap != null) cap.createFrameBuffer(fb.frameBuffer);
-        return fb.use();
-    }
-    /**
-     * 
-     * @param cap
-     * @param width
-     * @param height
-     * @param samples
-     * @return 
-     * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
-     */
-    protected FrameBuffer getFrameBuffer(GraphEventCapture cap, int width, int height, int samples) {
-        return getFrameBuffer(cap, null, width, height, samples);
+    protected FrameBuffer getFrameBuffer(Object tag, int width, int height, int samples) {
+        FrameBufferParameters params = frameBuffers.getLocalKey();
+        params.tag = tag;
+        params.width = width;
+        params.height = height;
+        params.samples = samples;
+        return frameBuffers.fetch();
     }
     /**
      * 
@@ -488,19 +468,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(int width, int height, int samples) {
-        return getFrameBuffer(null, null, width, height, samples);
-    }
-    /**
-     * 
-     * @param tag
-     * @param width
-     * @param height
-     * @param samples
-     * @return 
-     * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
-     */
-    protected FrameBuffer getFrameBuffer(Object tag, int width, int height, int samples) {
-        return getFrameBuffer(null, tag, width, height, samples);
+        return getFrameBuffer(null, width, height, samples);
     }
     /**
      * Creates a FrameBuffer matching the width and height presented by the {@link FGRenderContext}.
@@ -511,7 +479,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(FGRenderContext context, int samples) {
-        return getFrameBuffer(context.getGraphCapture(), context.getWidth(), context.getHeight(), samples);
+        return getFrameBuffer(context.getWidth(), context.getHeight(), samples);
     }
     /**
      * Creates a FrameBuffer matching the width and height presented by the {@link FGRenderContext}.
@@ -523,7 +491,7 @@ public abstract class RenderPass extends RenderModule implements Savable {
      * @see #getFrameBuffer(com.jme3.renderer.framegraph.debug.GraphEventCapture, java.lang.String, int, int, int) 
      */
     protected FrameBuffer getFrameBuffer(FGRenderContext context, Object tag, int samples) {
-        return getFrameBuffer(context.getGraphCapture(), tag, context.getWidth(), context.getHeight(), samples);
+        return getFrameBuffer(tag, context.getWidth(), context.getHeight(), samples);
     }
     
     /**
@@ -550,36 +518,66 @@ public abstract class RenderPass extends RenderModule implements Savable {
      */
     protected void read(InputCapsule in) throws IOException {}
     
-    private static class PassFrameBuffer {
-        
-        public static final String DEF_TAG = "#DefaultTag";
-        
-        public final Object tag;
-        public final FrameBuffer frameBuffer;
-        public boolean used = false;
-        
-        public PassFrameBuffer(int width, int height, int samples) {
-            this(DEF_TAG, width, height, samples);
+    private static class FrameBufferCache extends MappedCache<FrameBufferParameters, FrameBuffer> {
+
+        public FrameBufferCache() {}
+        public FrameBufferCache(FrameBufferParameters localKey) {
+            super(localKey);
         }
-        public PassFrameBuffer(Object tag, int width, int height, int samples) {
+        
+        @Override
+        protected FrameBuffer createElement(FrameBufferParameters key) {
+            return new FrameBuffer(key.width, key.height, key.samples);
+        }
+        @Override
+        protected void destroyElement(FrameBuffer element) {
+            element.dispose();
+        }
+        
+    }
+    private static class FrameBufferParameters {
+        
+        private Object tag;
+        private int width, height, samples;
+
+        public FrameBufferParameters(Object tag, int width, int height, int samples) {
             this.tag = tag;
-            frameBuffer = new FrameBuffer(width, height, samples);
+            this.width = width;
+            this.height = height;
+            this.samples = samples;
         }
-        
-        public FrameBuffer use() {
-            used = true;
-            return frameBuffer;
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 97 * hash + Objects.hashCode(this.tag);
+            hash = 97 * hash + this.width;
+            hash = 97 * hash + this.height;
+            hash = 97 * hash + this.samples;
+            return hash;
         }
-        
-        public boolean qualifies(Object tag, int width, int height, int samples) {
-            return frameBuffer.getWidth()   == width
-                && frameBuffer.getHeight()  == height
-                && frameBuffer.getSamples() == samples
-                && this.tag.equals(tag);
-        }
-        
-        public void dispose() {
-            frameBuffer.dispose();
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final FrameBufferParameters other = (FrameBufferParameters) obj;
+            if (this.width != other.width) {
+                return false;
+            }
+            if (this.height != other.height) {
+                return false;
+            }
+            if (this.samples != other.samples) {
+                return false;
+            }
+            return Objects.equals(this.tag, other.tag);
         }
         
     }

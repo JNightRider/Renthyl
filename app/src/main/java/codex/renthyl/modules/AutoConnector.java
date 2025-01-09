@@ -9,7 +9,7 @@ package codex.renthyl.modules;
  * @author codex
  * @param <T>
  */
-public interface AutoConnector <T extends RenderModule> {
+public interface AutoConnector <T extends AbstractRenderModule> {
     
     public void connect(RenderContainer<T> container, T module);
     

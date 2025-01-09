@@ -31,8 +31,9 @@ package codex.renthyl.modules.geometry;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.util.GeometryRenderHandler;
 
 /**
  * Renders a queue bucket to the viewport's output framebuffer.
@@ -53,8 +54,7 @@ public class OutputGeometryPass extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
-        context.popFrameBuffer();
-        context.renderGeometry(resources.acquire(geometry), null, null);
+        resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
     }
     @Override
     protected void reset(FGRenderContext context) {}

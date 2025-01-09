@@ -30,7 +30,6 @@ package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
-import com.jme3.texture.Texture3D;
 import com.jme3.util.NativeObject;
 import java.util.LinkedList;
 import java.util.function.Consumer;

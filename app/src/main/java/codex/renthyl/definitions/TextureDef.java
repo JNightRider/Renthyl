@@ -28,6 +28,7 @@
  */
 package codex.renthyl.definitions;
 
+import codex.boost.export.SavableObject;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -44,7 +45,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import org.lwjgl.BufferUtils;
 
 /**
  * General resource definition for textures.
@@ -107,11 +107,7 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         Image img;
         if (depth > 0) {
             ArrayList<ByteBuffer> data = new ArrayList<>(1);
-            ByteBuffer buf = BufferUtils.createByteBuffer(width * height * depth * format.getBitsPerPixel() / Byte.SIZE);
-            buf.limit(buf.capacity()).position(0);
-            data.add(buf);
             img = new Image(format, width, height, depth, data, colorSpace);
-            img.setUpdateNeeded();
         } else {
             img = new Image(format, width, height, null, colorSpace);
         }
@@ -143,7 +139,9 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
             return null;
         }
         if (validateImage(img)) {
-            return textureBuilder.apply(img);
+            T tex = textureBuilder.apply(img);
+            setupTexture(tex);
+            return tex;
         }
         return null;
     }
@@ -593,6 +591,13 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         return new Texture3DCapsule(texDef);
     }
     
+    public static TextureDef<Texture2D> readTexture2D(InputCapsule in, String name, TextureDef<Texture2D> defValue) throws IOException {
+        return SavableObject.readSavable(in, name, TextureDefCapsule.class, new Texture2DCapsule(defValue)).getTextureDef();
+    }
+    public static TextureDef<Texture2D> readTexture3D(InputCapsule in, String name, TextureDef<Texture3D> defValue) throws IOException {
+        return SavableObject.readSavable(in, name, TextureDefCapsule.class, new Texture3DCapsule(defValue)).getTextureDef();
+    }
+    
     public static abstract class TextureDefCapsule <T extends Texture> implements Savable {
 
         protected TextureDef<T> textureDef;
@@ -604,11 +609,11 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         @Override
         public void write(JmeExporter ex) throws IOException {
             OutputCapsule out = ex.getCapsule(this);
-            out.write(textureDef.getWidth(), "width", 1024);
-            out.write(textureDef.getHeight(), "height", 1024);
+            out.write(textureDef.getWidth(), "width", 128);
+            out.write(textureDef.getHeight(), "height", 128);
             out.write(textureDef.getDepth(), "depth", 1);
             out.write(textureDef.getSamples(), "samples", 1);
-            out.write(textureDef.getFormat(), "format", Image.Format.RGB8);
+            out.write(textureDef.getFormat(), "format", Image.Format.RGBA8);
             out.write(textureDef.isFormatFlexible(), "formatFlexible", false);
             out.write(textureDef.getColorSpace(), "colorSpace", ColorSpace.Linear);
             out.write(textureDef.getMagFilter(), "magFilter", Texture.MagFilter.Bilinear);
@@ -623,8 +628,8 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         public void read(JmeImporter im) throws IOException {
             InputCapsule in = im.getCapsule(this);
             textureDef = createDefinition();
-            textureDef.setWidth(in.readInt("width", 1024));
-            textureDef.setHeight(in.readInt("height", 1024));
+            textureDef.setWidth(in.readInt("width", 128));
+            textureDef.setHeight(in.readInt("height", 128));
             textureDef.setDepth(in.readInt("depth", 1));
             textureDef.setSamples(in.readInt("samples", 1));
             textureDef.setFormat(in.readEnum("format", Image.Format.class, Image.Format.RGBA8));

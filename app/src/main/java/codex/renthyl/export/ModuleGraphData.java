@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, codex
+ * Copyright (c) 2025, codex
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,9 +29,11 @@
 package codex.renthyl.export;
 
 import codex.boost.export.SavableObject;
-import codex.renthyl.Connectable;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.modules.Connectable;
+import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.modules.RenderModule;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketGroup;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -42,6 +44,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -51,12 +54,14 @@ import java.util.function.Consumer;
  */
 public class ModuleGraphData implements Savable {
     
-    private static final ArrayList<SavableConnection> DEF_CONNECTIONS = new ArrayList<>();
+    private static final ArrayList<SavableConnection> DEF_CONNECTIONS = new ArrayList<>(0);
+    private static final ArrayList<TicketIndex> DEF_INDICES = new ArrayList<>(0);
+    private static int nextModuleId = 0;
     
-    private RenderModule rootModule;
+    private AbstractRenderModule rootModule;
     
     public ModuleGraphData() {}
-    public ModuleGraphData(RenderModule root) {
+    public ModuleGraphData(AbstractRenderModule root) {
         this.rootModule = root;
     }
 
@@ -70,61 +75,83 @@ public class ModuleGraphData implements Savable {
         final LinkedList<RenderModule> members = new LinkedList<>();
         rootModule.traverse(new ModuleTreeExtractor(members));
         // descend the queue, so that output ids can be reset in the same pass
+        final ArrayList<TicketIndex> targetIndices = new ArrayList<>();
         for (Iterator<RenderModule> it = members.descendingIterator(); it.hasNext();) {
             RenderModule m = it.next();
-            for (ResourceTicket t : m.getInputTickets()) {
-                if (t.hasSource()) {
-                    int sourceId = t.getSource().getExportGroupId();
-                    if (sourceId < 0) {
-                        connections.add(new SavableConnection(m.getId(), sourceId,
-                                t.getName(), t.getSource().getName()));
-                    }
+            // generate export indices for input groups
+            for (TicketGroup<Object> g : m.getInputGroups().values()) {
+                g.generateExportIndices(i -> {
+                    i.setModuleId(m.getExportId());
+                    i.setGroupName(g.getName());
+                    i.setInput(true);
+                    targetIndices.add(i);
+                });
+            }
+            // generate export indices for output groups
+            for (TicketGroup<Object> g : m.getOutputGroups().values()) {
+                g.generateExportIndices(i -> {
+                    i.setModuleId(m.getExportId());
+                    i.setGroupName(g.getName());
+                    i.setInput(false);
+                    targetIndices.add(i);
+                });
+            }
+            // remove indices that cannot fetch a source index to connect to
+            for (Iterator<TicketIndex> indices = targetIndices.iterator(); indices.hasNext();) {
+                TicketIndex i = indices.next();
+                if (!i.fetchSourceIndex()) {
+                    indices.remove();
                 }
             }
-            // reset output ids, since they will no longer be used
-            for (ResourceTicket t : m.getOutputTickets()) {
-                t.setExportGroupId(-1);
+            // reset export indices, since they will no longer be used relative to the groups
+            for (Iterator<ResourceTicket> tickets = m.ticketIterator(true, true); tickets.hasNext();) {
+                tickets.next().clearExportIndex();
             }
         }
         // write
         OutputCapsule out = ex.getCapsule(this);
         out.write(rootModule, "root", null);
         out.writeSavableArrayList(connections, "connections", DEF_CONNECTIONS);
+        out.writeSavableArrayList(targetIndices, "targetIndices", DEF_INDICES);
         connections.clear();
     }
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);
-        rootModule = SavableObject.readSavable(in, "root", RenderModule.class, null);
-        final ArrayList<SavableConnection> connections = in.readSavableArrayList("connections", DEF_CONNECTIONS);
-        final HashMap<Integer, RenderModule> registry = new HashMap<>();
-        rootModule.traverse(m -> { if (registry.put(m.getId(), m) != null)
+        rootModule = SavableObject.readSavable(in, "root", AbstractRenderModule.class, null);
+        final ArrayList<TicketIndex> indices = in.readSavableArrayList("targetIndices", DEF_INDICES);
+        final HashMap<Integer, Connectable> registry = new HashMap<>();
+        final HashMap<String, List<TicketIndex>> indexMap = new HashMap<>();
+        rootModule.traverse(m -> { if (registry.put(m.getExportId(), m) != null)
                 throw new IllegalStateException("Modules with duplicate ids imported."); });
-        for (SavableConnection c : connections) {
-            Connectable source = registry.get(c.getSourceId());
-            if (source == null) {
-                throw new NullPointerException("Source of connection not found.");
+        // accumulate indices to lists by group
+        for (TicketIndex i : indices) {
+            String key = i.generateGroupKey();
+            List<TicketIndex> c = indexMap.get(key);
+            if (c == null) {
+                c = new ArrayList<>();
+                indexMap.put(key, c);
             }
-            Connectable target = registry.get(c.getTargetId());
-            if (target == null) {
-                throw new NullPointerException("Target of connection not found.");
-            }
-            target.makeInput(source, c.getSourceTicket(), c.getTargetTicket());
+            c.add(i);
         }
-        connections.clear();
+        // apply accumulated indices
+        for (List<TicketIndex> c : indexMap.values()) {
+            c.get(0).getGroup(registry).applySavedConnections(registry, c);
+        }
+        indices.clear();
         registry.clear();
     }
     
-    public void setRootModule(RenderModule rootModule) {
+    public void setRootModule(AbstractRenderModule rootModule) {
         this.rootModule = rootModule;
     }
-    public RenderModule getRootModule() {
+    public AbstractRenderModule getRootModule() {
         return rootModule;
     }
-    public <T extends RenderModule> T getRootModule(Class<T> requiredType) {
+    public <T extends AbstractRenderModule> T getRootModule(Class<T> requiredType) {
         if (rootModule != null && !requiredType.isAssignableFrom(rootModule.getClass())) {
-            throw new ClassCastException("Module tree root is a "+rootModule.getClass().getName()
-                    + " when required as a "+requiredType.getName());
+            throw new ClassCastException("Module tree root is a " + rootModule.getClass().getName()
+                    + " when required as a " + requiredType.getName());
         }
         return (T)rootModule;
     }
@@ -139,12 +166,8 @@ public class ModuleGraphData implements Savable {
         
         @Override
         public void accept(RenderModule m) {
+            m.setExportId(nextModuleId++);
             members.add(m);
-            // only need to apply id to export tickets, since we will have the
-            // correct id handy for input tickets when we extract connections.
-            for (ResourceTicket t : m.getOutputTickets()) {
-                t.setExportGroupId(m.getId());
-            }
         }
         
         public LinkedList<RenderModule> getMembers() {

@@ -43,8 +43,6 @@ import codex.renthyl.jobs.JobEventHandler;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.RenderModule;
-import codex.renthyl.modules.RenderPass;
 import codex.renthyl.modules.RenderThread;
 import com.jme3.asset.AssetManager;
 import com.jme3.opencl.CommandQueue;
@@ -58,6 +56,9 @@ import java.util.HashMap;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import codex.renthyl.jobs.FGJobExecutor;
+import codex.renthyl.modules.LayoutMember;
+import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.RenderPass;
 import java.util.LinkedList;
 
 /**
@@ -122,7 +123,7 @@ import java.util.LinkedList;
  * 
  * @author codex
  */
-public class FrameGraph implements RenderPipeline<FGPipelineContext> {
+public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMember {
     
     private static final Logger LOG = Logger.getLogger(FrameGraph.class.getName());
     private static final long THREAD_WAIT_TIMEOUT = 5000;
@@ -200,8 +201,11 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
     @Override
     public void pipelineRender(RenderManager rm, FGPipelineContext pContext, ViewPort vp, float tpf) {
         
+        // Never render after an error has occured in rendering.
+        // Resources could easily have been left in a bad state.
         if (jobHandler.errorOccured()) {
-            return;
+            throw new RendererException("An error occured during a previous render frame. "
+                    + "Aborting because it is dangerous to proceed.");
         }
         
         rm.applyViewPort(vp);
@@ -223,7 +227,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
             jobList.flush();
             root.queueModule(context, jobList, ModuleIndex.MAIN_THREAD);
         }
-        root.prepareModuleRender(context);
+        root.prepareRender(context);
         resources.applyFutureReferences();
         
         // cull modules and resources
@@ -234,7 +238,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         }
         
         // execute
-        context.pushRenderSettings();
         FGJobExecutor ex = fetchExecutor(pContext);
         jobHandler.start(jobList.getNumActiveJobs());
         ex.submitExecutionJobs(jobList.gatherActiveAsyncJobs(asyncJobs));
@@ -245,10 +248,11 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         }
         
         // reset
-        context.popFrameBuffer();
-        root.resetModuleRender(context);
+        context.popActiveModes();
+        root.resetRender(context);
         pContext.getRenderObjects().clearReservations();
-        resources.clear();
+        resources.reset();
+        asyncJobs.clear();
         rm.getRenderer().clearClipRect();
         
         rendered = true;
@@ -263,6 +267,10 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
         root.renderingComplete();
         resources.endRenderFrame();
         rendered = false;
+    }
+    @Override
+    public void setLayoutUpdateNeeded() {
+        layoutUpdateNeeded = true;
     }
     @Override
     public String toString() {
@@ -295,35 +303,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
      */
     public <T extends RenderModule> T add(T module, int index) {
         root.add(module, index);
-        return module;
-    }
-    
-    /**
-     * Adds the module at the end of the root container.
-     * 
-     * @param <T>
-     * @param module
-     * @param name name to be assigned to the module
-     * @return given pass
-     */
-    public <T extends RenderModule> T add(T module, String name) {
-        root.add(module);
-        module.setName(name);
-        return module;
-    }
-    
-    /**
-     * Adds the module at the index in the root container.
-     * 
-     * @param <T>
-     * @param module
-     * @param index
-     * @param name name to be assigned to the module
-     * @return 
-     */
-    public <T extends RenderModule> T add(T module, int index, String name) {
-        root.add(module, index);
-        module.setName(name);
         return module;
     }
     
@@ -513,14 +492,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext> {
      */
     public HashMap<String, Object> getSettingsMap() {
         return settings;
-    }
-    
-    /**
-     * Indicates that the layout of the framegraph has changed and
-     * an update is necessary before rendering.
-     */
-    public void setLayoutUpdateNeeded() {
-        layoutUpdateNeeded = true;
     }
     
     /**

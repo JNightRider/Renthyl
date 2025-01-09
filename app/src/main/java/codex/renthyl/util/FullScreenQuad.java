@@ -118,10 +118,18 @@ public class FullScreenQuad {
             transferMat.getAdditionalRenderState().setDepthTest(writeDepth);
             transferMat.getAdditionalRenderState().setDepthWrite(writeDepth);
             render(rm, transferMat);
+            setVisualizeAsDepth(false);
             setAlphaDiscard(null);
         }
     }
     
+    /**
+     * 
+     * @param visualize 
+     */
+    public void setVisualizeAsDepth(boolean visualize) {
+        transferMat.setBoolean("VisualizeAsDepth", visualize);
+    }
     /**
      * Sets the alpha discard threshold for next texture render.
      * <p>

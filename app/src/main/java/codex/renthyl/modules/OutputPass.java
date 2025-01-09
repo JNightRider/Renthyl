@@ -30,7 +30,7 @@ package codex.renthyl.modules;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -67,7 +67,6 @@ public class OutputPass extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
-        context.popFrameBuffer();
         Texture2D colorTex = resources.acquireOrElse(color, null);
         Texture2D depthTex = resources.acquireOrElse(depth, null);
         if (alphaDiscard != null) {

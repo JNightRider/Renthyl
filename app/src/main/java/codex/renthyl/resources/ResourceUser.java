@@ -29,8 +29,8 @@
 package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
-import java.util.LinkedList;
-import java.util.List;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import java.util.Iterator;
 
 /**
  *
@@ -38,9 +38,9 @@ import java.util.List;
  */
 public interface ResourceUser {
     
-    public LinkedList<ResourceTicket> getInputTickets();
+    public Iterator<ResourceTicket> getInputTickets();
     
-    public LinkedList<ResourceTicket> getOutputTickets();
+    public Iterator<ResourceTicket> getOutputTickets();
     
     public ModuleIndex getIndex();
     

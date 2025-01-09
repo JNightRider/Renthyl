@@ -32,8 +32,9 @@ import codex.boost.export.SavableObject;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
+import codex.renthyl.definitions.SimpleDef;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.OutputCapsule;
 import java.io.IOException;
@@ -42,18 +43,26 @@ import java.io.IOException;
  * Outputs a resource from the cache.
  * 
  * @author codex
+ * @param <T>
  * @see CacheWrite
  */
-public class CacheRead extends RenderPass {
+public class CacheRead <T> extends RenderPass {
     
     public static final String OUTPUT = "Output";
     
     private GraphSource<String> keySource;
     private ResourceTicket output;
+    private SimpleDef<T> def;
     
-    public CacheRead() {}
-    public CacheRead(GraphSource<String> keySource) {
+    public CacheRead(Class<T> type) {
+        this(type, (GraphSource)null);
+    }
+    public CacheRead(Class<T> type, String key) {
+        this(type, GraphSource.value(key));
+    }
+    public CacheRead(Class<T> type, GraphSource<String> keySource) {
         this.keySource = keySource;
+        this.def = new SimpleDef<>(type);
     }
     
     @Override
@@ -62,7 +71,7 @@ public class CacheRead extends RenderPass {
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        declare(null, output);
+        declare(def, output);
     }
     @Override
     protected void execute(FGRenderContext context) {

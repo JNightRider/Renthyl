@@ -28,8 +28,8 @@
  */
 package codex.renthyl.util;
 
-import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Spatial;
+import java.util.function.Function;
 
 /**
  * Tracks the world value of a spatial parameter by userdata.
@@ -148,6 +148,17 @@ public abstract class SpatialWorldParam <T> {
         return inherit;
     }
     
+    public static <T> T getWorldParameter(Spatial subject, T inherit, T defState, Function<Spatial, T> extract) {
+        while (subject != null) {
+            T val = extract.apply(subject);
+            if (val != null && !val.equals(inherit)) {
+                return val;
+            }
+            subject = subject.getParent();
+        }
+        return defState;
+    }
+    
     /**
      * Calculates the world render queue parameter.
      */
@@ -170,29 +181,6 @@ public abstract class SpatialWorldParam <T> {
         @Override
         public String getWorldValue(Spatial spatial) {
             return spatial.getUserData(RESULT);
-        }
-        
-    };
-    
-    /**
-     * Calculates the world shadow mode parameter.
-     */
-    public static final SpatialWorldParam<RenderQueue.ShadowMode> ShadowModeParam
-            = new SpatialWorldParam<RenderQueue.ShadowMode>(RenderQueue.ShadowMode.Off, RenderQueue.ShadowMode.Inherit) {
-
-        public static final String RESULT = "ResultShadowMode";
-
-        @Override
-        protected RenderQueue.ShadowMode getLocalValue(Spatial spatial) {
-            return spatial.getLocalShadowMode();
-        }
-        @Override
-        protected void saveWorldValue(Spatial spatial, RenderQueue.ShadowMode value) {
-            spatial.setUserData(RESULT, value.name());
-        }
-        @Override
-        public RenderQueue.ShadowMode getWorldValue(Spatial spatial) {
-            return Enum.valueOf(RenderQueue.ShadowMode.class, spatial.getUserData(RESULT));
         }
         
     };

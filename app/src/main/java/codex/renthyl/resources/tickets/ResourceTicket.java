@@ -26,11 +26,13 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.resources;
+package codex.renthyl.resources.tickets;
 
-import codex.renthyl.Connectable;
+import codex.renthyl.export.TicketIndex;
+import codex.renthyl.resources.ResourceView;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Objects;
 
 /**
  * References a {@link RenderResource} by index.
@@ -48,34 +50,58 @@ public class ResourceTicket <T> {
     public static final String RESERVED = "#";
     public static final int INVALID = -1, FORCE_INVALID = -2;
     
-    private final Connectable user;
+    private final TicketGroup<T> group;
     private String name;
     private int localIndex;
-    private int exportGroupId = -1;
     private long objectId = -1;
-    private boolean overrideWorld = false;
+    private boolean bound = false;
     private ResourceTicket<T> source;
     private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
+    private TicketIndex exportIndex;
     
-    public ResourceTicket() {
-        this(null, null, INVALID);
-    }
     public ResourceTicket(String name) {
-        this(null, name, INVALID);
+        this(null, name);
     }
-    public ResourceTicket(String name, int index) {
-        this(null, name, index);
-    }
-    public ResourceTicket(Connectable user) {
-        this(user, null, INVALID);
-    }
-    public ResourceTicket(Connectable user, String name) {
-        this(user, name, INVALID);
-    }
-    public ResourceTicket(Connectable user, String name, int index) {
-        this.user = user;
+    public ResourceTicket(TicketGroup<T> group, String name) {
+        this.group = group;
         this.name = name;
-        this.localIndex = index;
+    }
+    
+    /**
+     * Sets the flag indicating that this ticket is currently bound to a ResourceView.
+     * That is, this ticket has been used to declare or reference a ResourceView,
+     * but has not yet released.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     */
+    public void setBindFlag() {
+        if (bound) {
+            throw new IllegalStateException("Cannot make multiple declarations/references with a single ticket: " + this);
+        }
+        bound = true;
+    }
+    /**
+     * Clears the flag indicating that this ticket is currently bound to a ResourceView.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     * 
+     * @see #setBindFlag() 
+     */
+    public void clearBindFlag() {
+        bound = false;
+    }
+    /**
+     * Clears the bind flag and returns its previous value.
+     * <p>
+     * Called internally. <strong>Do not use.</strong>
+     * 
+     * @return 
+     * @see #setBindFlag()
+     */
+    public boolean pollBindFlag() {
+        boolean b = bound;
+        bound = false;
+        return b;
     }
     
     /**
@@ -89,43 +115,34 @@ public class ResourceTicket <T> {
     }
     
     /**
-     * Copies this ticket's resource index to the target ticket.
+     * Sets the export index of this ticket.
      * 
-     * @param target
-     * @return 
+     * @param exportIndex 
      */
-    public ResourceTicket<T> copyIndexTo(ResourceTicket<T> target) {
-        if (target == null) {
-            target = new ResourceTicket();
-        }
-        return target.setLocalIndex(localIndex);
+    protected void setExportIndex(TicketIndex exportIndex) {
+        this.exportIndex = Objects.requireNonNull(exportIndex);
     }
     /**
-     * Copies this ticket's object ID to the target ticket.
-     * 
-     * @param target
-     * @return 
+     * Clears the export index.
      */
-    public ResourceTicket<T> copyObjectTo(ResourceTicket<T> target) {
-        if (target == null) {
-            target = new ResourceTicket();
-        }
-        target.setObjectId(objectId);
-        return target;
+    public void clearExportIndex() {
+        this.exportIndex = null;
     }
-    
     /**
      * Sets the source ticket.
      * 
      * @param source 
      */
-    public void setSource(ResourceTicket<T> source) {
+    public void setSource(ResourceTicket source) {
         if (this.source != source) {
+            if (source == this) {
+                throw new IllegalArgumentException("Ticket cannot have itself as its source.");
+            }
             if (this.source != null) {
                 this.source.targets.remove(this);
             }
-            if (user != null) {
-                user.setLayoutUpdateNeeded();
+            if (group != null) {
+                group.ticketSourceChanged(this, source);
             }
             this.source = source;
             if (this.source != null) {
@@ -152,26 +169,9 @@ public class ResourceTicket <T> {
      * @param index
      * @return 
      */
-    protected ResourceTicket<T> setLocalIndex(int index) {
+    public ResourceTicket<T> setLocalIndex(int index) {
         this.localIndex = index;
         return this;
-    }
-    /**
-     * Sets this ticket to override the inherited world index with its
-     * own local index.
-     * <p>
-     * This is usually used by "referencing" tickets to temporarily ignore
-     * an incoming resource.
-     * <p>
-     * default={@code false}
-     * 
-     * @param override 
-     */
-    public void setOverrideWorldIndex(boolean override) {
-        if (source != null && this.overrideWorld != override && user != null) {
-            user.setLayoutUpdateNeeded();
-        }
-        this.overrideWorld = override;
     }
     /**
      * Sets the object ID.
@@ -181,31 +181,20 @@ public class ResourceTicket <T> {
     public void setObjectId(long objectId) {
         this.objectId = objectId;
     }
-    /**
-     * Sets the id of the group this ticket is exported with.
-     * <p>
-     * Called internally. Do not use.
-     * 
-     * @param exportGroupId 
-     */
-    public void setExportGroupId(int exportGroupId) {
-        this.exportGroupId = exportGroupId;
-    }
     
-    /**
-     * Gets the user (owner) of this ticket.
-     * 
-     * @return user (may be null)
-     */
-    public Connectable getUser() {
-        return user;
-    }
     /**
      * 
      * @return 
      */
     public String getName() {
         return name;
+    }
+    /**
+     * 
+     * @return 
+     */
+    public TicketGroup<T> getGroup() {
+        return group;
     }
     /**
      * Gets the world index.
@@ -220,7 +209,7 @@ public class ResourceTicket <T> {
      * @return world index
      */
     public int getWorldIndex() {
-        if (source != null && !overrideWorld) {
+        if (source != null) {
             int i = source.getWorldIndex();
             if (i >= 0) return i;
         }
@@ -253,19 +242,22 @@ public class ResourceTicket <T> {
         return source;
     }
     /**
+     * Returns true if this ticket is currently associated with a ResourceView.
+     * That is, if this ticket was used to declare or reference a ResourceView
+     * and has not yet released.
+     * 
+     * @return 
+     */
+    public boolean isBindFlagSet() {
+        return bound;
+    }
+    /**
      * Returns true if this source ticket is not null.
      * 
      * @return 
      */
     public boolean hasSource() {
         return source != null;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public boolean isOverrideWorldIndex() {
-        return overrideWorld;
     }
     /**
      * Gets all tickets depending on this ticket.
@@ -276,18 +268,18 @@ public class ResourceTicket <T> {
         return targets;
     }
     /**
+     * Gets the export index of this ticket.
      * 
      * @return 
      */
-    public int getExportGroupId() {
-        return exportGroupId;
+    public TicketIndex getExportIndex() {
+        return exportIndex;
     }
     
     @Override
     public String toString() {
-        return "Ticket[name="+name+", worldIndex="+getWorldIndex()+"]";
+        return "Ticket[name=" + name + ", worldIndex=" + getWorldIndex() + "]";
     }
-    
     
     /**
      * Returns true if the ticket is valid for locating a resource.

@@ -5,7 +5,7 @@
 package codex.renthyl.jobs;
 
 import codex.renthyl.FGRenderContext;
-import codex.renthyl.modules.RenderModule;
+import codex.renthyl.modules.AbstractRenderModule;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -13,11 +13,11 @@ import java.util.LinkedList;
  *
  * @author codex
  */
-public class FGExecutionJob implements Runnable, Iterable<RenderModule> {
+public class FGExecutionJob implements Runnable, Iterable<AbstractRenderModule> {
     
     private final JobEventHandler events;
     private final FGRenderContext context;
-    private final LinkedList<RenderModule> queue = new LinkedList<>();
+    private final LinkedList<AbstractRenderModule> queue = new LinkedList<>();
     private final int index;
 
     public FGExecutionJob(JobEventHandler events, FGRenderContext context, int index) {
@@ -29,9 +29,14 @@ public class FGExecutionJob implements Runnable, Iterable<RenderModule> {
     @Override
     public void run() {
         try {
-            for (RenderModule m : queue) {
-                m.executeModuleRender(context);
+            long jobStart = System.nanoTime();
+            System.out.println("Job " + index + " profile:");
+            for (AbstractRenderModule m : queue) {
+                long start = System.nanoTime();
+                m.executeRender(context);
+                System.out.println("  " + m + ": " + ((double)Math.abs(System.nanoTime() - start) / 1000000.0) + "ms");
             }
+            System.out.println("Job " + index + " took " + ((double)Math.abs(System.nanoTime() - jobStart) / 1000000.0) + "ms");
             events.complete();
         } catch (Exception ex) {
             events.interrupt();
@@ -39,7 +44,7 @@ public class FGExecutionJob implements Runnable, Iterable<RenderModule> {
         }
     }
     @Override
-    public Iterator<RenderModule> iterator() {
+    public Iterator<AbstractRenderModule> iterator() {
         return queue.iterator();
     }
     
@@ -49,7 +54,7 @@ public class FGExecutionJob implements Runnable, Iterable<RenderModule> {
      * @param module 
      * @return the index the module was added to in the module queue
      */
-    public int add(RenderModule module) {
+    public int add(AbstractRenderModule module) {
         queue.addLast(module);
         return queue.size() - 1;
     }
