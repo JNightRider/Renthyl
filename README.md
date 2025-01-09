@@ -1,5 +1,7 @@
 Renthyl is a modular FrameGraph-based rendering pipeline designed with efficiency in mind.
 
+[![](https://jitpack.io/v/codex128/Renthyl.svg)](https://jitpack.io/#codex128/Renthyl)
+
 ## Features
 
 * Allows for the use of modern rendering paradigms, such as deferred and forward++.
@@ -13,7 +15,21 @@ Renthyl is a modular FrameGraph-based rendering pipeline designed with efficienc
 
 ## Get Started
 
-1. Clone the repository and run the gradle wrapper.
+1. Add Renthyl to your Gradle build script.
+
+```groovy
+dependencies {
+   implementation "com.github.codex128:Renthyl:1.2.3"
+}
+```
+Make sure you add Jitpack as a repository:
+```groovy
+repositories {
+   maven {
+      url "https://jitpack.io"
+   }
+}
+```
 
 2. Initialize Renthyl in your JMonkeyEngine application.
    
