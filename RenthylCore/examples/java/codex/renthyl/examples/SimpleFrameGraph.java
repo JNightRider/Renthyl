@@ -12,9 +12,11 @@ import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
@@ -87,8 +89,8 @@ public class SimpleFrameGraph extends SimpleApplication {
         // queues created by the enqueue pass into a single queue. Each individual
         // queue is attached to a group called "Queues", and the geometries inside each
         // queue will maintain their correct order.
-        merge.getInputGroup("Queues").makeInput(enqueue.getMainOutputGroup(),
-                TicketSelector.anyName("Opaque", "Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
+        merge.makeInput(enqueue.getMainOutputGroup(),
+                TicketSelector.names("Opaque", "Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
         
         // Connect the merge pass to the geometry pass. This way, the geometry pass
         // will render from the merged queue created by the merge pass.
