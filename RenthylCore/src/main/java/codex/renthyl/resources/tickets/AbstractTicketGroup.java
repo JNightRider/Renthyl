@@ -89,6 +89,7 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
                 for (ResourceTicket<T> s : source) {
                     if (sourceSelector.select(s, t, i++) && targetSelector.select(t, s, j)) {
                         t.setSource(s);
+                        System.out.println("connect " + s.getName() + " to " + t.getName());
                         connections++;
                         break;
                     }

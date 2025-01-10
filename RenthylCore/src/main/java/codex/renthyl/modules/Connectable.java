@@ -202,9 +202,10 @@ public interface Connectable extends LayoutMember {
      * @param source
      * @param sourceSelector
      * @param targetSelector 
+     * @return number of connections made
      */
-    public default void makeInput(Connectable source, String sourceSelector, String targetSelector) {
-        getMainInputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
+    public default int makeInput(Connectable source, String sourceSelector, String targetSelector) {
+        return getMainInputGroup().makeInput(source.getMainOutputGroup(), sourceSelector, targetSelector);
     }
     
     /**

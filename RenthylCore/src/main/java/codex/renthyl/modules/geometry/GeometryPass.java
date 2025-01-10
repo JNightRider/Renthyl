@@ -36,7 +36,6 @@ import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
-import com.jme3.math.ColorRGBA;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;

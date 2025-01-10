@@ -166,14 +166,18 @@ public class RenderContainer <R extends RenderModule> extends AbstractRenderModu
         if (this == module) {
             throw new IllegalArgumentException("Cannot add container to itself.");
         }
+        if (module.getParent() == this) {
+            throw new IllegalArgumentException("Module already added to container.");
+        }
         if (module.getParent() != null) {
             module.getParent().remove(module);
         }
-        if (index < 0) {
-            index = queue.size();
-        }
         if (module.setParent(this)) {
-            queue.add(index, module);
+            if (index < 0 || index >= queue.size()) {
+                queue.add(module);
+            } else {
+                queue.add(index, module);
+            }
             if (isAssigned()) {
                 module.initializeModule(frameGraph);
             }

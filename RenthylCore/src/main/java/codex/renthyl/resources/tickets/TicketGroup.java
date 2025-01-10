@@ -174,9 +174,10 @@ public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T
      * @param source
      * @param sourceName
      * @param targetName 
+     * @return 
      */
-    public default void makeInput(TicketGroup<T> source, String sourceName, String targetName) {
-        makeInput(source, TicketSelector.name(sourceName), TicketSelector.name(targetName));
+    public default int makeInput(TicketGroup<T> source, String sourceName, String targetName) {
+        return makeInput(source, TicketSelector.name(sourceName), TicketSelector.name(targetName));
     }
     
     /**

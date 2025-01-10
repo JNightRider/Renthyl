@@ -115,7 +115,7 @@ public abstract class AbstractRenderModule implements RenderModule {
     @Override
     public <T, R extends TicketGroup<T>> R addInputGroup(R group) {
         if (inputGroups.put(group.getName(), group) != null) {
-            throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\".");
+            throw new IllegalArgumentException("Group already registered under \"" + group.getName() + "\" for " + this);
         }
         group.attach(this);
         return group;

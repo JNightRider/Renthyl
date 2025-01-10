@@ -141,6 +141,11 @@ public interface TicketSelector {
     public static final TicketSelector First = new IndexBetweenSelector(0, 1);
     
     /**
+     * Selector that only approves connection if the two tickets' names match.
+     */
+    public static final TicketSelector NamesMatch = (t, o, i) -> o == null || t.getName().equals(o.getName());
+    
+    /**
      * Creates a selector that selects only the given ticket.
      * 
      * @param ticket
@@ -177,16 +182,6 @@ public interface TicketSelector {
      */
     public static TicketSelector names(String... names) {
         return new AnyNameSelector(names);
-    }
-    /**
-     * Creates a selector that only confirms a relationship if the two
-     * tickets' names are equal.
-     * 
-     * @param delegate
-     * @return 
-     */
-    public static TicketSelector namesMatch() {
-        return (t, o, i) -> o == null || t.getName().equals(o.getName());
     }
     /**
      * Creates a selector that selects only the ticket at the index.

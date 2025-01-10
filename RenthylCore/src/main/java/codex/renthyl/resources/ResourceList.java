@@ -600,7 +600,7 @@ public class ResourceList {
      */
     public void claimWritePermissions(ResourceTicket ticket) {
         if (ResourceTicket.validate(ticket)) {
-            fastLocate(ticket).claimWritePermissions();
+            locate(ticket).claimWritePermissions();
         }
     }
     
@@ -1216,6 +1216,7 @@ public class ResourceList {
         // queue all resources that are not referenced
         for (ResourceView r : resources) {
             if (r != null && !r.isReferenced() && !r.isTemporary()) {
+                System.out.println("cull " + r);
                 cull.add(r);
             }
         }
@@ -1236,6 +1237,7 @@ public class ResourceList {
             // If the user is found to not produce used resources, dereference
             // all incoming resources and remove all outgoing resources.
             if (!user.isUsed()) {
+                System.out.println("cull " + user);
                 for (Iterator<ResourceTicket> it = user.getInputTickets(); it.hasNext();) {
                     ResourceTicket t = it.next();
                     t.clearBindFlag();
@@ -1247,6 +1249,7 @@ public class ResourceList {
                     // If the resource is found to no longer be referenced by
                     // anything, queue the resource.
                     if (!r.cull()) {
+                        System.out.println("cull " + r);
                         cull.addLast(r);
                     }
                 }

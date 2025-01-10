@@ -30,7 +30,9 @@ public class FGExecutionJob implements Runnable, Iterable<AbstractRenderModule> 
     public void run() {
         try {
             for (AbstractRenderModule m : queue) {
-                m.executeRender(context);
+                if (m.isUsed()) {
+                    m.executeRender(context);
+                }
             }
             events.complete();
         } catch (Exception ex) {
