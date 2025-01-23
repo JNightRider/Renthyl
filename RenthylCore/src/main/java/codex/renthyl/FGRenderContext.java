@@ -33,12 +33,7 @@ import codex.renthyl.resources.ResourceList;
 import codex.renthyl.util.FullScreenQuad;
 import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.draw.RenderMode;
-import codex.renthyl.util.GeometryRenderHandler;
-import com.jme3.light.LightFilter;
 import com.jme3.material.Material;
-import com.jme3.material.RenderState;
-import com.jme3.math.ColorRGBA;
-import com.jme3.math.Vector4f;
 import com.jme3.opencl.CommandQueue;
 import com.jme3.opencl.Context;
 import com.jme3.profile.AppProfiler;
@@ -48,9 +43,7 @@ import com.jme3.renderer.Renderer;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
-import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
-import java.util.function.Predicate;
 import com.jme3.scene.Mesh;
 import com.jme3.scene.instancing.InstancedGeometry;
 import java.util.ArrayDeque;
@@ -61,21 +54,6 @@ import java.util.ArrayDeque;
  * Provides RenderPasses with access to important objects such as the RenderManager,
  * ViewPort, profiler, and a fullscreen quad. Utility methods are provided for
  * fullscreen quad rendering and camera management.
- * <p>
- * Additionally, the following render settings are handled to ensure settings
- * do not leak between renders.
- * <ul>
- *   <li>Forced technique</li>
- *   <li>Forced material</li>
- *   <li>Geometry render handler</li>
- *   <li>Geometry filter</li>
- *   <li>Forced render state</li>
- * </ul>
- * After each pass execution on the main render thread, {@link #popActiveModes()} is
- * called to reset these settings to what they were before rendering began.
- * <p>
- * FrameBuffers are <em>not</em> managed. Passes are expected to explicitely set
- * the FrameBuffer they intend on rendering with.
  * 
  * @author codex
  */
@@ -131,8 +109,8 @@ public class FGRenderContext {
     }
     /**
      * Returns true if the context is ready for rendering.
-     * 
-     * @return 
+     *
+     * @return
      */
     public boolean isReady() {
         return renderManager != null && viewPort != null;
@@ -251,7 +229,12 @@ public class FGRenderContext {
         this.clQueue = clQueue;
     }
     /**
-     * 
+     * Enables culling based on culling results from the previous frame.
+     * <p>
+     * If not enabled, each module in the graph must be prepared and re-culled every frame
+     * regardless of whether it will actually be executed. Temporal culling allows those
+     * processes to be skipped if no layout update has been raised.
+     *
      * @param temporalCulling 
      */
     protected void setTemporalCulling(boolean temporalCulling) {

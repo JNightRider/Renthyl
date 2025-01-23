@@ -81,4 +81,18 @@ public interface DefinedTicketGroup <T, D extends ResourceDef<T>> extends Ticket
         }
     }
     
+    public default D selectDef(TicketSelector selector) {
+        int i = 0;
+        for (ResourceTicket<T> t : getTickets()) {
+            if (selector.select(t, i)) {
+                break;
+            }
+            i++;
+        }
+        if (i < getDefs().size()) {
+            return getDef(i);
+        }
+        return null;
+    }
+    
 }

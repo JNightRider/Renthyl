@@ -16,6 +16,8 @@ import com.jme3.app.state.BaseAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.export.binary.BinaryLoader;
 import com.jme3.renderer.RenderManager;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
@@ -42,6 +44,13 @@ public final class Renthyl {
      * Name of the Renthyl library.
      */
     public static final String LIBRARY_NAME = Renthyl.class.getSimpleName();
+    
+    /**
+     * Version of the Renthyl library.
+     */
+    public static final String VERSION = "1.2.4";
+    
+    private static final Logger LOG = Logger.getLogger(Renthyl.class.getName());
     
     private static Renthyl instance;
     
@@ -127,6 +136,7 @@ public final class Renthyl {
     }
     
     private final DefaultJobExecutor defaultExecutor = new DefaultJobExecutor();
+    private Level missedConnectionLogLevel = null;
     
     private Renthyl(Application app) {
         
@@ -145,12 +155,57 @@ public final class Renthyl {
     }
     
     /**
+     * Logs a missed connection event using {@link #getMissedConnectionLogLevel()}
+     * logging level, if not null.
+     * @param source
+     * @param target
+     * @param source
+     * @param target
+     */
+    public void logMissedConnection(TicketSelector source, TicketSelector target) {
+        if (missedConnectionLogLevel != null) {
+            StringBuilder msg = new StringBuilder();
+            msg.append("Failed to connect any tickets.\n        source: ")
+                    .append(source).append("\n        target: ").append(target);
+            StackTraceElement[] trace = Thread.currentThread().getStackTrace();
+            for (int i = 2; i < trace.length; i++) {
+                // ignore the first two trace elements because they trace this
+                // method and Thread#getStackTrace()
+                msg.append("\n    ").append(trace[i]);
+            }
+            LOG.log(missedConnectionLogLevel, msg.toString());
+        }
+    }
+    
+    /**
+     * Sets the logging level used when a connection attempt fails
+     * to connect anything.
+     * <p>
+     * default=null (no logging)
+     * 
+     * @param level logging level for missed connections, or null to not log such events
+     */
+    public void setMissedConnectionLogLevel(Level level) {
+        this.missedConnectionLogLevel = level;
+    }
+    
+    /**
      * Gets the default job executor used when no other is specified.
      * 
      * @return 
      */
     public DefaultJobExecutor getBaseExecutor() {
         return defaultExecutor;
+    }
+    /**
+     * Gets the logging level used when a connection attempt fails
+     * to connect anything.
+     * 
+     * @return 
+     * @see #setMissedConnectionLogLevel(java.lang.System.Logger.Level)
+     */
+    public Level getMissedConnectionLogLevel() {
+        return missedConnectionLogLevel;
     }
     
 }

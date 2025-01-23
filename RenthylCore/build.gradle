@@ -1,8 +1,6 @@
 
-
-
 plugins {
-    id 'buildlogic.java-application-conventions'
+    //id 'buildlogic.java-application-conventions'
     id 'java-library'
     id 'maven-publish'
     id 'signing'
@@ -10,7 +8,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    jcenter()
 	maven { url "https://jitpack.io" }
 }
 
@@ -24,36 +21,15 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "com.github.codex128:Boost:$boostVer"
 }
-
-task copyJavadoc(dependsOn: javadoc) {
-    
-}
-
-// remove the generated javadocs in the /docs folder
-task cleanJavadoc(type: Delete) {
-    delete "$projectDir/docs/javadoc/"
-}
-
-clean {
-    dependsOn cleanJavadoc
-}
-
-build {
-    dependsOn copyJavadoc
-}
-
-task sourcesJar(type: Jar) {
+/*
+tasks.register('sourcesJar', Jar) {
     from sourceSets.main.allJava
     archiveClassifier = 'sources'
 }
 
-task javadocJar(type: Jar) {
+tasks.register('javadocJar', Jar) {
     from javadoc
     archiveClassifier = 'javadoc'
-}
-
-javadoc {
-    failOnError = false
 }
 
 publishing {
@@ -68,4 +44,4 @@ publishing {
         }
     }
 }
-
+*/

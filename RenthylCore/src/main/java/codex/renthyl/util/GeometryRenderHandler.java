@@ -42,9 +42,6 @@ import com.jme3.scene.Spatial;
  */
 public interface GeometryRenderHandler {
     
-    /**
-     * 
-     */
     GeometryRenderHandler DEFAULT = (context, geom) -> context.getRenderManager().renderGeometry(geom);
     
     /**

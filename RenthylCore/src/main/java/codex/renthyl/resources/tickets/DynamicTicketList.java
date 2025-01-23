@@ -28,6 +28,7 @@
  */
 package codex.renthyl.resources.tickets;
 
+import codex.renthyl.Renthyl;
 import codex.renthyl.export.TicketIndex;
 import codex.renthyl.modules.Connectable;
 import com.jme3.export.InputCapsule;
@@ -103,6 +104,9 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
                 }
             }
             i++;
+        }
+        if (connections == 0) {
+            Renthyl.getInstance().logMissedConnection(sourceSelector, targetSelector);
         }
         return connections;
     }

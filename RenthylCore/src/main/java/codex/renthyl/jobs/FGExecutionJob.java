@@ -6,6 +6,7 @@ package codex.renthyl.jobs;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.modules.AbstractRenderModule;
+import com.jme3.profile.SpStep;
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -31,6 +32,9 @@ public class FGExecutionJob implements Runnable, Iterable<AbstractRenderModule> 
         try {
             for (AbstractRenderModule m : queue) {
                 if (m.isUsed()) {
+                    if (index == 0 && context.isProfilerAvailable()) {
+                        context.getProfiler().spStep(SpStep.ProcPostQueue, m.getName());
+                    }
                     m.executeRender(context);
                 }
             }

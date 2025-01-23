@@ -53,6 +53,8 @@ public interface TicketSelector {
     public boolean select(ResourceTicket ticket, ResourceTicket other, int index);
     
     /**
+     * Returns true if {@code ticket} is selected in relation to no
+     * other tickets.
      * 
      * @param ticket
      * @param index
@@ -229,7 +231,7 @@ public interface TicketSelector {
      * @return 
      */
     public static TicketSelector and(TicketSelector... delegates) {
-        return new LogicSelector(delegates) {
+        return new LogicSelector("AND", delegates) {
             @Override
             protected boolean evaluateCounts(int trueCount, int falseCount) {
                 return falseCount == 0;
@@ -244,7 +246,7 @@ public interface TicketSelector {
      * @return 
      */
     public static TicketSelector or(TicketSelector... delegates) {
-        return new LogicSelector(delegates) {
+        return new LogicSelector("OR", delegates) {
             @Override
             protected boolean evaluateCounts(int trueCount, int falseCount) {
                 return trueCount > 0;
@@ -259,7 +261,7 @@ public interface TicketSelector {
      * @return 
      */
     public static TicketSelector nor(TicketSelector... delegates) {
-        return new LogicSelector(delegates) {
+        return new LogicSelector("NOR", delegates) {
             @Override
             protected boolean evaluateCounts(int trueCount, int falseCount) {
                 return trueCount == 0;
@@ -278,6 +280,10 @@ public interface TicketSelector {
         @Override
         public boolean select(ResourceTicket ticket, ResourceTicket other, int index) {
             return name.equals(ticket.getName());
+        }
+        @Override
+        public String toString() {
+            return "name(" + name + ")";
         }
         
         public String getName() {
@@ -302,6 +308,17 @@ public interface TicketSelector {
             }
             return false;
         }
+        @Override
+        public String toString() {
+            StringBuilder str = new StringBuilder("names(");
+            for (int i = 0; i < names.length; i++) {
+                str.append(names[i]);
+                if (i < names.length-1) {
+                    str.append(", ");
+                }
+            }
+            return str.append(")").toString();
+        }
         
     }
     public static class IndexBetweenSelector implements TicketSelector {
@@ -317,13 +334,22 @@ public interface TicketSelector {
         public boolean select(ResourceTicket t, ResourceTicket o, int i) {
             return i >= start && i < end;
         }
+        @Override
+        public String toString() {
+            return "between(" + start + ", " + end + ")";
+        }
         
     }
     public static abstract class LogicSelector implements TicketSelector {
         
+        private final String operator;
         private final TicketSelector[] delegates;
         
         public LogicSelector(TicketSelector... delegates) {
+            this("...", delegates);
+        }
+        public LogicSelector(String operator, TicketSelector... delegates) {
+            this.operator = operator;
             this.delegates = delegates;
         }
         
@@ -336,6 +362,17 @@ public interface TicketSelector {
                 }
             }
             return evaluateCounts(trueCount, delegates.length-trueCount);
+        }
+        @Override
+        public String toString() {
+            StringBuilder str = new StringBuilder("logic(");
+            for (int i = 0; i < delegates.length; i++) {
+                str.append(delegates[i]);
+                if (i < delegates.length-1) {
+                    str.append(" ").append(operator).append(" ");
+                }
+            }
+            return str.append(")").toString();
         }
         
         protected abstract boolean evaluateCounts(int trueCount, int falseCount);

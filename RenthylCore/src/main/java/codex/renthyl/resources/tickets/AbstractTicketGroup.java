@@ -28,11 +28,11 @@
  */
 package codex.renthyl.resources.tickets;
 
+import codex.renthyl.Renthyl;
 import codex.renthyl.export.NamedTicketIndex;
 import codex.renthyl.export.TicketIndex;
-import java.util.Iterator;
 import codex.renthyl.modules.Connectable;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
@@ -96,6 +96,9 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
                 }
             }
             j++;
+        }
+        if (connections == 0) {
+            Renthyl.getInstance().logMissedConnection(sourceSelector, targetSelector);
         }
         return connections;
     }

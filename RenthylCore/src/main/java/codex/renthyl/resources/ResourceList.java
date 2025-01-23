@@ -36,6 +36,7 @@ import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.ArrayIterator;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
