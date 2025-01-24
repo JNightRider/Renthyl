@@ -4,7 +4,10 @@
  */
 package codex.renthylplus.vxgi;
 
+import codex.jmecompute.WorkSize;
+import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeShader;
+import codex.jmecompute.opengl.Glsl;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
