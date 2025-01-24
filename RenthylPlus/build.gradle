@@ -13,7 +13,7 @@ repositories {
 
 project.ext {
     jmeVer = '3.8.0-alpha2'
-    computeVer = '0d500fbc0b'
+    computeVer = '339019217c'
     boostVer = 'dd2f4b856d'
 }
 
