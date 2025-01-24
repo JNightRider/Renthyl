@@ -1,0 +1,33 @@
+
+ShaderDef {
+    
+    shader 450 430 RenthylPlus/MatDefs/VXGI/pbrIndirect.glsl
+
+    Uniforms {
+        
+        Texture ColorMap
+        Texture DepthMap
+        Texture DiffuseMap
+        Texture PositionMap
+        Texture NormalMap
+        Texture MaterialMap
+        Texture VoxelMap
+        Image Target
+        
+        Vector3 CameraPosition
+        Vector3 GridMin
+        Vector3 GridMax
+        Vector2 SpecularAngleRange
+        
+        FloatArray TraceDirections Vec3
+        Float TraceTangent
+        Float TraceQuality
+        Float IndirectFactor
+        Float Time
+        Matrix4 CameraMatrixInverse
+        Int GridSize
+        
+    }
+    
+}
+

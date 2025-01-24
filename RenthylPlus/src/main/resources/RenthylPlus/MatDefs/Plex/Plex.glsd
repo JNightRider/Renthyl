@@ -1,0 +1,271 @@
+
+import codex.jmecompute.opengl.*;
+import codex.jmecompute.uniforms.*;
+import codex.jmecompute.assets.UniversalShaderLoader;
+import com.jme3.math.Matrix3f;
+import com.jme3.math.Matrix4f;
+import com.jme3.math.Vector2f;
+import com.jme3.math.Vector3f;
+import com.jme3.math.Vector4f;
+
+def targetShader = null;
+
+def shader(String name, String asset, Closure config) {
+    if (targetShader != null) {
+        throw new IllegalStateException("Cannot declare shader inside shader config.");
+    }
+    def shader = UniversalShaderLoader.loadComputeShader(assetManager, asset);
+    if (shaderMap.put(name, shader) != null) {
+        throw new IllegalArgumentException("Duplicate shader name: $name");
+    }
+    targetShader = shader;
+    config();
+    targetShader = null;
+    return shader;
+}
+def versions(Glsl... versions) {
+    targetShader.setVersions(versions);
+}
+
+def uniform(GLUniform u) {
+    targetShader.uniform(u);
+    return u;
+}
+def uniform(GLUniform u, Closure config) {
+    config.setDelegate(uniform(u));
+    config();
+    return u;
+}
+def define(String defineName, String uniformName) {
+    targetShader.uniformDefine(defineName, uniformName);
+}
+
+def bool(String name) {
+    return uniform(new BooleanUniform(name));
+}
+def bool(String name, boolean value) {
+    return uniform(new BooleanUniform(name), { set(value) });
+}
+def integer(String name) {
+    return uniform(new IntUniform(name));
+}
+def integer(String name, int value) {
+    return uniform(new IntUniform(name), { set(value) });
+}
+def uinteger(String name) {
+    return uniform(new UIntUniform(name));
+}
+def uinteger(String name, int value) {
+    return uniform(new UIntUniform(name), { set(value) });
+}
+def float32(String name) {
+    return uniform(new IntUniform(name));
+}
+def float32(String name, float value) {
+    return uniform(new FloatUniform(name), { set(value) });
+}
+def double64(String name) {
+    return uniform(new DoubleUniform(name));
+}
+def double64(String name, double value) {
+    return uniform(new DoubleUniform(name), { set(value) });
+}
+
+def vector2(String name) {
+    return uniform(new Vector2Uniform(name));
+}
+def vector2(String name, Vector2f value) {
+    return uniform(new Vector2Uniform(name), { set(value) });
+}
+def vector2(String name, float x, float y) {
+    return uniform(new Vector2Uniform(name), { set(new Vector2f(x, y)) });
+}
+def vector3(String name) {
+    return uniform(new Vector3Uniform(name));
+}
+def vector3(String name, Vector3f value) {
+    return uniform(new Vector3Uniform(name), { set(value) });
+}
+def vector3(String name, float x, float y, float z) {
+    return uniform(new Vector3Uniform(name), { set(new Vector3f(x, y, z)) });
+}
+def vector4(String name) {
+    return uniform(new Vector4Uniform(name));
+}
+def vector4(String name, Vector4f value) {
+    return uniform(new Vector4Uniform(name), { set(value) });
+}
+def vector4(String name, float x, float y, float z, float w) {
+    return uniform(new Vector4Uniform(name), { set(new Vector4f(x, y, z, w)) });
+}
+def matrix3(String name) {
+    return uniform(new Matrix3Uniform(name));
+}
+def matrix3(String name, Matrix3f value) {
+    return uniform(new Matrix3Uniform(name), { set(value) });
+}
+def matrix4(String name) {
+    return uniform(new Matrix4Uniform(name));
+}
+def matrix4(String name, Matrix4f value) {
+    return uniform(new Matrix4Uniform(name), { set(value) });
+}
+
+def texture(String name) {
+    return uniform(new TextureUniform(name));
+}
+def textureArray(String name) {
+    return uniform(new TextureArrayUniform(name));
+}
+def textureCollection(String name) {
+    return uniform(new TextureCollectionUniform(name));
+}
+def image(String name) {
+    return uniform(new ImageUniform(name));
+}
+def imageArray(String name) {
+    return uniform(new ImageArrayUniform(name));
+}
+def imageCollection(String name) {
+    return uniform(new ImageCollectionUniform(name));
+}
+
+def intBuffer(String name) {
+    return uniform(new IntBufferUniform(name));
+}
+def intBuffer(String name, Closure config) {
+    return uniform(new IntBufferUniform(name), config);
+}
+def uintBuffer(String name) {
+    return uniform(new UIntBufferUniform(name));
+}
+def uintBuffer(String name, Closure config) {
+    return uniform(new UIntBufferUniform(name), config);
+}
+def floatBuffer(String name) {
+    return uniform(new FloatBufferUniform(name));
+}
+def floatBuffer(String name, Closure config) {
+    return uniform(new FloatBufferUniform(name), config);
+}
+def doubleBuffer(String name) {
+    return uniform(new DoubleBufferUniform(name));
+}
+def doubleBuffer(String name, Closure config) {
+    return uniform(new DoubleBufferUniform(name), config);
+}
+
+def vertexBuffer(String name) {
+    return uniform(new VertexBufferShaderStorage(name));
+}
+def vertexBuffer(String name, Closure closure) {
+    return uniform(new VertexBufferShaderStorage(name), closure);
+}
+def uniformBufferObject(String name) {
+    return uniform(new UniformBufferObject(name));
+}
+def uniformBufferObject(String name, Closure closure) {
+    return uniform(new UniformBufferObject(name), closure);
+}
+
+shader "PBRLighting" "RenthylPlus/MatDefs/Plex/PBRLighting.glsl" {
+    
+    versions Glsl.V450, Glsl.V430
+    
+    // buffers
+    vertexBuffer "IndexBuffer"
+    vertexBuffer "PositionBuffer"
+    vertexBuffer "TexCoordBuffer"
+    vertexBuffer "NormalBuffer"
+    vertexBuffer "TangentBuffer"
+    vertexBuffer "ColorBuffer"
+    bool "UseVertexColor"
+    define "TANGENTS" "TangentBuffer"
+    define "VERTEX_COLOR" "UseVertexColor"
+    
+    // material
+    texture "BaseColorMap"
+    texture "MetallicMap" { setColorSpace(ColorSpace.Linear) }
+    texture "RoughnessMap" { setColorSpace(ColorSpace.Linear) }
+    texture "MetallicRoughnessMap" { setColorSpace(ColorSpace.Linear) }
+    texture "SpecularMap"
+    texture "GlossinessMap"
+    texture "SpecularGlossinessMap"
+    texture "LightMap"
+    vector4 "BaseColor" 1.0f 1.0f 1.0f 1.0f
+    vector4 "Specular" 1.0f 1.0f 1.0f 1.0f
+    float32 "Metallic" 1.0f
+    float32 "Roughness" 1.0f
+    float32 "Glossiness" 1.0f
+    bool "UseSpecGloss"
+    define "BASECOLORMAP" "BaseColorMap"
+    define "METALLICMAP" "MetallicMap"
+    define "ROUGHNESSMAP" "RoughnessMap"
+    define "SPECULARMAP" "SpecularMap"
+    define "GLOSSINESSMAP" "GlossinessMap"
+    define "USE_PACKED_MR" "MetallicRoughnessMap"
+    define "USE_PACKED_SG" "SpecularGlossinessMap"
+    define "SPECGLOSSPIPELINE" "UseSpecGloss"
+    define "LIGHTMAP" "LightMap"
+    
+    // normal + parallax
+    texture "NormalMap"
+    texture "ParallaxMap" { setColorSpace(ColorSpace.Linear) }
+    float32 "NormalScale"
+    float32 "NormalType" -1.0f
+    float32 "ParallaxHeight" 0.05f
+    bool "PackedNormalParallax"
+    bool "SteepParallax"
+    define "NORMALMAP" "NormalMap"
+    define "NORMALSCALE" "NormalScale"
+    define "NORMAL_TYPE" "NormalType"
+    define "PARALLAXMAP" "ParallaxMap"
+    define "NORMALMAP_PARALLAX" "PackedNormalParallax"
+    define "STEEP_PARALLAX" "SteepParallax"
+    
+    // emissive
+    texture "EmissiveMap"
+    vector4 "Emissive"
+    float32 "EmissivePower" 3.0f
+    float32 "EmissiveIntensity" 2.0f
+    define "EMISSIVEMAP" "EmissiveMap"
+    define "EMISSIVE" "Emissive"
+    
+    // skinning
+    floatBuffer "BoneMatrices" { setStride(Stride.Mat4); }
+    floatBuffer "MorphWeights"
+    integer "NumberOfBones"
+    integer "NumberOfMorphTargets"
+    integer "NumberOfTargetsBuffers"
+    define "NUM_BONES" "NumberOfBones"
+    define "NUM_MORPH_TARGETS" "NumberOfMorphTargets"
+    define "NUM_TARGETS_BUFFERS" "NumberOfTargetsBuffers"
+    
+    // ambient occlusion
+    float32 "AoStrength"
+    bool "LightMapAsAOMap"
+    bool "AoPackedInMRMap"
+    define "AO_MAP" "LightMapAsAOMap"
+    define "AO_PACKED_IN_MR_MAP" "AoPackedInMRMap"
+    define "AO_STRENGTH" "AoStrength"
+    
+    // specular anti-aliasing
+    bool "UseSpecularAA" true
+    float32 "SpecularAASigma"
+    float32 "SpecularAAKappa"
+    define "SPECULAR_AA" "UseSpecularAA"
+    define "SPECULAR_AA_SCREEN_SPACE_VARIANCE" "SpecularAASigma"
+    define "SPECULAR_AA_THRESHOLD" "SpecularAAKappa"
+    
+    // misc
+    integer "BoundDrawBuffer"
+    float32 "AlphaDiscardThreshold"
+    bool "HorizonFade"
+    bool "SeparateTexCoord"
+    define "BOUND_DRAW_BUFFER" "BoundDrawBuffer"
+    define "SEPARATE_TEXCOORD" "SeparateTexCoord"
+    define "DISCARD_ALPHA" "AlphaDiscardThreshold"
+    define "HORIZON_FADE" "HorizonFade"
+    
+}
+
