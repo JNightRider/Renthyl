@@ -55,7 +55,7 @@ public interface Connectable extends LayoutMember {
      * @param name
      * @return added ticket
      */
-    public ResourceTicket addInput(String name);
+    public <T> ResourceTicket<T> addInput(String name);
     
     /**
      * Adds the ticket to the main output group returned by
@@ -65,7 +65,7 @@ public interface Connectable extends LayoutMember {
      * @param name
      * @return added ticket
      */
-    public ResourceTicket addOutput(String name);
+    public <T> ResourceTicket<T> addOutput(String name);
     
     /**
      * Adds and attaches the group as input.

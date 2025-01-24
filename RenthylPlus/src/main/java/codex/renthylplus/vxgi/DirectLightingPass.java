@@ -68,7 +68,6 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        // TODO: group gbuffers into one ticket group
         declare(colorDef, color);
         declare(depthDef, depth);
         materials.declareAll(resources, this);

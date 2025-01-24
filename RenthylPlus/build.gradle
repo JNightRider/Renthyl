@@ -2,7 +2,7 @@
 
 
 plugins {
-    id 'buildlogic.java-application-conventions'
+    //id 'buildlogic.java-application-conventions'
     id 'java-library'
     id 'maven-publish'
     id 'signing'
@@ -15,19 +15,18 @@ repositories {
 
 project.ext {
     jmeVer = '3.8.0-alpha2'
-    renthylVer = 'v1.2.4'
-    boostVer = '1.2.3'
+    computeVer = '0d500fbc0b'
 }
 
 dependencies {
+    implementation project(":RenthylCore")
     implementation "org.jmonkeyengine:jme3-core:$jmeVer"
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "org.jmonkeyengine:jme3-effects:$jmeVer"
-    implementation "com.github.codex128:Renthyl:$renthylVer"
-    implementation "com.github.codex128:Boost:$boostVer"
-    implementation 'com.github.codex128:JMECompute:v1.0.0'
+    implementation "com.github.codex128:JMECompute:$computeVer"
 }
 
+/**
 tasks.register('sourcesJar', Jar) {
     from sourceSets.main.allJava
     archiveClassifier = 'sources'
@@ -54,4 +53,4 @@ publishing {
         }
     }
 }
-
+*/

@@ -76,7 +76,7 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     }
     @Override
     public ResourceTicket<T> add(String name) {
-        return append(new ResourceTicket(this, name));
+        return append(new ResourceTicket<>(this, name));
     }
     @Override
     @SuppressWarnings("null")

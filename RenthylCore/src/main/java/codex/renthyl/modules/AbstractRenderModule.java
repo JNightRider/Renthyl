@@ -105,12 +105,14 @@ public abstract class AbstractRenderModule implements RenderModule {
     }
     
     @Override
-    public ResourceTicket addInput(String name) {
-        return getMainInputGroup().add(name);
+    public <T> ResourceTicket<T> addInput(String name) {
+        //noinspection unchecked
+        return ((TicketGroup<T>)getMainInputGroup()).add(name);
     }
     @Override
-    public ResourceTicket addOutput(String name) {
-        return getMainOutputGroup().add(name);
+    public <T> ResourceTicket<T> addOutput(String name) {
+        //noinspection unchecked
+        return ((TicketGroup<T>)getMainOutputGroup()).add(name);
     }
     @Override
     public <T, R extends TicketGroup<T>> R addInputGroup(R group) {

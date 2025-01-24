@@ -1,9 +1,7 @@
 
 plugins {
-    //id 'buildlogic.java-application-conventions'
     id 'java-library'
     id 'maven-publish'
-    id 'signing'
 }
 
 repositories {
@@ -21,7 +19,7 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "com.github.codex128:Boost:$boostVer"
 }
-/*
+
 tasks.register('sourcesJar', Jar) {
     from sourceSets.main.allJava
     archiveClassifier = 'sources'
@@ -34,14 +32,10 @@ tasks.register('javadocJar', Jar) {
 
 publishing {
     publications {
-        MyPublication(MavenPublication) {
-            groupId = 'com.github.codex128'
-            artifactId = 'renthyl-rendering-library'
-            version = '1.2.2'
+        LibraryPublication(MavenPublication) {
             from components.java
             artifact sourcesJar
             artifact javadocJar
         }
     }
 }
-*/
