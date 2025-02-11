@@ -13,7 +13,7 @@ repositories {
 
 project.ext {
     jmeVer = '3.8.0-alpha2'
-    computeVer = '69d633c79e'
+    computeVer = 'ecc1a0b83d'
     boostVer = 'dd2f4b856d'
     monkeywrenchVer = '0.6.2'
 }
@@ -23,9 +23,9 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-core:$jmeVer"
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "org.jmonkeyengine:jme3-effects:$jmeVer"
-    //implementation "com.github.codex128:JMECompute:$computeVer"
+    implementation "com.github.codex128:JMECompute:$computeVer"
     // debugging
-    implementation project(":JMECompute")
+    //implementation project(":JMECompute")
     implementation "com.github.codex128:Boost:$boostVer"
     testImplementation "com.github.stephengold:MonkeyWrench:$monkeywrenchVer"
 }

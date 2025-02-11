@@ -3,5 +3,5 @@ rootProject.name = 'Renthyl'
 include "RenthylCore", "RenthylPlus"
 
 // debugging
-include "JMECompute"
-project(":JMECompute").projectDir = file("../JMECompute/JMECompute")
+//include "JMECompute"
+//project(":JMECompute").projectDir = file("../JMECompute/JMECompute")
