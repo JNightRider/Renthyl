@@ -454,26 +454,6 @@
 					"active_ypaint_node":""
 				}
 			},
-			"name":"pattern",
-			"pbrMetallicRoughness":{
-				"baseColorTexture":{
-					"index":0
-				},
-				"metallicFactor":0,
-				"roughnessFactor":0.4000000059604645
-			}
-		},
-		{
-			"doubleSided":true,
-			"extras":{
-				"lp":{
-					"uid":"5157a2d78e"
-				},
-				"pov":{},
-				"yp":{
-					"active_ypaint_node":""
-				}
-			},
 			"name":"white",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -621,7 +601,7 @@
 						"TEXCOORD_0":10
 					},
 					"indices":11,
-					"material":2
+					"material":1
 				}
 			]
 		},
@@ -635,7 +615,7 @@
 						"TEXCOORD_0":14
 					},
 					"indices":15,
-					"material":3
+					"material":2
 				}
 			]
 		},
@@ -649,7 +629,7 @@
 						"TEXCOORD_0":18
 					},
 					"indices":15,
-					"material":4
+					"material":3
 				}
 			]
 		},
@@ -663,7 +643,7 @@
 						"TEXCOORD_0":21
 					},
 					"indices":15,
-					"material":3
+					"material":2
 				}
 			]
 		},
@@ -677,7 +657,7 @@
 						"TEXCOORD_0":24
 					},
 					"indices":15,
-					"material":4
+					"material":3
 				}
 			]
 		},
@@ -691,7 +671,7 @@
 						"TEXCOORD_0":27
 					},
 					"indices":15,
-					"material":3
+					"material":2
 				}
 			]
 		},
@@ -705,7 +685,7 @@
 						"TEXCOORD_0":30
 					},
 					"indices":15,
-					"material":4
+					"material":3
 				}
 			]
 		},
@@ -722,7 +702,7 @@
 						"TEXCOORD_0":33
 					},
 					"indices":15,
-					"material":5
+					"material":4
 				}
 			]
 		},
@@ -750,7 +730,7 @@
 						"TEXCOORD_0":39
 					},
 					"indices":15,
-					"material":2
+					"material":1
 				}
 			]
 		},
@@ -777,22 +757,9 @@
 						"TEXCOORD_0":46
 					},
 					"indices":47,
-					"material":6
+					"material":5
 				}
 			]
-		}
-	],
-	"textures":[
-		{
-			"sampler":0,
-			"source":0
-		}
-	],
-	"images":[
-		{
-			"mimeType":"image/png",
-			"name":"test-texture",
-			"uri":"test-texture.png"
 		}
 	],
 	"accessors":[
@@ -1513,12 +1480,6 @@
 			"byteLength":12,
 			"byteOffset":10648,
 			"target":34963
-		}
-	],
-	"samplers":[
-		{
-			"magFilter":9729,
-			"minFilter":9987
 		}
 	],
 	"buffers":[

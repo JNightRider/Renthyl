@@ -1,35 +1,30 @@
-Renthyl is a modular FrameGraph-based rendering pipeline designed with efficiency in mind.
+
+# Renthyl
 
 [![](https://jitpack.io/v/codex128/Renthyl.svg)](https://jitpack.io/#codex128/Renthyl)
 
-## Features
+![VXGI-demo](resources/VXGI-demo.png)
 
+Renthyl is a modular, code-first, and completely customizable rendering pipeline for JMonkeyEngine suitable for any game. It is designed to be as fast as possible by culling unnecessary render operations and minimizing resource creation.
 
+Renthyl is currently in alpha status: there may be bugs. If one is encountered, please open an issue, and include stacktraces, example code, and screenshots if applicable. Also note that many features within the RenthylPlus subproject are work-in-progress.
 
-* Allows for the use of modern rendering paradigms, such as deferred and forward++.
-* Code-first design makes constructing and manipulating FrameGraphs incredibly easy.
-* Easily control the layout of the FrameGraph using game logic.
-* Designed to be totally savable, so FrameGraphs can be saved and loaded from files.
-* Culling algorithm ensures unnecessary operations are skipped.
-* Resource manager minimizes the creation and binding of resources by reallocating resources where possible.
-* Allows for stress-free multithreading.
-* Tree-like Structure allows individual groups of passes to be exported and shared.
+Contributors are welcome and wanted! If you have the know-how, consider implementing a rendering technique in the RenthylPlus subproject.
 
 ## Get Started
 
-1. Add Renthyl to your Gradle build script.
+1. Add Renthyl to your Gradle build script. Renthyl depends on Java 8 and JMonkeyEngine 3.8 minimum, along with some other libraries.
 
 ```groovy
-dependencies {
-   implementation "com.github.codex128:Renthyl:1.2.3"
-}
-```
-Make sure you add Jitpack as a repository:
-```groovy
 repositories {
-   maven {
-      url "https://jitpack.io"
-   }
+    maven {
+        url "https://jitpack.io"
+    }
+}
+dependencies {
+    implementation "com.github.codex128:RenthylCore:v1.2.5"
+    implementation "com.github.codex128:RenthylCore:v1.2.5:sources"
+    implementation "com.github.codex128:RenthylCore:v1.2.5:javadoc"
 }
 ```
 
@@ -37,12 +32,15 @@ repositories {
    
 ```java
 Renthyl.initialize(application);
+```
+
+3. Create a FrameGraph and add it to the main ViewPort.
+
+```java
 FrameGraph fg = Renthyl.forward(assetManager);
 viewPort.setPipeline(fg);
 ```
 
-3. Run the project.
+### Wiki (under construction)
 
-## Learn Renthyl
-
-A full guide on how to use Renthyl can be found at this repository's [wiki](https://github.com/codex128/FrameGraph/wiki).
+* [Understanding Renthyl](Wiki/UnderstandingRenthyl.md)
