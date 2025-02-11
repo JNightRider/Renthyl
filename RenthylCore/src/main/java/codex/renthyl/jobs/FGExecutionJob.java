@@ -84,5 +84,14 @@ public class FGExecutionJob implements Runnable, Iterable<AbstractRenderModule> 
     public int getIndex() {
         return index;
     }
+
+    /**
+     * Returns true if this job is designated to run on the main application thread.
+     *
+     * @return
+     */
+    public boolean isMainJob() {
+        return index == 0;
+    }
     
 }

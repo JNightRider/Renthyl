@@ -163,6 +163,7 @@ void main() {
     //vec3 avg = (prev.rgb * prev.a + result.rgb * result.a) / (prev.a + result.a);
     //result = vec4(avg, result.a + result.a);
     //result.a = 1000.0;
+    result.a = 1.0;
     imageStore(m_VoxelMap, voxIndex, result);
    
 }

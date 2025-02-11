@@ -322,7 +322,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
      * @param inTicket name of the input ticket on each pass
      * @param outTicket name of the output ticket on each pass
      * @return array of passes
-     * @see PassThread#addLoop(T[], int, java.util.function.Supplier, java.lang.String, java.lang.String)
      */
     public <T extends RenderModule> T[] addLoop(T[] array, Function<Integer, T> factory,
             String inTicket, String outTicket) {
@@ -343,7 +342,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
      * @param inTicket name of the input ticket on each pass
      * @param outTicket name of the output ticket on each pass
      * @return array of passes
-     * @see PassThread#addLoop(T[], int, java.util.function.Supplier, java.lang.String, java.lang.String)
      */
     public <T extends RenderModule> T[] addLoop(T[] array, int index,
             Function<Integer, T> function, String inTicket, String outTicket) {
@@ -697,7 +695,7 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
     }
     
     /**
-     * Returns true if this framegraph is running asynchronous {@link PassThread PassThreads}.
+     * Returns true if this framegraph is running asynchronously.
      * 
      * @return 
      */

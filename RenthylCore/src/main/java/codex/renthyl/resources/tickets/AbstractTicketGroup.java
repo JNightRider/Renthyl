@@ -32,10 +32,8 @@ import codex.renthyl.Renthyl;
 import codex.renthyl.export.NamedTicketIndex;
 import codex.renthyl.export.TicketIndex;
 import codex.renthyl.modules.Connectable;
-import java.util.Iterator;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
+
+import java.util.*;
 import java.util.function.Consumer;
 
 /**
@@ -49,6 +47,7 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
     protected final String name;
     protected Connectable owner;
     private int connectedTickets = 0;
+    private final HashSet<ResourceTicket> ticketSet = new HashSet<>();
 
     public AbstractTicketGroup(String name) {
         this.name = name;
@@ -79,24 +78,27 @@ public abstract class AbstractTicketGroup <T> implements TicketGroup<T> {
         return append(new ResourceTicket<>(this, name));
     }
     @Override
-    @SuppressWarnings("null")
-    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector, boolean allowDoubles) {
         int j = 0;
         int connections = 0;
         for (ResourceTicket<T> t : this) {
             if (targetSelector.select(t, j)) {
                 int i = 0;
                 for (ResourceTicket<T> s : source) {
-                    if (sourceSelector.select(s, t, i++) && targetSelector.select(t, s, j)) {
+                    if ((allowDoubles || !ticketSet.contains(s)) && sourceSelector.select(s, t, i) && targetSelector.select(t, s, j)) {
                         t.setSource(s);
-                        System.out.println("connect " + s.getName() + " to " + t.getName());
                         connections++;
+                        if (!allowDoubles) {
+                            ticketSet.add(s);
+                        }
                         break;
                     }
+                    i++;
                 }
             }
             j++;
         }
+        ticketSet.clear();
         if (connections == 0) {
             Renthyl.getInstance().logMissedConnection(sourceSelector, targetSelector);
         }

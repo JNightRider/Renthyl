@@ -67,7 +67,7 @@ vec4 traceVoxelCone(vec3 origin, vec3 direction, float apertureTan2, float quali
     float occlusion = 0.0; // the cone's ability to receive color (0=full, 1=none)
     vec3 color = vec3(0.0); // accumulated color
     origin += direction * voxSize * 1.25; // ensure we start by sampling a neighboring voxel
-    while (occlusion < 1.0) { // trace until the cone cannot receive more color
+    for (int i = 0; i < 100 && occlusion < 1.0; i++) { // trace until the cone cannot receive more color
         vec3 pos = origin + direction * dist;
         if (!withinVoxelGridBounds(pos)) {
             // the cone has effectively left the voxel grid

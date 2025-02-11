@@ -68,13 +68,12 @@ public class ResourceView <T> {
     private boolean temporary = false;
     private boolean undefined = false;
     
-    public ResourceView(ResourceUser producer, ResourceDef<T> def, String name, int index/*, ResourceTicket<T> declaringTicket*/) {
+    public ResourceView(ResourceUser producer, ResourceDef<T> def, String name, int index) {
         this.producer = producer;
         this.def = def;
         this.name = name;
         this.index = index;
         this.lifetime = new TimeFrame(this.producer.getIndex(), 0);
-        //declaringTicket.setBindFlag();
     }
     
     /**
@@ -110,9 +109,10 @@ public class ResourceView <T> {
         ticket.clearBindFlag();
         if (!writeComplete.getAndSet(true)) {
             if (!readLock.isHeldByCurrentThread()) {
-                throw new IllegalStateException("Read lock not acquired before releasing.");
-            }
-            if (isReadConcurrent()) {
+                if (!complete) { // read lock is only required for shared resources
+                    throw new IllegalStateException("Read lock not acquired before releasing.");
+                }
+            } else if (isReadConcurrent()) {
                 readCondition.signalAll();
             } else {
                 readCondition.signal();

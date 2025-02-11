@@ -4,6 +4,8 @@ Renthyl is a modular FrameGraph-based rendering pipeline designed with efficienc
 
 ## Features
 
+
+
 * Allows for the use of modern rendering paradigms, such as deferred and forward++.
 * Code-first design makes constructing and manipulating FrameGraphs incredibly easy.
 * Easily control the layout of the FrameGraph using game logic.

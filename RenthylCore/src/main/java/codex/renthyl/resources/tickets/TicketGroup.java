@@ -45,7 +45,9 @@ import java.util.stream.Stream;
  * @param <T>
  */
 public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T>> {
-    
+
+    public static final int OMIT_DOUBLE_CONNECTIONS = 1;
+
     /****************
      * Abstract API *
      ****************/
@@ -93,13 +95,14 @@ public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T
     /**
      * Connects each target ticket accepted by the target selector to a
      * corresponding source ticket accepted by the source selector.
-     * 
+     *
      * @param source
      * @param sourceSelector
-     * @param targetSelector 
+     * @param targetSelector
+     * @param allowDoubles allows source tickets to be connected to multiple target tickets
      * @return the number of connections made as a result of this call
      */
-    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector);
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector, boolean allowDoubles);
     
     /**
      * Gets the number of tickets in the group that have a
@@ -125,6 +128,19 @@ public interface TicketGroup <T> extends LayoutMember, Iterable<ResourceTicket<T
     /*******************
      * Implemented API *
      *******************/
+
+    /**
+     * Connects each target ticket accepted by the target selector to a
+     * corresponding source ticket accepted by the source selector.
+     *
+     * @param source
+     * @param sourceSelector
+     * @param targetSelector
+     * @return the number of connections made as a result of this call
+     */
+    public default int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+        return makeInput(source, sourceSelector, targetSelector, true);
+    }
     
     /**
      * Gets the first ticket accepted by the selector.

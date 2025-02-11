@@ -85,7 +85,7 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
         return tickets;
     }
     @Override
-    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector) {
+    public int makeInput(TicketGroup<T> source, TicketSelector sourceSelector, TicketSelector targetSelector, boolean allowDoubles) {
         int i = 0;
         int connections = 0;
         for (ResourceTicket<T> s : source) {

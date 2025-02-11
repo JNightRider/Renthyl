@@ -56,11 +56,11 @@ public class VoxelShadowComposerPass extends RenderPass {
         //lightDef.setAccess(Image.Access.ReadWrite);
         shader = UniversalShaderLoader.loadComputeShader(frameGraph.getAssetManager(),
                 "RenthylPlus/MatDefs/VXGI/voxelShadowComposer.glsl");
-        shader.uniformImage("VoxelLightMap");
+        /*shader.uniformImage("VoxelLightMap");
         shader.uniformsVector3("GridMin", "GridMax");
         shader.uniformTexture("ShadowMap");
         shader.uniformMatrix4("LightMatrix");
-        shader.uniformInt("LightIndex");
+        shader.uniformInt("LightIndex");*/
     }
     @Override
     protected void prepare(FGRenderContext context) {

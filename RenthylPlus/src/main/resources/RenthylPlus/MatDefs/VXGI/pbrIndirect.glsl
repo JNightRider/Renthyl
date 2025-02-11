@@ -62,6 +62,7 @@ void main() {
         // first invocation does specular
         direction = reflect(normalize(wPosition - CameraPosition), normal);
         apertureTan = tan(mix(SpecularAngleRange.x, SpecularAngleRange.y, clamp(1.0, 0.0, 1.0)));
+        //apertureTan = TraceTangent;
         factor = 1.0;
     } else {
         // all other invocations do diffuse
@@ -79,6 +80,7 @@ void main() {
     
     // approximate indirect lighting
     vec4 color = traceVoxelCone(wPosition, direction, apertureTan * 2.0, TraceQuality);
+    //vec4 color = vec4(0.0);
     color.rgb *= factor;
     
     // combine trace results with results from other invocations

@@ -13,8 +13,12 @@ import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.geometry.GeometryDepthPass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.TicketSelector;
+import codex.renthylplus.effects.FilterChain;
+import codex.renthylplus.effects.ports.FXAAPass;
+import codex.renthylplus.effects.ports.SoftBloomPass;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
 import codex.renthylplus.vxgi.LightArrayPass;
@@ -90,7 +94,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         spot = new SpotLight();
         spot.setPosition(new Vector3f(10, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
-        spot.setColor(ColorRGBA.White.mult(0.2f));
+        spot.setColor(ColorRGBA.White.mult(3.0f));
         spot.setSpotRange(1000f);
         spot.setSpotOuterAngle(FastMath.PI*0.25f);
         spot.setSpotInnerAngle(FastMath.PI*0.05f);
@@ -102,7 +106,9 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         cam.setFov(100);
         flyCam.setMoveSpeed(30);
         flyCam.setDragToRotate(true);
-        
+
+        //viewPort.setPipeline(Renthyl.forward(assetManager));
+
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
         
@@ -114,9 +120,11 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         LightGatherPass lightGather = fg.add(new LightGatherPass());
         LightArrayPass lightArray = fg.add(new LightArrayPass());
         VoxelConeTracer vct = fg.add(new VoxelConeTracer()).create();
+        FilterChain<FilterProtocol> fpp = fg.add(new FilterChain<>());
         OutputPass out = fg.add(new OutputPass());
-        
-        Renthyl.getInstance().setMissedConnectionLogLevel(Level.SEVERE);
+
+        // warn of missed connections
+        Renthyl.getInstance().setMissedConnectionLogLevel(Level.WARNING);
         depth.getMainInputGroup().makeInput(lightGather.getMainInputGroup(),
                 TicketSelector.name("hello"), TicketSelector.name("world"));
         
@@ -141,16 +149,22 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         vct.makeInput(shadows, "LightContribution", "LightContribution");
         vct.getInputGroup("ShadowMaps").makeInput(shadowMaps.getOutputGroup("ShadowMaps"),
                 TicketSelector.All, TicketSelector.All);
-        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps").registerTargetList(
-                vct.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
-        
-        out.makeInput(vct, "Result", "Color");
+        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps")
+                .registerTargetList(vct.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
+
+        // post-processing effects
+        fpp.add(new FXAAPass());
+        fpp.add(new SoftBloomPass());
+        fpp.getMainInputGroup().makeInput(vct.getMainOutputGroup(), "Result", "Color");
+
+        out.getMainInputGroup().makeInput(fpp.getMainOutputGroup(), "Result", "Color");
+        //out.makeInput(vct, "Result", "Color");
         //out.makeInput(shadows, "LightContribution", "Color");
         //out.makeInput(depth, "Depth", "Color");
         
         shadowMaps.addSpotLight(GraphSource.value(spot), 4096);
         vct.setVoxelBounds(GraphSource.value(new BoundingBox(new Vector3f(0, 10.1f, 0), 20, 20, 20)));
-        vct.setVoxelGridSize(GraphSource.value(256));
+        vct.setVoxelGridSize(GraphSource.value(128));
         
         inputManager.addMapping("x+", new KeyTrigger(KeyInput.KEY_LEFT));
         inputManager.addMapping("x-", new KeyTrigger(KeyInput.KEY_RIGHT));

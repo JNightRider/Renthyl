@@ -4,6 +4,7 @@
  */
 package codex.renthylplus.effects;
 
+import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.TicketSelector;
@@ -20,17 +21,16 @@ public class FilterChain <R extends FilterProtocol> extends RenderContainer<R> i
             color = new TicketSignature<>(true, TicketSelector.name("Color")),
             depth = new TicketSignature<>(true, TicketSelector.name("Depth")),
             result = new TicketSignature<>(false, TicketSelector.name("Result"));
-    
+
     public FilterChain() {
         super();
-        addTickets();
     }
     public FilterChain(String name) {
         super(name);
-        addTickets();
     }
-    
-    private void addTickets() {
+
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
         addInput(color.getSelector().getName());
         addInput(depth.getSelector().getName());
         addOutput(result.getSelector().getName());
@@ -64,7 +64,7 @@ public class FilterChain <R extends FilterProtocol> extends RenderContainer<R> i
             makeInput(prev, prev.getFilteredResult(), result);
         } else if (prev == null && next != null) {
             next.makeInput(this, color, next.getRenderedSceneColor());
-        } else if (prev != null && next != null) {
+        } else if (prev != null) {
             next.makeInput(prev, prev.getFilteredResult(), next.getRenderedSceneColor());
         } else {
             makeInput(this, color, result);

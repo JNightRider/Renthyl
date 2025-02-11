@@ -88,8 +88,8 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
         indirect.makeInput(voxelEnv, "Bounds", "Bounds");
         indirect.makeInput(voxelEnv, "GridSize", "GridSize");
         
-        vis.makeInput(voxels, "Voxels", "Voxels");
-        //vis.makeInput(voxShadows, "LightContribution", "Voxels");
+        //vis.makeInput(voxels, "Voxels", "Voxels");
+        vis.makeInput(voxShadows, "LightContribution", "Voxels");
         vis.makeInput(getMainInputGroup(), TicketSelector.name("Geometry"), TicketSelector.NamesMatch);
         vis.makeInput(voxelEnv, "Bounds", "Bounds");
         
@@ -98,6 +98,7 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
         
         getMainOutputGroup().makeInput(indirect.getMainOutputGroup(), "Result", "Result");
         //getMainOutputGroup().makeInput(vis.getMainOutputGroup(), "Color", "Result");
+        //getMainOutputGroup().makeInput(direct.getMainOutputGroup(), "Color", "Result");
         
         return this;
         

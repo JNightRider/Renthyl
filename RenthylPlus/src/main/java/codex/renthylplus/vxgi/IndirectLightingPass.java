@@ -4,10 +4,12 @@
  */
 package codex.renthylplus.vxgi;
 
+import codex.jmecompute.Stride;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.jmecompute.opengl.Glsl;
+import codex.jmecompute.opengl.uniforms.buffers.FloatArrayUniform;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
@@ -69,9 +71,10 @@ public class IndirectLightingPass extends RenderPass {
         voxelBounds = addInput("Bounds");
         gridSize = addInput("GridSize");
         result = addOutput("Result");
-        shader = UniversalShaderLoader.loadComputeShaderDef(frameGraph.getAssetManager(),
-                "RenthylPlus/MatDefs/VXGI/pbrIndirect.glsl").getFirst();
-        shader.set("TraceDirections", tracePattern);
+        shader = UniversalShaderLoader.loadComputeShader(frameGraph.getAssetManager(),
+                "RenthylPlus/MatDefs/VXGI/pbrIndirect.glsl");
+        shader.uniform(new FloatArrayUniform("TraceDirections", Stride.Vec3)).set(tracePattern);
+        shader.set("TraceTangent", APERTURE_TAN);
         shader.define("NUM_TRACES", tracePattern.length / 3);
     }
     @Override

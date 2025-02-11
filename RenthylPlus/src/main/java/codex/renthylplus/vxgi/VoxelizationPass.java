@@ -82,7 +82,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         clear.uniformImage("VoxelMap");
         clear.uniformVector4("Value").set(Vector3f.ZERO);
         mipmapper = UniversalShaderLoader.loadComputeShader(frameGraph.getAssetManager(),
-                "RenthylPlus/MatDefs/VXGI/voxelMipmap.glsl", Glsl.V450);
+                "RenthylPlus/MatDefs/VXGI/voxelMipmap.glsl", Glsl.V430);
         mipmapper.uniformTexture("VoxelMap");
         mipmapper.uniformImage("TargetLevel");
         mipmapper.uniformInt("SourceLevel");
@@ -156,11 +156,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         
         int voxId = voxelMap.getImage().getId();
         if (!mipsGenerated.contains(voxId)) {
-            int i = 0;
-            for (; (n >> i) > 2; i++) {}
-            //voxelMap.getImage().setMipMapSizes(new int[i]);
             GL45.glBindTexture(GL45.GL_TEXTURE_3D, voxId);
-            //GL45.glTexParameteri(GL45.GL_TEXTURE_3D, GL45.GL_TEXTURE_MAX_LEVEL, 2);
             GL45.glGenerateMipmap(GL45.GL_TEXTURE_3D);
             mipsGenerated.add(voxId);
         }

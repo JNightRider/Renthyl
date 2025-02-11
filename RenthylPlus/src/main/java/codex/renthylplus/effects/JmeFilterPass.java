@@ -59,7 +59,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
                     requireDepth = true;
                 }
             }
-            declare(subpasses.get(subpasses.size()-1).def, result);
+            declare(subpasses.getLast().def, result);
             reserve(result);
             if (requireColor) {
                 reference(sceneColor);
@@ -75,7 +75,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
     @Override
     protected void execute(FGRenderContext context) {
         
-        if (!enabled) {
+        if (!enabled) { // resources have not been declared/referenced, so no releasing is necessary in this case
             return;
         }
         
