@@ -75,7 +75,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
     @Override
     protected void execute(FGRenderContext context) {
         
-        if (!enabled) { // resources have not been declared/referenced, so no releasing is necessary in this case
+        if (!enabled && !subpasses.isEmpty()) { // resources have not been declared/referenced, so no releasing is necessary in this case
             return;
         }
         

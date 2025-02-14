@@ -92,7 +92,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         }
         
         spot = new SpotLight();
-        spot.setPosition(new Vector3f(10, 10, 10));
+        spot.setPosition(new Vector3f(100, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
         spot.setColor(ColorRGBA.White.mult(2.0f));
         spot.setSpotRange(1000f);
