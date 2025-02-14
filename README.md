@@ -22,9 +22,9 @@ repositories {
     }
 }
 dependencies {
-    implementation "com.github.codex128:RenthylCore:v1.2.5"
-    implementation "com.github.codex128:RenthylCore:v1.2.5:sources"
-    implementation "com.github.codex128:RenthylCore:v1.2.5:javadoc"
+    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha"
+    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha:sources"
+    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha:javadoc"
 }
 ```
 
