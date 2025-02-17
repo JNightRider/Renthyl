@@ -1,12 +1,10 @@
 # Understanding Renthyl
 
----
-
 The key to using Renthyl effectively is to understand how Renthyl behaves and why it does things the way it does. The document will attempt to explain how Renthyl works, and why that matters to developers.
 
 ## Core Design Goals
 
-Renthyl was designed with two main goals in mind:
+Renthyl was designed with three main goals in mind:
 
 1. **Modular pipeline.** Modular means that the pipeline is divided into individual modules which can easily be removed, added, or totally rewritten and replaced. This architecture choice is powerful for rendering because we don't expect that every game will work well with generic rendering techniques. In other words, modularity gives developers the flexibility to redesign any individual part of the rendering pipeline that they please.
 
@@ -14,7 +12,7 @@ Renthyl was designed with two main goals in mind:
 
 3. **Communication between modules.** To emphasize the pipeline's modularity, modules must be able to communicate or share resources. For example, if one module writes to a texture, another module should be able to read the contents of that texture.
 
-Renthyl meets the first goal specifically by providing the RenderModule class. RenderModules can be queued into the FrameGraph and get executed when the FrameGraph is called for rendering. In this sense, a FrameGraph is nothing more than a task queue, and RenderModules are the tasks to perform.
+Renthyl meets the first goal specifically by providing the RenderModule interface. RenderModules can be queued into the FrameGraph and get executed when the FrameGraph is called for rendering. In this sense, a FrameGraph is nothing more than a task queue, and RenderModules are the tasks to perform.
 
 The other goal is met by the ResourceList class. ResourceList is the public-facing API through which RenderModules can interact with the resource system as a whole. The resource system is quite a bit larger than just ResourceList, but only ResourceList can be publicly interacted with.
 
@@ -50,11 +48,9 @@ Note that stages 2, 3, and 4 are influenced by temporal culling, which reuses qu
 
 # In Practice
 
----
-
 ## Custom RenderPass
 
-RenderPass provides 5 abstract methods to implement:
+RenderPass is an implementation of RenderModule specifically designed to facilitate rendering tasks. RenderPass provides 5 abstract methods to implement:
 
 ```java
 public class MyCustomPass extends RenderPass {

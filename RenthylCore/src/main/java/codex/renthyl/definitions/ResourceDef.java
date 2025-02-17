@@ -28,6 +28,7 @@
  */
 package codex.renthyl.definitions;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -93,7 +94,7 @@ public interface ResourceDef <T> {
      */
     public default boolean isEquivalentTag(Object tag) {
         Object t = getResourceTag();
-        return t == tag || (t != null && t.equals(tag));
+        return Objects.equals(t, tag);
     }
     
     /**

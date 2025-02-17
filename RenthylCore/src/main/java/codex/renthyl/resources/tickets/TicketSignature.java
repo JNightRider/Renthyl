@@ -17,9 +17,9 @@ public class TicketSignature <T extends TicketSelector> implements TicketSelecto
     
     public static final TicketSignature NULL = new TicketSignature(true, TicketSelector.None);
     
-    private String groupName;
-    private boolean input;
-    private T selector;
+    private final String groupName;
+    private final boolean input;
+    private final T selector;
     
     public TicketSignature(boolean input, T selector) {
         this(AbstractRenderModule.MAIN_GROUP, input, selector);

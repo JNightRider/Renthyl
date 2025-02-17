@@ -22,10 +22,10 @@ import java.util.logging.Level;
 /**
  * Renthyl is a modular {@link FrameGraph} rendering library for JMonkeyEngine3.
  * <p>
- * To use Renthyl features, first {@link #initialize(com.jme3.app.Application) initialize} Renthyl.
+ * To use Renthyl features, first {@link #initialize(Application) initialize} Renthyl.
  * <p>
- * <strong>Make contributions or submit bug reports at the Renthyl repository on GitHub:</strong>
- * <em>https://github.com/codex128/Renthyl</em>
+ * <strong>Make contributions or submit bug reports at the Renthyl repository on
+ * <a href="https://github.com/codex128/Renthyl">GitHub</a>.
  * <p>
  * <strong>To learn how to use Renthyl, visit the Renthyl wiki on GitHub:</strong><br>
  * <em>https://github.com/codex128/Renthyl/wiki/0.-Welcome!</em>
@@ -35,7 +35,7 @@ import java.util.logging.Level;
  * <p>
  * <strong>Consider using Renthyl's official addon library:</strong><br>
  * <em>https://github.com/codex128/RenthylPlus</em>
- * 
+ *
  * @author codex
  */
 public final class Renthyl {
