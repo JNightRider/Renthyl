@@ -268,6 +268,20 @@ public interface TicketSelector {
             }
         };
     }
+    /**
+     * Creates a selector that selects each ticket if a matching name is contained
+     * as an evenly indexed element in the given array. Connections are only
+     * allowed if the next element matches the other ticket's name.
+     * <p>For example, the array {@code {"a", "b", "c", "d"}} would only select
+     * tickets named either "a" or "c", and would only allow connections between
+     * "a" and "b", and "c" to "d".</p>
+     *
+     * @param names
+     * @return
+     */
+    public static TicketSelector mapNames(String... names) {
+        return new NameMapper(names);
+    }
     
     public static class NameSelector implements TicketSelector {
         
@@ -377,6 +391,28 @@ public interface TicketSelector {
         
         protected abstract boolean evaluateCounts(int trueCount, int falseCount);
         
+    }
+    public static class NameMapper implements TicketSelector {
+
+        private final String[] names;
+
+        public NameMapper(String... names) {
+            this.names = names;
+            if ((this.names.length & 1) != 0) {
+                throw new IllegalArgumentException("Expected an even number of names to map.");
+            }
+        }
+
+        @Override
+        public boolean select(ResourceTicket ticket, ResourceTicket other, int index) {
+            for (int i = 0; i < names.length; i += 2) {
+                if (names[i].equals(ticket.getName()) && (other == null || names[i + 1].equals(other.getName()))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }
     
 }
