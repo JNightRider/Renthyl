@@ -28,15 +28,7 @@ public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implem
     public AbstractArrayDef(int size) {
         this.size = size;
     }
-    
-    @Override
-    public T applyIndirectResource(Object resource) {
-        return null;
-    }
-    @Override
-    public boolean isAllowIndirectResources() {
-        return false;
-    }
+
     @Override
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);

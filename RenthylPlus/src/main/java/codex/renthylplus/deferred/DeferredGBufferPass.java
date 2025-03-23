@@ -35,7 +35,6 @@ import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.DefinedTicketArray;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthyl.util.GeometryRenderHandler;
@@ -50,7 +49,7 @@ import com.jme3.renderer.queue.NullComparator;
 import java.util.LinkedList;
 
 /**
- * Renders information about a queue of geometries to a set of textures.
+ * Renders information about a queue of geometries to a add of textures.
  * <p>
  * Inputs:
  * <ul>

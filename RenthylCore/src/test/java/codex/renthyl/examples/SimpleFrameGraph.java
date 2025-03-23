@@ -78,7 +78,7 @@ public class SimpleFrameGraph extends SimpleApplication {
             // SceneEnqueuePass enqueue = new SceneEnqueuePass();
             // enqueue.add("MyQueue", new GeometryQueue());
             // fg.add(enqueue);
-        // Doing so is useful if you ever want to render a set of geometries
+        // Doing so is useful if you ever want to render a add of geometries
         // differently from other geometries.
         
         // Add a pass that will merge all the queues created by the previous pass into

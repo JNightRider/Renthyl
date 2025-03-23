@@ -220,8 +220,8 @@ public class SoftBloomPass extends JmeFilterPass {
     /**
      * Sets pass textures to use bilinear filtering.
      * <p>
-     * If true, downsampling textures are set to {@code min=BilinearNoMipMaps} and
-     * upsampling textures are set to {@code mag=Bilinear}, which produces better
+     * If true, downsampling textures are add to {@code min=BilinearNoMipMaps} and
+     * upsampling textures are add to {@code mag=Bilinear}, which produces better
      * quality glow. If false, textures use their default filters.
      * <p>
      * default=true

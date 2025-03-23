@@ -49,5 +49,14 @@ public class TicketList <T> extends AbstractTicketGroup<T> {
     public Collection<ResourceTicket<T>> getTickets() {
         return tickets;
     }
+
+    public boolean remove(String name) {
+        for (ResourceTicket<T> t : tickets) {
+            if (t.getName().equals(name)) {
+                return remove(t);
+            }
+        }
+        return false;
+    }
     
 }

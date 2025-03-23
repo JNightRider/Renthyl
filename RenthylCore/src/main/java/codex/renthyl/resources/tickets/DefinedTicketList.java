@@ -31,6 +31,7 @@ package codex.renthyl.resources.tickets;
 import codex.renthyl.definitions.ResourceDef;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 
 /**
  * TicketList that stores, for each ticket, a corresponding {@link ResourceDef}.
@@ -39,10 +40,9 @@ import java.util.Collection;
  * @param <T>
  * @param <D> type of ResourceDef stored
  */
-public class DefinedTicketList <T, D extends ResourceDef<T>> extends TicketList<T>
-        implements DefinedTicketGroup<T, D> {
+public class DefinedTicketList <T, D extends ResourceDef<T>> extends TicketList<T> implements DefinedTicketGroup<T, D> {
     
-    private final ArrayList<D> defs = new ArrayList<>();
+    private final HashMap<String, D> defs = new HashMap<>();
     
     public DefinedTicketList(String name) {
         super(name);
@@ -50,11 +50,11 @@ public class DefinedTicketList <T, D extends ResourceDef<T>> extends TicketList<
 
     @Override
     public Collection<D> getDefs() {
-        return defs;
+        return defs.values();
     }
     @Override
-    public D getDef(int i) {
-        return defs.get(i);
+    public D getDef(String ticketName) {
+        return defs.get(ticketName);
     }
     @Override
     public ResourceTicket<T> add(String name, D def)  {
@@ -64,6 +64,14 @@ public class DefinedTicketList <T, D extends ResourceDef<T>> extends TicketList<
     @Override
     public ResourceTicket<T> add(String name) {
         throw new UnsupportedOperationException("Tickets must be added along with a definition.");
+    }
+    @Override
+    public boolean remove(String name) {
+        if (super.remove(name)) {
+            defs.remove(name);
+            return true;
+        }
+        return false;
     }
     
 }

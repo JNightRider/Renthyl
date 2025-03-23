@@ -28,11 +28,13 @@
  */
 package codex.renthyl.definitions;
 
-import java.util.Objects;
+import codex.renthyl.resources.EvaluatedResource;
+import codex.renthyl.resources.RenderObject;
+
 import java.util.function.Consumer;
 
 /**
- * Manages the behavior of a {@link ResourceView}, especially for creation,
+ * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
  * reallocation, and disposal of related raw resources.
  * 
  * @author codex
@@ -45,57 +47,22 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public T createResource();
+    T createResource();
     
     /**
-     * Checks if the resource can be directly allocated to this definition's
-     * {@link ResourceView} as is.
-     * <p>
-     * For reallocation, direct "as is" resources are preferred over indirect
-     * resources. Usually because direct resources are specifically designed
-     * for whatever task.
+     * Checks if the resource can be allocated.
      * 
      * @param resource
      * @return the resource if approved, otherwise null
      */
-    public T applyDirectResource(Object resource);
-    
+    float evaluateResource(Object resource);
+
     /**
-     * Repurposes the given resource for allocation to this definition's
-     * {@link ResourceView}.
-     * <p>
-     * An indirect resource usually does not exactly match the type of this
-     * definition, but does contain the necessary components.
-     * 
+     * Configures the resource for allocation once it has been chosen.
+     *
      * @param resource
-     * @return repurposed resource, or null if the given resource is not usable.
      */
-    public T applyIndirectResource(Object resource);
-    
-    /**
-     * Gets the tag object associated with the resource this definition represents.
-     * <p>
-     * The tag can be used to narrow reallocation scope. Only
-     * {@link codex.renthyl.resources.RenderObject RenderObjects} that have an
-     * {@link #isEquivalentTag(java.lang.Object) equivalent} tag to this can be reallocated.
-     * RenderObjects derive their tags from the resource definitions used to create them.
-     * 
-     * @return resource tag (may be null)
-     */
-    public default Object getResourceTag() {
-        return null;
-    }
-    
-    /**
-     * 
-     * 
-     * @param tag
-     * @return 
-     */
-    public default boolean isEquivalentTag(Object tag) {
-        Object t = getResourceTag();
-        return Objects.equals(t, tag);
-    }
+    T applyResource(Object resource);
     
     /**
      * Returns the number of frames which the resource must be
@@ -105,7 +72,7 @@ public interface ResourceDef <T> {
      * 
      * @return static timeout duration
      */
-    public default int getStaticTimeout() {
+    default int getStaticTimeout() {
         return -1;
     }
     
@@ -114,7 +81,7 @@ public interface ResourceDef <T> {
      * 
      * @return resource disposer, or null
      */
-    public default Consumer<T> getDisposalMethod() {
+    default Consumer<T> getDisposalMethod() {
         return null;
     }
     
@@ -123,7 +90,7 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public default boolean isUseExisting() {
+    default boolean isUseExisting() {
         return true;
     }
     
@@ -133,7 +100,7 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public default boolean isAllowCasualAllocation() {
+    default boolean isAllowCasualAllocation() {
         return true;
     }
     
@@ -142,7 +109,7 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public default boolean isAllowReservations() {
+    default boolean isAllowReservations() {
         return true;
     }
     
@@ -152,7 +119,7 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public default boolean isDisposeOnRelease() {
+    default boolean isDisposeOnRelease() {
         return false;
     }
     
@@ -161,39 +128,8 @@ public interface ResourceDef <T> {
      * 
      * @return 
      */
-    public default boolean isReadConcurrent() {
+    default boolean isReadConcurrent() {
         return true;
-    }
-    
-    /**
-     * Returns true if the definition allows allocation of
-     * indirect resources.
-     * <p>
-     * This has the same effect as always returning null for
-     * {@link #applyIndirectResource(java.lang.Object)}, but this method
-     * allows certain checks to be skipped if false is returned.
-     * <p>
-     * Note that this hint only applies to casual allocations.
-     * If a specific object id is presented, then applying an indirect
-     * resource will still be attempted if applying directly fails.
-     * However, those cases shuold be relatively rare.
-     * <p>
-     * default=false
-     * 
-     * @return 
-     */
-    public default boolean isAllowIndirectResources() {
-        return false;
-    }
-    
-    /**
-     * Returns true if console debugging should be enabled
-     * for this definition.
-     * 
-     * @return 
-     */
-    public default boolean isDebugEnabled() {
-        return false;
     }
     
     /**
@@ -201,7 +137,7 @@ public interface ResourceDef <T> {
      * 
      * @param resource 
      */
-    public default void dispose(T resource) {
+    default void dispose(T resource) {
         Consumer<T> d = getDisposalMethod();
         if (d != null) d.accept(resource);
     }

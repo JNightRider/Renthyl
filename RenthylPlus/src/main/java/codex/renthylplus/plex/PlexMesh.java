@@ -92,13 +92,13 @@ public class PlexMesh extends Mesh {
         // For this calculation, p1 will act as a temporary vector, as we would
         // move p1 to be at (0, 0, 0) anyway.
         
-        // set p2 as a vector pointing from p1 to p2
+        // add p2 as a vector pointing from p1 to p2
         p2.subtractLocal(p1);
-        // set p3 as a vector pointing from p1 to p3
+        // add p3 as a vector pointing from p1 to p3
         p3.subtractLocal(p1);
-        // set p1 vector perpedicular to p2 and p3 (resulting length does not matter)
+        // add p1 vector perpedicular to p2 and p3 (resulting length does not matter)
         p2.cross(p3, p1);
-        // set p1 perpedicular to p1 and p2 then normalize
+        // add p1 perpedicular to p1 and p2 then normalize
         p1.crossLocal(p2).normalizeLocal();
         // project p3 onto p1 to create a rectangle formed by p1 and p2 where half
         // its area is the area of the triangle

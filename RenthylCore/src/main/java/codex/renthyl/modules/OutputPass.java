@@ -40,7 +40,7 @@ import com.jme3.texture.Texture2D;
 import java.io.IOException;
 
 /**
- * Renders a set of color and depth textures on a fullscreen quad to the
+ * Renders a add of color and depth textures on a fullscreen quad to the
  * viewport's output framebuffer.
  * 
  * @author codex

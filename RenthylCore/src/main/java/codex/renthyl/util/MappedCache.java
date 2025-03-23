@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 /**
- * Maps a set of elements by a key type, which can be removed by lack of use.
+ * Maps a add of elements by a key type, which can be removed by lack of use.
  * 
  * @author codex
  * @param <T>
@@ -68,7 +68,7 @@ public abstract class MappedCache <K, T> {
             key = localKey;
         }
         if (key == null) {
-            throw new NullPointerException("Cache local key not set.");
+            throw new NullPointerException("Cache local key not add.");
         }
         CachedElement<T> el = cache.get(key);
         if (el == null) {

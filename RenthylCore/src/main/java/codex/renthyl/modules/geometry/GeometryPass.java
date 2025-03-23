@@ -32,16 +32,18 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderEnvironment;
 import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
+import com.jme3.renderer.Camera;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
 /**
- * Renders a queue bucket to a set of color and depth textures.
+ * Renders a queue bucket to a add of color and depth textures.
  * <p>
  * Inputs:
  * <ul>
@@ -61,7 +63,9 @@ public class GeometryPass extends RenderPass {
     
     private ResourceTicket<Texture2D> inColor, inDepth, outColor, outDepth;
     private ResourceTicket<GeometryQueue> geometry;
-    private TextureDef<Texture2D> colorDef, depthDef;
+    private ResourceTicket<RenderEnvironment> environment;
+    private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
+    private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
     
     public GeometryPass() {}
@@ -71,10 +75,9 @@ public class GeometryPass extends RenderPass {
         inColor = addInput("Color");
         inDepth = addInput("Depth");
         geometry = addInput("Geometry");
+        environment = addInput("Environment");
         outColor = addOutput("Color");
         outDepth = addOutput("Depth");
-        colorDef = new TextureDef<>(Texture2D.class, img -> new Texture2D(img));
-        depthDef = new TextureDef<>(Texture2D.class, img -> new Texture2D(img), Image.Format.Depth);
         colorDef.setFormatFlexible(true);
         depthDef.setFormatFlexible(true);
     }

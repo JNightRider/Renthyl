@@ -30,13 +30,11 @@ package codex.renthyl.resources;
 
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.ModuleIndex;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.definitions.ResourceDef;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.ArrayIterator;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -86,7 +84,6 @@ public class ResourceList {
     
     private final FrameGraph frameGraph;
     private RenderObjectMap map;
-    private GraphEventCapture cap;
     private final ArrayList<ResourceView> resources;
     private final LinkedList<FutureReference> futureRefs = new LinkedList<>();
     private final ResourceCache cache = new ResourceCache();
@@ -241,7 +238,6 @@ public class ResourceList {
         }
         ResourceView resource = create(producer, def, ticket.getName());
         ticket.setBindFlag();
-        if (cap != null) cap.declareResource(resource.getIndex(), ticket.getName());
         ticket.setLocalIndex(resource.getIndex());
         return ticket;
     }
@@ -356,7 +352,6 @@ public class ResourceList {
         ResourceView resource = locate(ticket, sync);
         if (resource != null) {
             resource.reference(index, ticket);
-            if (cap != null) cap.referenceResource(resource.getIndex(), ticket.getName());
         } else {
             // save for later, since the resource hasn't been declared yet
             futureRefs.add(new FutureReference(index, ticket, optional, user));
@@ -502,10 +497,8 @@ public class ResourceList {
      * @param ticket 
      */
     public void setUndefined(ResourceTicket ticket) {
-        ResourceView resource = locate(ticket);
-            resource.setUndefined();
-        if (cap != null) cap.setResourceUndefined(resource.getIndex(), ticket.getName());
-        }
+        locate(ticket).setUndefined();
+    }
     
     /**
      * Marks each resource view associated with the tickets as undefined.
@@ -548,7 +541,6 @@ public class ResourceList {
         RenderObject obj = locate(ticket).getObject();
         if (obj != null) {
             obj.setConstant(true);
-            if (cap != null) cap.setObjectConstant(obj.getId());
         }
     }
     
@@ -572,7 +564,7 @@ public class ResourceList {
      * <p>
      * A resource is virtual if it does not contain a concrete object and is
      * not marked as undefined. Resources can only be virtual if they have never
-     * been acquired, assigned primitively, or set to undefined.
+     * been acquired, assigned primitively, or add to undefined.
      * 
      * @param ticket
      * @param optional
@@ -672,7 +664,6 @@ public class ResourceList {
         if (resource.isVirtual()) {
             map.allocate(resource, frameGraph.isAsync());
         }
-        if (cap != null) cap.acquireResource(resource.getIndex(), ticket.getName());
         ticket.setObjectId(resource.getObjectId());
         return resource.getResource();
     }
@@ -759,7 +750,6 @@ public class ResourceList {
                 }
                 fbo.addColorTarget(FrameBuffer.FrameBufferTarget.newTarget(tex));
                 fbo.setUpdateNeeded();
-                if (cap != null) cap.bindTexture(t.getWorldIndex(), t.getName());
                 textureBinds++;
             }
             i++;
@@ -854,7 +844,6 @@ public class ResourceList {
             if (acquired != existing) {
                 fbo.replaceColorTarget(i, FrameBuffer.FrameBufferTarget.newTarget(acquired));
                 fbo.setUpdateNeeded();
-                if (cap != null) cap.bindTexture(ticket.getWorldIndex(), ticket.getName());
                 textureBinds++;
             }
             return acquired;
@@ -871,7 +860,7 @@ public class ResourceList {
      * target to the framebuffer.
      * <p>
      * If the texture is already assigned to the framebuffer as the depth target,
-     * the nothing changes.
+     * then nothing changes.
      * 
      * @param <T>
      * @param fbo framebuffer to assign the depth target to
@@ -885,7 +874,6 @@ public class ResourceList {
         if (target == null || acquired != target.getTexture()) {
             fbo.setDepthTarget(FrameBuffer.FrameBufferTarget.newTarget(acquired));
             fbo.setUpdateNeeded();
-            if (cap != null) cap.bindTexture(ticket.getWorldIndex(), ticket.getName());
             textureBinds++;
         }
         return acquired;
@@ -923,8 +911,7 @@ public class ResourceList {
     /**
      * Transfers the resource associated with {@code from} to the ResourceView
      * associated with {@code to}. This operation is intended to replace the initial
-     * {@link #acquire(ResourceTicket) acquire} call for the
-     * target ResourceView.
+     * {@link #acquire(ResourceTicket) acquire} call for the target ResourceView.
      * <p>
      * In order for the transfer to be successful:
      * <ul>
@@ -941,8 +928,8 @@ public class ResourceList {
      * is expected to be {@link ResourceView#isFullyReleased() fully released}.
      * <p>
      * Because this method fails when an adverse situation arises rather than deferring
-     * as {@link #acquire(ResourceTicket) acquiring} would do,
-     * this method ignores reservations held to the transfering object.
+     * as {@link #acquire(ResourceTicket) acquiring} would do, this method ignores reservations
+     * held to the transfering object.
      * 
      * @param <T>
      * @param sourceTicket represents the ResourceView to transfer from
@@ -991,11 +978,11 @@ public class ResourceList {
      * will directly store the value. Note that the value will be lost when the
      * render resource is destroyed at the end of the rendering process.
      * <p>
-     * A resource should only be set primitively if it was
+     * A resource should only be added primitively if it was
      * {@link #declarePrimitive(ResourceUser, ResourceTicket) declared primitively},
      * otherwise an exception will be thrown.
      * <p>
-     * This is intended to called in place of {@link #acquire(ResourceTicket)}.
+     * This is intended to be called in place of {@link #acquire(ResourceTicket)}.
      * 
      * @param <T>
      * @param ticket 
@@ -1017,11 +1004,7 @@ public class ResourceList {
      * @see #release(ResourceTicket)
      */
     protected boolean release(ResourceView resource, ResourceTicket ticket) {
-        if (cap != null) cap.releaseResource(resource.getIndex(), resource.getName());
         if (!resource.release(this, ticket)) {
-            if (cap != null && resource.getObject() != null) {
-                cap.releaseObject(resource.getObject().getId());
-            }
             remove(resource.getIndex());
             if (!resource.isVirtual() && !resource.isUndefined()) {
                 ResourceDef def = resource.getDefinition();
@@ -1173,11 +1156,9 @@ public class ResourceList {
      * This should only be called once per frame.
      * 
      * @param map
-     * @param cap
      */
-    public void beginRenderFrame(RenderObjectMap map, GraphEventCapture cap) {
+    public void beginRenderFrame(RenderObjectMap map) {
         this.map = map;
-        this.cap = cap;
         textureBinds = 0;
     }
     
@@ -1206,14 +1187,18 @@ public class ResourceList {
      * Culls all resources and resource producers found to be unused.
      * <p>
      * This should only be called after resource users have fully counted their
-     * references, and prior to execution.
+     * references, and prior to execution. The algorithm uses a "flood-fill"
+     * approach. First, unreferenced resources (beyond the declaring reference)
+     * are culled and their producers lose one "reference", which is an internal
+     * counter of produced resources. If a producer loses all "references", any
+     * resources it references likewise lose a reference. If a resource loses all
+     * references, it's producer loses a reference and the cycle continues.
      */
     public void cullUnreferenced() {
-        LinkedList<ResourceView> cull = new LinkedList<>();
+        final LinkedList<ResourceView> cull = new LinkedList<>();
         // queue all resources that are not referenced
         for (ResourceView r : resources) {
             if (r != null && !r.isReferenced() && !r.isTemporary()) {
-                System.out.println("cull " + r);
                 cull.add(r);
             }
         }
@@ -1234,7 +1219,6 @@ public class ResourceList {
             // If the user is found to not produce used resources, dereference
             // all incoming resources and remove all outgoing resources.
             if (!user.isUsed()) {
-                System.out.println("cull " + user);
                 for (Iterator<ResourceTicket> it = user.getInputTickets(); it.hasNext();) {
                     ResourceTicket t = it.next();
                     t.clearBindFlag();
@@ -1246,7 +1230,6 @@ public class ResourceList {
                     // If the resource is found to no longer be referenced by
                     // anything, queue the resource.
                     if (!r.cull()) {
-                        System.out.println("cull " + r);
                         cull.addLast(r);
                     }
                 }
@@ -1269,13 +1252,8 @@ public class ResourceList {
         for (ResourceTicket t : endangeredTickets) {
             t.clearBindFlag();
         }
-        int size = resources.size();
         resources.clear();
         nextSlot = 0;
-        if (cap != null) {
-            cap.clearResources(size);
-            cap.value("framebufferTextureBinds", textureBinds);
-        }
     }
     
     /**

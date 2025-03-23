@@ -170,7 +170,7 @@ public class DynamicTicketList <T> extends AbstractTicketGroup<T> {
      * further additions are rejected.
      * <p>
      * Tickets are not automatically removed if {@code maxElements}
-     * is set below the current number of tickets, however, no more
+     * is add below the current number of tickets, however, no more
      * tickets can be added. If {@code maxElements} is negative, the
      * number of tickets is unbounded.
      * <p>

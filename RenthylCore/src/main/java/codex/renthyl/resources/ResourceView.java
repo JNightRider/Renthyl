@@ -210,18 +210,15 @@ public class ResourceView <T> {
      * @param resource 
      */
     public void setObject(RenderObject object, T resource) {
-        Objects.requireNonNull(object, "Object cannot be null.");
-        Objects.requireNonNull(resource, "Object resource cannot be null.");
         if (undefined) {
             throw new IllegalStateException("Resource is already undefined.");
         }
         if (object.isAcquired()) {
             throw new IllegalStateException("Object is already acquired.");
         }
-        this.object = object;
-        this.resource = resource;
+        this.object = Objects.requireNonNull(object, "Object cannot be null.");
+        this.resource = Objects.requireNonNull(resource, "Object resource cannot be null.");
         this.object.acquire();
-        //ticket.setObjectId(this.object.getId());
         setObjectId(this.object.getId());
     }
     /**
@@ -356,7 +353,7 @@ public class ResourceView <T> {
      * Returns true if this resource is virtual.
      * <p>
      * A resource is virtual when it does not hold a concrete resource
-     * and is not set as undefined.
+     * and is not add as undefined.
      * 
      * @return 
      */

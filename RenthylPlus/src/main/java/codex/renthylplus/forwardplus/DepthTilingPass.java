@@ -50,8 +50,8 @@ public class DepthTilingPass extends RenderPass {
         int w = inTex.getImage().getWidth() / tileSize;
         int h = inTex.getImage().getHeight() / tileSize;
         tileDef.setSize(w, h);
-        //shader.set("DepthTexture", ArgType.Texture, inTex);
-        //shader.set("TileTexture", ArgType.Texture, resources.acquire(depthRangeTiles));
+        //shader.add("DepthTexture", ArgType.Texture, inTex);
+        //shader.add("TileTexture", ArgType.Texture, resources.acquire(depthRangeTiles));
         shader.execute(new WorkSize(w, h, 1).offloadToLocal(tileSize));
     }
     @Override

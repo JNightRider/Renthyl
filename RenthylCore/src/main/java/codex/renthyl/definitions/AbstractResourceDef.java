@@ -45,8 +45,6 @@ public abstract class AbstractResourceDef <T> implements ResourceDef<T> {
     private boolean allowReservations = true;
     private boolean disposeOnRelease = false;
     private boolean readConcurrent = true;
-    private boolean allowIndirectResources = false;
-    private boolean debug = false;
     
     @Override
     public int getStaticTimeout() {
@@ -83,16 +81,6 @@ public abstract class AbstractResourceDef <T> implements ResourceDef<T> {
         return readConcurrent;
     }
     
-    @Override
-    public boolean isAllowIndirectResources() {
-        return allowIndirectResources;
-    }
-    
-    @Override
-    public boolean isDebugEnabled() {
-        return debug;
-    }
-    
     /**
      * Sets the Consumer responsible for disposing the resource.
      * <p>
@@ -109,7 +97,7 @@ public abstract class AbstractResourceDef <T> implements ResourceDef<T> {
      * disposed.
      * <p>
      * If less than zero, the default value provided by
-     * {@link com.jme3.renderer.framegraph.RenderObjectMap RenderObjectMap} will
+     * {@link codex.renthyl.resources.RenderObjectMap RenderObjectMap} will
      * be used instead.
      * 
      * @param staticTimout 
@@ -172,23 +160,6 @@ public abstract class AbstractResourceDef <T> implements ResourceDef<T> {
      */
     public void setReadConcurrent(boolean readConcurrent) {
         this.readConcurrent = readConcurrent;
-    }
-
-    /**
-     * 
-     * @param allowIndirectResources 
-     * @see #isAllowIndirectResources() 
-     */
-    public void setAllowIndirectResources(boolean allowIndirectResources) {
-        this.allowIndirectResources = allowIndirectResources;
-    }
-    
-    /**
-     * 
-     * @param debug 
-     */
-    public void setDebugEnabled(boolean debug) {
-        this.debug = debug;
     }
     
 }

@@ -106,7 +106,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
     @Override
     protected void execute(FGRenderContext context) {
         
-        // set voxel grid size from source
+        // add voxel grid size from source
         int n = resources.acquireOrElse(gridSize, VoxelEnvSetupPass.DEFAULT_VOXEL_GRID_SIZE);
         voxelDef.setCube(n);
         renderTargetDef.setSquare(n);

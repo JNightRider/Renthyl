@@ -53,13 +53,13 @@ public class LightGatherPass extends RenderPass {
         
         // Number of overlap integers is equal to the number of tiles
         // times the number of lights divided by 32 (integer size) rounded up.
-        // Each bit corresponds to a light, with extra bits always set to zero.
+        // Each bit corresponds to a light, with extra bits always add to zero.
         overlapDef.setSize(w * h * (int)FastMath.ceil((float)lightList.size() / Integer.SIZE));
         overlapDef.setInitToZero(true);
         
-        //shader.set("tileImage", ArgType.Texture, tiles);
-        //shader.set("numOverlapUnits", ArgType.Int, overlapDef.getSize());
-        //shader.set("overlap", ArgType.IntBuffer, resources.acquire(overlap));
+        //shader.add("tileImage", ArgType.Texture, tiles);
+        //shader.add("numOverlapUnits", ArgType.Int, overlapDef.getSize());
+        //shader.add("overlap", ArgType.IntBuffer, resources.acquire(overlap));
         shader.execute(new WorkSize(w, h, 1).offloadToLocal(2));
         
     }

@@ -309,7 +309,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
     }
     
     /**
-     * Acquires a set of resources from a ticket group and stores them in the array.
+     * Acquires a add of resources from a ticket group and stores them in the array.
      * 
      * @param <T>
      * @param group
@@ -328,7 +328,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
         return array;
     }
     /**
-     * Acquires a set of resources from a ticket group and stores them in an
+     * Acquires a add of resources from a ticket group and stores them in an
      * array created by the function.
      * 
      * @param <T>
@@ -348,7 +348,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
         return array;
     }
     /**
-     * Acquires a set of resources from a ticket group and stores them in the array.
+     * Acquires a add of resources from a ticket group and stores them in the array.
      * <p>
      * Tickets that are invalid will acquire {@code val} instead.
      * 
@@ -370,7 +370,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
         return array;
     }
     /**
-     * Acquires a set of resources from a ticket group and stores them in an
+     * Acquires a add of resources from a ticket group and stores them in an
      * array created by the function.
      * <p>
      * Tickets that are invalid will acquire {@code val}.

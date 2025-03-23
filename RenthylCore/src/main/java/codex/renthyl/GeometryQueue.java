@@ -70,7 +70,6 @@ public class GeometryQueue implements Iterable<Geometry>, Savable {
     private Geometry[] geometries;
     private QueueComparator comparator;
     private final ArrayList<QueueView> views = new ArrayList<>();
-    private final LinkedList<Integer[]> availableQueues = new LinkedList<>();
     private final ArrayList<GeometryQueue> internalQueues = new ArrayList<>();
     private final ArrayList<RenderMode> modes = new ArrayList<>();
     private final ListSort<Integer> listSort = new ListSort<>();
@@ -141,38 +140,14 @@ public class GeometryQueue implements Iterable<Geometry>, Savable {
     public void addMode(RenderMode m) {
         modes.add(m);
     }
-    
-    public void fitParallelCamera(Camera cam) {
-        if (!cam.isParallelProjection()) {
-            throw new IllegalArgumentException("Camera must be in parallel projection mode.");
-        }
-        BoundingSphere sphere = sphereFromBox(getWorldBound(null));
-        cam.setLocation(sphere.getCenter().subtract(cam.getDirection().mult(sphere.getRadius() + cam.getFrustumNear())));
-        cam.setFrustumLeft(sphere.getRadius());
-        cam.setFrustumRight(sphere.getRadius());
-        cam.setFrustumBottom(sphere.getRadius());
-        cam.setFrustumTop(sphere.getRadius());
-        cam.setFrustumFar(sphere.getRadius()*2 + cam.getFrustumNear());
-        cam.update();
-        cam.updateViewProjection();
-    }
-    private BoundingSphere sphereFromBox(BoundingBox box) {
-        BoundingSphere sphere = new BoundingSphere();
-        sphere.setCenter(box.getCenter());
-        sphere.setRadius(FastMath.sqrt(FastMath.sqr(box.getXExtent())
-                + FastMath.sqr(box.getYExtent()) + FastMath.sqr(box.getZExtent())));
-        return sphere;
-    }
-    
+
     public void clear() {
-        availableQueues.clear();
         size = 0;
         allViewsNeedUpdate = true;
         for (Iterator<QueueView> it = views.iterator(); it.hasNext();) {
             QueueView v = it.next();
             v.setUpdateFlag();
             if (!v.pollIsUsed()) {
-                availableQueues.add(v.queue);
                 it.remove();
             }
         }

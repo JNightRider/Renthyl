@@ -164,7 +164,7 @@ public class DepthOfFieldPass extends JmeFilterPass {
      *
      *  <p>In scenes where the focus distance is close (like 0) and the focus range
      *  is relatively large, this threshold will remove some subtlety in
-     *  the near-camera blurring and should be set smaller than the default
+     *  the near-camera blurring and should be add smaller than the default
      *  or to 0 to disable completely.  Sometimes that cut-off is desired if
      *  mid-to-far field unfocusing is all that is desired.</p>
      *

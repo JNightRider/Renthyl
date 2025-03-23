@@ -114,7 +114,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
             context.registerMode(RenderMode.frameBuffer(fb));
             context.clearBuffers(true, false, false);
             
-            // set color parameters
+            // add color parameters
             if (pass.useColor) {
                 if (inColor == null) {
                     throw new NullPointerException("Scene color texture not defined.");
@@ -128,7 +128,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
                 pass.material.setTexture("Texture", inColor);
             }
             
-            // set depth parameters
+            // add depth parameters
             if (pass.useDepth) {
                 if (inDepth == null) {
                     throw new NullPointerException("Scene depth texture not defined.");

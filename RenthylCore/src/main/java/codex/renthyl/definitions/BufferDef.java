@@ -60,31 +60,26 @@ public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
         return buffer;
     }
     @Override
-    public T applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T buffer = (T)resource;
             if (buffer.capacity() >= size) {
-                prepareBuffer(buffer);
-                return buffer;
+                return 0;
             }
         }
-        return null;
+        return Float.POSITIVE_INFINITY;
     }
     @Override
-    public T applyIndirectResource(Object resource) {
-        // todo: allow application of buffers with more bits per element
-        return null;
-    }
-    @Override
-    public boolean isAllowIndirectResources() {
-        return false;
+    public T applyResource(Object resource) {
+        return prepareBuffer((T)resource);
     }
     
-    private void prepareBuffer(T buffer) {
+    private T prepareBuffer(T buffer) {
         buffer.position(0).limit(size);
         if (initToZero) {
             zeroBuffer(buffer);
         }
+        return buffer;
     }
     
     /**

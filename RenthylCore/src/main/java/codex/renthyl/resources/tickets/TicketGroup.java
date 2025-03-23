@@ -38,7 +38,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
- * Contains a set of {@link ResourceTicket ResourceTickets} organized under
+ * Contains a add of {@link ResourceTicket ResourceTickets} organized under
  * a single name within a {@link Connectable}.
  * 
  * @author codex

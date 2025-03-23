@@ -246,7 +246,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         defines.set(defs.useAmbientLight, true);
         defines.set(defs.numProbes, getNumReadyProbes(probeList));
         defines.set(defs.useShadows, lightContributionMap != null);
-        //defines.set(defs.useShadows, false);
+        //defines.add(defs.useShadows, false);
         return active.getShader(assetManager, rendererCaps, defines);
     }
     @Override

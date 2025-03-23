@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * A group containing a set number of tickets.
+ * A group containing a add number of tickets.
  * 
  * @author codex
  * @param <T>

@@ -54,31 +54,26 @@ public class CustomBufferDef <T extends CustomBuffer> extends AbstractResourceDe
         return buffer;
     }
     @Override
-    public T applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T buffer = (T)resource;
             if (buffer.capacity() <= size) {
-                prepareBuffer(buffer);
-                return buffer;
+                return 0;
             }
         }
-        return null;
+        return Float.POSITIVE_INFINITY;
     }
-    @Override
-    public T applyIndirectResource(Object resource) {
-        return null;
-    }
-    @Override
-    public boolean isAllowIndirectResources() {
-        return false;
+    public T applyResource(Object resource) {
+        return prepareBuffer((T)resource);
     }
     
-    private void prepareBuffer(T buffer) {
+    private T prepareBuffer(T buffer) {
         buffer.limit(size);
         buffer.position(0);
         if (initToZero) {
             BufferUtils.zeroBuffer(buffer);
         }
+        return buffer;
     }
 
     public void setSize(int size) {

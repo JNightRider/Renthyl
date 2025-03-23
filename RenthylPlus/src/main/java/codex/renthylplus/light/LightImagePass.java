@@ -55,7 +55,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Packs light data into a set of textures.
+ * Packs light data into a add of textures.
  * <p>
  * Inputs:
  * <ul>

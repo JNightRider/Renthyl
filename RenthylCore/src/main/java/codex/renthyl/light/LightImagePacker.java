@@ -46,7 +46,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Rasters light info to a set of textures.
+ * Rasters light info to a add of textures.
  * 
  * @author codex
  */

@@ -42,6 +42,7 @@ import com.jme3.texture.image.ColorSpace;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -62,7 +63,6 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
     
     private final Class<T> type;
     private Function<Image, T> textureBuilder;
-    private Function<Object, Image> imageExtractor;
     private int width = 128;
     private int height = 128;
     private int depth = 0;
@@ -114,36 +114,42 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         return createTexture(img);
     }
     @Override
-    public T applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T tex = (T)resource;
             if (validateImage(tex.getImage())) {
-                setupTexture(tex);
-                return tex;
-            }
-        }
-        return null;
-    }
-    @Override
-    public T applyIndirectResource(Object resource) {
-        Image img;
-        if (imageExtractor != null) {
-            if ((img = imageExtractor.apply(resource)) == null) {
-                return null;
+                return 0;
             }
         } else if (resource instanceof Texture) {
+            if (validateImage(((Texture)resource).getImage())) {
+                return 1;
+            }
+        } else if (resource instanceof Image) {
+            if (validateImage((Image)resource)) {
+                return 1;
+            }
+        }
+        return Float.POSITIVE_INFINITY;
+    }
+
+    @Override
+    public T applyResource(Object resource) {
+        if (type.isAssignableFrom(resource.getClass())) {
+            T tex = (T)resource;
+            setupTexture(tex);
+            return tex;
+        }
+        Image img;
+        if (resource instanceof Texture) {
             img = ((Texture)resource).getImage();
         } else if (resource instanceof Image) {
             img = (Image)resource;
         } else {
-            return null;
+            throw new IllegalStateException("Image not found.");
         }
-        if (validateImage(img)) {
-            T tex = textureBuilder.apply(img);
-            setupTexture(tex);
-            return tex;
-        }
-        return null;
+        T tex = textureBuilder.apply(img);
+        setupTexture(tex);
+        return tex;
     }
     @Override
     public Consumer<T> getDisposalMethod() {
@@ -199,16 +205,7 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
      * @param textureBuilder 
      */
     public void setTextureBuilder(Function<Image, T> textureBuilder) {
-        Objects.requireNonNull(textureBuilder);
-        this.textureBuilder = textureBuilder;
-    }
-    /**
-     * Sets the function that extracts an Image from an object.
-     * 
-     * @param imageExtractor 
-     */
-    public void setImageExtractor(Function<Object, Image> imageExtractor) {
-        this.imageExtractor = imageExtractor;
+        this.textureBuilder = Objects.requireNonNull(textureBuilder);
     }
     /**
      * Sets the texture width.
@@ -251,6 +248,7 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
      * @param length 
      */
     public void setSquare(int length) {
+        assert length > 0 : "Length must be more than zero.";
         width = height = length;
     }
     /**
@@ -259,6 +257,7 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
      * @param length 
      */
     public void setCube(int length) {
+        assert length > 0 : "Length must be more than zero.";
         width = height = depth = length;
     }
     /**
@@ -294,12 +293,12 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         setDepth(def.depth);
     }
     /**
-     * Sets the given texture demensions to contain the specified number of pixels.
+     * Sets the given texture demensions to contain at least the specified number of pixels.
      * 
      * @param pixels
-     * @param w true to set width
-     * @param h true to set height
-     * @param d true to set depth
+     * @param w true to add width
+     * @param h true to add height
+     * @param d true to add depth
      */
     public void setNumPixels(int pixels, boolean w, boolean h, boolean d) {
         int n = 0;
@@ -424,13 +423,6 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
      */
     public Function<Image, T> getTextureBuilder() {
         return textureBuilder;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public Function<Object, Image> getImageExtractor() {
-        return imageExtractor;
     }
     /**
      * 

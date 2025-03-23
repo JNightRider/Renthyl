@@ -35,15 +35,18 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
         return (T[])Array.newInstance(type, size + padding);
     }
     @Override
-    public T[] applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         Class component = resource.getClass().getComponentType();
         if (component != null && type.isAssignableFrom(component)) {
             T[] array = (T[])resource;
             if (array.length >= size) {
-                return array;
+                return 0;
             }
         }
-        return null;
+        return Float.POSITIVE_INFINITY;
+    }
+    public T[] applyResource(Object resource) {
+        return (T[])resource;
     }
     @Override
     public void write(JmeExporter ex) throws IOException {

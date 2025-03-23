@@ -29,13 +29,10 @@
 package codex.renthyl;
 
 import codex.renthyl.resources.RenderObjectMap;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.jobs.FGJobExecutor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.pipeline.PipelineContext;
-import java.io.IOException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -49,7 +46,6 @@ public class FGPipelineContext implements PipelineContext {
     
     private final RenderObjectMap renderObjects;
     private FGJobExecutor defaultExecutor;
-    private GraphEventCapture eventCapture;
     private boolean rendered = false;
     
     public FGPipelineContext(Renthyl renthyl) {
@@ -59,10 +55,6 @@ public class FGPipelineContext implements PipelineContext {
 
     @Override
     public boolean startViewPortRender(RenderManager rm, ViewPort vp) {
-        if (eventCapture != null) {
-            eventCapture.beginRenderFrame();
-        }
-        renderObjects.newFrame();
         return rendered;
     }
     @Override
@@ -71,26 +63,12 @@ public class FGPipelineContext implements PipelineContext {
     }
     @Override
     public void endContextRenderFrame(RenderManager rm) {
-        if (eventCapture != null) {
-            eventCapture.endRenderFrame();
-        }
         renderObjects.flushMap();
-        if (eventCapture != null && eventCapture.isComplete()) {
-            try {
-                eventCapture.export();
-            } catch (IOException ex) {
-                LOG.log(Level.SEVERE, "Error exporting captured event data.", ex);
-            }
-            eventCapture = null;
-        }
         rendered = false;
     }
     
     public void setDefaultExecutor(FGJobExecutor executor) {
         defaultExecutor = (executor != null ? executor : Renthyl.getInstance().getBaseExecutor());
-    }
-    public void setEventCapture(GraphEventCapture eventCapture) {
-        this.eventCapture = eventCapture;
     }
     
     public RenderObjectMap getRenderObjects() {
@@ -98,9 +76,6 @@ public class FGPipelineContext implements PipelineContext {
     }
     public FGJobExecutor getDefaultExecutor() {
         return defaultExecutor;
-    }
-    public GraphEventCapture getEventCapture() {
-        return eventCapture;
     }
     
 }

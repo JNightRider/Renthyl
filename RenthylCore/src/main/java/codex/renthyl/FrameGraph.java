@@ -35,7 +35,6 @@ import codex.renthyl.resources.ResourceList;
 import codex.renthyl.asset.FrameGraphKey;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.export.FrameGraphData;
 import codex.renthyl.export.ModuleGraphData;
 import codex.renthyl.jobs.FGExecutionJob;
@@ -139,7 +138,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
     private FGJobExecutor executor;
     private RenderThread root;
     private String name = "FrameGraph";
-    private String docAsset = null;
     private boolean layoutUpdateNeeded = true;
     private boolean rendered = false;
     private boolean debugPrint = false;
@@ -210,14 +208,10 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
         
         rm.applyViewPort(vp);
         context.target(rm, pContext, vp, tpf);
-        GraphEventCapture cap = context.getGraphCapture();
         
         // update
-        if (cap != null) {
-            cap.renderViewPort(context.getViewPort());
-        }
         if (!rendered) {
-            resources.beginRenderFrame(pContext.getRenderObjects(), pContext.getEventCapture());
+            resources.beginRenderFrame(pContext.getRenderObjects());
         }
         root.updateModule(context, tpf);
         
@@ -535,41 +529,6 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
     }
     
     /**
-     * Sets the asset path corresponding to a documentation file for
-     * this FrameGraph.
-     * <p>
-     * <em>This feature is a work in progress.</em>
-     * 
-     * @param docs asset path, or null for no documentation
-     */
-    public void setDocumentationAsset(String docs) {
-        this.docAsset = docs;
-    }
-    
-    /**
-     * Sets the OpenCL context used for compute shading.
-     * <p>
-     * The context is propagated to render modules through the
-     * {@link FGRenderContext}.
-     * 
-     * @param clContext 
-     */
-    public void setCLContext(Context clContext) {
-        context.setCLContext(clContext);
-    }
-    
-    /**
-     * Assigns this framegraph to the OpenCL command queue.
-     * <p>
-     * Modules do not need to use the assigned command queue, but are encouraged to.
-     * 
-     * @param clQueue 
-     */
-    public void setCLQueue(CommandQueue clQueue) {
-        context.setCLQueue(clQueue);
-    }
-    
-    /**
      * Enables printing of information useful for debugging.
      * <p>
      * default=false
@@ -637,31 +596,12 @@ public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMemb
     }
     
     /**
-     * Gets the OpenCL context used for compute shading, or null if not set.
-     * 
-     * @return 
-     */
-    public Context getCLContext() {
-        return context.getCLContext();
-    }
-    
-    /**
      * Gets the name of this framegraph.
      * 
      * @return 
      */
     public String getName() {
         return name;
-    }
-    
-    /**
-     * Returns an asset path corresponding to a documentation file for
-     * this FrameGraph.
-     * 
-     * @return asset path, or null if no documentation is available
-     */
-    public String getDocumantationAsset() {
-        return docAsset;
     }
     
     /**

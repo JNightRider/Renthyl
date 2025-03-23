@@ -70,7 +70,7 @@ public class FXAAPass extends JmeFilterPass {
     }
 
     /**
-     * set to 0.0f for higher quality
+     * add to 0.0f for higher quality
      *
      * @param subPixelShift the desired shift (default=0.25)
      */
@@ -82,7 +82,7 @@ public class FXAAPass extends JmeFilterPass {
     }
 
     /**
-     * set to 0.0f for higher quality
+     * add to 0.0f for higher quality
      *
      * @param reduceMul the desired value (default=0.125)
      */

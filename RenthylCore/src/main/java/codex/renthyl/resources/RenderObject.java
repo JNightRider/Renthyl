@@ -49,14 +49,12 @@ public class RenderObject <T> {
     
     private final long id;
     private final T object;
-    private final Object tag;
     private final LinkedList<Reservation> reservations = new LinkedList<>();
     private int timeoutDuration;
     private int timeout = 0;
     private boolean acquired = false;
     private boolean constant = false;
     private boolean inspect = false;
-    private boolean prioritized = false;
     private final boolean allowCasualAllocation;
     private final boolean allowReservations;
     private Consumer disposer;
@@ -73,7 +71,6 @@ public class RenderObject <T> {
             throw new NullPointerException("Object cannot be null.");
         }
         this.object = object;
-        this.tag = def.getResourceTag();
         this.timeoutDuration = def.getStaticTimeout();
         this.allowCasualAllocation = def.isAllowCasualAllocation();
         this.allowReservations = def.isAllowReservations();
@@ -119,26 +116,6 @@ public class RenderObject <T> {
      */
     public boolean isInspect() {
         return inspect;
-    }
-    
-    /**
-     * Marks this RenderObject as priorized, but not officially claimed, by a thread.
-     * <p>
-     * This will block threads from attempting to reallocate this as an indirect
-     * resource.
-     * 
-     * @param prioritized 
-     */
-    public void setPrioritized(boolean prioritized) {
-        this.prioritized = prioritized;
-    }
-    /**
-     * Returns true if this RenderObject is prioritized.
-     * 
-     * @return 
-     */
-    public boolean isPrioritized() {
-        return prioritized;
     }
     
     /**
@@ -249,14 +226,6 @@ public class RenderObject <T> {
         return object;
     }
     /**
-     * Returns this object's tag.
-     * 
-     * @return tag (may be null)
-     */
-    public Object getTag() {
-        return tag;
-    }
-    /**
      * Returns true if this render object is acquired (and not yet released).
      * 
      * @return 
@@ -292,7 +261,7 @@ public class RenderObject <T> {
     
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[id=" + id + ", tag=" + tag + ", type=" + object.getClass().getName() + "]";
+        return getClass().getSimpleName() + "[id=" + id + ", type=" + object.getClass().getName() + "]";
     }
     
     /**

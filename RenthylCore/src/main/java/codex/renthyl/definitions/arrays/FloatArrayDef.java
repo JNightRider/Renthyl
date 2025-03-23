@@ -20,14 +20,17 @@ public class FloatArrayDef extends AbstractArrayDef<float[]> {
         return new float[size + padding];
     }
     @Override
-    public float[] applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         if (resource instanceof float[]) {
             float[] array = (float[])resource;
             if (array.length >= size) {
-                return array;
+                return 0;
             }
         }
-        return null;
+        return Float.POSITIVE_INFINITY;
+    }
+    public float[] applyResource(Object resource) {
+        return (float[])resource;
     }
     
 }

@@ -54,7 +54,7 @@ public interface DefinedTicketGroup <T, D extends ResourceDef<T>> extends Ticket
      * @param i
      * @return 
      */
-    public D getDef(int i);
+    public D getDef(String ticketName);
     
     /**
      * Adds a ticket along with its definition.
@@ -85,12 +85,9 @@ public interface DefinedTicketGroup <T, D extends ResourceDef<T>> extends Ticket
         int i = 0;
         for (ResourceTicket<T> t : getTickets()) {
             if (selector.select(t, i)) {
-                break;
+                return getDef(t.getName());
             }
             i++;
-        }
-        if (i < getDefs().size()) {
-            return getDef(i);
         }
         return null;
     }

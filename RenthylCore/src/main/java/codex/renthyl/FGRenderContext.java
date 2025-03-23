@@ -29,9 +29,9 @@
 package codex.renthyl;
 
 import codex.boost.render.DepthRange;
+import codex.renthyl.draw.RenderEnvironment;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.util.FullScreenQuad;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.draw.RenderMode;
 import com.jme3.material.Material;
 import com.jme3.opencl.CommandQueue;
@@ -65,28 +65,18 @@ public class FGRenderContext {
     private ViewPort viewPort;
     private float tpf;
     private final FullScreenQuad screen;
-    private Context clContext;
-    private CommandQueue clQueue;
     private boolean temporalCulling = true;
     
     private final ArrayDeque<RenderMode> activeModes = new ArrayDeque<>();
     private final DepthRange depth = new DepthRange();
-    
-    /**
-     * 
-     * @param frameGraph 
-     */
-    public FGRenderContext(FrameGraph frameGraph) {
-        this(frameGraph, null);
-    }
+    private final RenderEnvironment baseEnv = new RenderEnvironment();
+
     /**
      * 
      * @param frameGraph
-     * @param clContext 
      */
-    public FGRenderContext(FrameGraph frameGraph, Context clContext) {
+    public FGRenderContext(FrameGraph frameGraph) {
         this.frameGraph = frameGraph;
-        this.clContext = clContext;
         this.screen = new FullScreenQuad(this.frameGraph.getAssetManager());
     }
     
@@ -103,9 +93,11 @@ public class FGRenderContext {
         this.context = context;
         this.viewPort = vp;
         this.tpf = tpf;
-        if (viewPort == null) {
+        if (this.viewPort == null) {
             throw new NullPointerException("ViewPort cannot be null.");
         }
+        baseEnv.fromRenderManager(this.renderManager);
+        baseEnv.fromViewPort(this.viewPort);
     }
     /**
      * Returns true if the context is ready for rendering.
@@ -156,11 +148,6 @@ public class FGRenderContext {
      * @param depth depth texture, or null
      */
     public void renderTextures(Texture2D color, Texture2D depth) {
-        if (color != null) {
-            //resizeCamera(color.getImage().getWidth(), color.getImage().getHeight(), false, false);
-        } else if (depth != null) {
-            //resizeCamera(depth.getImage().getWidth(), depth.getImage().getHeight(), false, false);
-        }
         screen.render(renderManager, color, depth);
     }
     
@@ -171,7 +158,7 @@ public class FGRenderContext {
      * @param geometry 
      */
     public static void renderMeshFromGeometry(Renderer renderer, Geometry geometry) {
-        /**
+        /*
          * Copyright (c) 2009-2024 jMonkeyEngine
          * All rights reserved.
          */
@@ -211,23 +198,7 @@ public class FGRenderContext {
         this.depth.set(depth);
         this.depth.apply(getRenderer());
     }
-    
-    /**
-     * Sets the OpenCL context for compute shading.
-     * 
-     * @param clContext 
-     */
-    public void setCLContext(Context clContext) {
-        this.clContext = clContext;
-    }
-    /**
-     * Sets the OpenCL command queue for compute shading.
-     * 
-     * @param clQueue 
-     */
-    public void setCLQueue(CommandQueue clQueue) {
-        this.clQueue = clQueue;
-    }
+
     /**
      * Enables culling based on culling results from the previous frame.
      * <p>
@@ -336,30 +307,6 @@ public class FGRenderContext {
         return store.set(depth);
     }
     /**
-     * Gets the debug frame capture if one is assigned.
-     * 
-     * @return 
-     */
-    public GraphEventCapture getGraphCapture() {
-        return context.getEventCapture();
-    }
-    /**
-     * Gets the OpenCL context for compute shading.
-     * 
-     * @return 
-     */
-    public Context getCLContext() {
-        return clContext;
-    }
-    /**
-     * Gets the OpenCL command queue assigned to this context.
-     * 
-     * @return 
-     */
-    public CommandQueue getCLQueue() {
-        return clQueue;
-    }
-    /**
      * Gets the time per frame.
      * 
      * @return 
@@ -413,14 +360,6 @@ public class FGRenderContext {
      */
     public boolean isProfilerAvailable() {
         return renderManager.getProfiler() != null;
-    }
-    /**
-     * Returns true if a debug frame snapshot is assigned.
-     * 
-     * @return 
-     */
-    public boolean isGraphCaptureActive() {
-        return context.getEventCapture() != null;
     }
     
 }

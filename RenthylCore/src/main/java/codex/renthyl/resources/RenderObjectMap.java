@@ -30,8 +30,9 @@ package codex.renthyl.resources;
 
 import codex.renthyl.FGPipelineContext;
 import codex.renthyl.modules.ModuleIndex;
-import codex.renthyl.debug.GraphEventCapture;
 import codex.renthyl.definitions.ResourceDef;
+import com.jme3.math.FastMath;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -48,16 +49,6 @@ public class RenderObjectMap {
     private final FGPipelineContext context;
     private final Map<Long, RenderObject> objectMap = new ConcurrentHashMap<>();
     private int staticTimeout = 1;
-    
-    // statistics
-    private int totalAllocations = 0;
-    private int officialReservations = 0;
-    private int completedReservations = 0;
-    private int failedReservations = 0;
-    private int objectsCreated = 0;
-    private int objectsReallocated = 0;
-    private int totalObjects = 0;
-    private int flushedObjects = 0;
     
     /**
      * 
@@ -77,6 +68,9 @@ public class RenderObjectMap {
         RenderObject obj = new RenderObject(def, value, staticTimeout);
         objectMap.put(obj.getId(), obj);
         return obj;
+    }
+    private <T> void allocate(ResourceView<T> resource, EvaluatedResource eval) {
+        resource.setObject(eval.getResource(), resource.getDefinition().applyResource(eval.getResource().getObject()));
     }
     private boolean isAvailable(RenderObject object) {
         return !object.isAcquired() && !object.isConstant();
@@ -123,16 +117,20 @@ public class RenderObjectMap {
         if (resource.isUndefined()) {
             throw new IllegalArgumentException("Cannot allocate object to an undefined resource.");
         }
-        totalAllocations++;
         ResourceDef<T> def = resource.getDefinition();
         if (def == null) {
             throw new NullPointerException("Resource definition cannot be null in this context.");
         }
         if (def.isUseExisting()) {
+            EvaluatedResource eval = new EvaluatedResource();
             if (async) {
-                return allocateSpecificAsync(resource, ignoreReservations);
+                return allocateSpecificAsync(resource, eval, ignoreReservations);
             } else {
-                return allocateSpecificSync(resource, ignoreReservations);
+                allocateSpecificSync(resource, eval, ignoreReservations);
+                if (eval.isFinal()) {
+                    allocate(resource, eval);
+                    return true;
+                }
             }
         }
         return false;
@@ -156,15 +154,13 @@ public class RenderObjectMap {
         if (obj == null) {
             return false;
         }
+        EvaluatedResource eval = new EvaluatedResource();
         ResourceDef<T> def = resource.getDefinition();
-        T r = def.applyDirectResource(obj.getObject());
-        if (r == null && def.isAllowIndirectResources()) {
-            r = def.applyIndirectResource(resource);
-        }
-        if (r == null) {
+        eval.add(obj, def.evaluateResource(obj.getObject()));
+        if (!eval.isNull()) {
             throw new NullPointerException("Allocation from cache denied by resource definition.");
         }
-        resource.setObject(obj, r);
+        allocate(resource, eval);
         objectMap.put(obj.getId(), obj);
         return true;
     }
@@ -173,109 +169,76 @@ public class RenderObjectMap {
         if (resource.isUndefined()) {
             throw new IllegalArgumentException("Cannot allocate object to an undefined resource.");
         }
-        GraphEventCapture cap = context.getEventCapture();
-        totalAllocations++;
         ResourceDef<T> def = resource.getDefinition();
         if (def == null) {
             throw new NullPointerException("Resource definition cannot be null in this context.");
         }
         if (def.isUseExisting()) {
+            EvaluatedResource eval = new EvaluatedResource();
             // first try allocating a specific object, which is much faster
-            if (allocateSpecificSync(resource, false)) {
+            allocateSpecificSync(resource, eval, false);
+            if (eval.isFinal()) {
+                allocate(resource, eval);
                 return;
             }
             // find object to allocate
-            T indirectRes = null;
-            RenderObject indirectObj = null;
             for (RenderObject obj : objectMap.values()) {
-                if (isAvailable(obj) && obj.isAllowCasualAllocation()
-                        && def.isEquivalentTag(obj.getTag()) && !obj.isReservedWithin(resource.getLifeTime())) {
+                if (isAvailable(obj) && obj.isAllowCasualAllocation() && !obj.isReservedWithin(resource.getLifeTime())) {
                     // try applying a direct resource
-                    T r = def.applyDirectResource(obj.getObject());
-                    if (r != null) {
-                        resource.setObject(obj, r);
-                        if (cap != null) cap.reallocateObject(obj.getId(), resource.getIndex(),
-                                resource.getResource().getClass().getSimpleName());
-                        objectsReallocated++;
+                    eval.add(obj, def.evaluateResource(obj.getObject()));
+                    if (eval.isFinal()) {
+                        allocate(resource, eval);
                         return;
-                    }
-                    // then try applying an indirect resource, which is not as desirable
-                    if (def.isAllowIndirectResources() && indirectObj == null) {
-                        indirectRes = def.applyIndirectResource(obj.getObject());
-                        if (indirectRes != null) {
-                            indirectObj = obj;
-                        }
                     }
                 }
             }
-            // allocate indirect object
-            if (indirectObj != null) {
-                resource.setObject(indirectObj, indirectRes);
-                if (cap != null) cap.reallocateObject(indirectObj.getId(), resource.getIndex(),
-                        resource.getResource().getClass().getSimpleName());
-                objectsReallocated++;
+            if (!eval.isNull()) {
+                allocate(resource, eval);
                 return;
             }
         }
         // create new object
         resource.setObject(create(def));
-        if (cap != null) cap.createObject(resource.getObject().getId(),
-                resource.getIndex(), resource.getResource().getClass().getSimpleName());
-        objectsCreated++;
     }
-    private <T> boolean allocateSpecificSync(ResourceView<T> resource, boolean ignoreReservations) {
-        GraphEventCapture cap = context.getEventCapture();
+    private <T> boolean allocateSpecificSync(ResourceView<T> resource, EvaluatedResource eval, boolean ignoreReservations) {
         ResourceDef<T> def = resource.getDefinition();
         long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
-        RenderObject obj = objectMap.get(id);        
-        if (obj != null && def.isEquivalentTag(obj.getTag())) {
-            if (cap != null) cap.attemptReallocation(id, resource.getIndex());
-            if (isAvailable(obj) && (obj.claimReservation(resource.getProducer().getIndex())
-                    || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime()))) {
-                // reserved object is only applied if it is accepted by the definition
-                T r = def.applyDirectResource(obj.getObject());
-                if (r == null) {
-                    r = def.applyIndirectResource(obj.getObject());
-                }
-                if (r != null) {
-                    resource.setObject(obj, r);
-                    if (cap != null) cap.reallocateObject(id, resource.getIndex(),
-                            resource.getResource().getClass().getSimpleName());
-                    completedReservations++;
-                    objectsReallocated++;
-                    return true;
-                }
-            }
+        RenderObject obj = objectMap.get(id);
+        if (obj != null && isAvailable(obj) && (obj.claimReservation(resource.getProducer().getIndex())
+                || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime()))
+                && eval.add(obj, def.evaluateResource(obj.getObject())) && eval.isFinal()) {
+            allocate(resource, eval);
+            return true;
         }
-        failedReservations++;
         return false;
     }
     private <T> void allocateAsync(ResourceView<T> resource) {
         if (resource.isUndefined()) {
             throw new IllegalArgumentException("Cannot allocate object to an undefined resource.");
         }
-        GraphEventCapture cap = context.getEventCapture();
-        totalAllocations++;
         ResourceDef<T> def = resource.getDefinition();
         if (def.isUseExisting()) {
+            final EvaluatedResource eval = new EvaluatedResource();
             // first try allocating a specific object, which is much faster
-            if (allocateSpecificAsync(resource, false)) {
+            if (allocateSpecificAsync(resource, eval, false)) {
                 return;
             }
             // find object to allocate
-            T indirectRes = null;
-            RenderObject indirectObj = null;
-            LinkedList<RenderObject> skipped = new LinkedList<>();
-            Iterator<RenderObject> it = objectMap.values().iterator();
-            boolean next;
-            while ((next = it.hasNext()) || !skipped.isEmpty()) {
+            final LinkedList<RenderObject> skipped = new LinkedList<>();
+            final Iterator<RenderObject> it = objectMap.values().iterator();
+            while (it.hasNext() || !skipped.isEmpty()) {
                 RenderObject obj;
-                if (next) obj = it.next();
-                else obj = skipped.removeFirst();
-                if (isAvailable(obj) && obj.isAllowCasualAllocation() && def.isEquivalentTag(def.getResourceTag())) {
-                    if ((next || !skipped.isEmpty()) && obj.isInspect()) {
+                if (it.hasNext()) {
+                    obj = it.next();
+                } else if (FastMath.rand.nextBoolean()) {
+                    obj = skipped.removeFirst();
+                } else {
+                    obj = skipped.removeLast();
+                }
+                if (isAvailable(obj) && obj.isAllowCasualAllocation()) {
+                    if ((it.hasNext() || !skipped.isEmpty()) && obj.isInspect()) {
                         // Inspect this object later, because something else is inspecting it.
                         // This makes this thread try other objects first, instead of waiting
                         // for a synchronized block to be available.
@@ -290,94 +253,46 @@ public class RenderObjectMap {
                         if (!isAvailable(obj)) {
                             continue;
                         }
-                        obj.startInspect();
-                        if (!obj.isReservedWithin(resource.getLifeTime())) {
-                            // try applying a direct resource
-                            T r = def.applyDirectResource(obj.getObject());
-                            if (r != null) {
-                                resource.setObject(obj, r);
-                                if (cap != null) cap.reallocateObject(obj.getId(), resource.getIndex(),
-                                        resource.getResource().getClass().getSimpleName());
-                                objectsReallocated++;
-                                obj.endInspect();
-                                return;
-                            }
-                            // then try applying an indirect resource, which is not as desirable
-                            if (indirectObj == null && def.isAllowIndirectResources() && !obj.isPrioritized()) {
-                                indirectRes = def.applyIndirectResource(obj.getObject());
-                                if (indirectRes != null) {
-                                    indirectObj = obj;
-                                    // make sure no other threads attempt to apply this indirectly at the same time
-                                    obj.setPrioritized(true);
-                                    obj.endInspect();
-                                    continue;
-                                }
-                            }
+                        obj.startInspect(); // start inspection
+                        if (!obj.isReservedWithin(resource.getLifeTime())
+                                && eval.add(obj, def.evaluateResource(obj.getObject())) && eval.isFinal()) {
+                            allocate(resource, eval);
+                            obj.endInspect(); // end inspection
+                            return;
                         }
-                        obj.endInspect();
+                        obj.endInspect(); // end inspection
                     }
                 }
             }
             // allocate indirect object
-            if (indirectObj != null) synchronized (indirectObj) {
-                // disable priority flag
-                indirectObj.setPrioritized(false);
+            if (!eval.isNull()) synchronized (eval.getResource()) {
                 // check again if object is available
-                if (isAvailable(indirectObj)) {
-                    indirectObj.startInspect();
-                    resource.setObject(indirectObj, indirectRes);
-                    if (cap != null) cap.reallocateObject(indirectObj.getId(), resource.getIndex(),
-                            resource.getResource().getClass().getSimpleName());
-                    objectsReallocated++;
-                    indirectObj.endInspect();
-                } else {
-                    // In the unlikely event that another thread "steals" this object
-                    // from this thread, try allocating again.
-                    allocateAsync(resource);
+                if (isAvailable(eval.getResource())) {
+                    allocate(resource, eval);
+                    return;
                 }
-                return;
             }
         }
         // create new object
         resource.setObject(create(def));
-        if (cap != null) cap.createObject(resource.getObject().getId(),
-                resource.getIndex(), resource.getResource().getClass().getSimpleName());
-        objectsCreated++;
     }
-    private <T> boolean allocateSpecificAsync(ResourceView<T> resource, boolean ignoreReservations) {
-        GraphEventCapture cap = context.getEventCapture();
+    private <T> boolean allocateSpecificAsync(ResourceView<T> resource, EvaluatedResource eval, boolean ignoreReservations) {
         ResourceDef<T> def = resource.getDefinition();
         long id = resource.getObjectId();
         if (id < 0) return false;
         // allocate reserved object
         RenderObject obj = objectMap.get(id);        
-        if (obj != null && def.isEquivalentTag(obj.getTag())) {
-            if (cap != null) cap.attemptReallocation(id, resource.getIndex());
-            // note: specific allocation does not defer if the object is currently being inspected
-            if (isAvailable(obj)) synchronized (obj) {
-                // start object inspection to avoid thread build up on a single object
-                obj.startInspect();
-                if (obj.claimReservation(resource.getProducer().getIndex())
-                        || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime())) {
-                    // reserved object is only applied if it is accepted by the definition
-                    T r = def.applyDirectResource(obj.getObject());
-                    if (r == null) {
-                        r = def.applyIndirectResource(obj.getObject());
-                    }
-                    if (r != null) {
-                        resource.setObject(obj, r);
-                        if (cap != null) cap.reallocateObject(id, resource.getIndex(),
-                                resource.getResource().getClass().getSimpleName());
-                        completedReservations++;
-                        objectsReallocated++;
-                        obj.endInspect();
-                        return true;
-                    }
-                }
-                obj.endInspect();
+        if (obj != null && isAvailable(obj)) synchronized (obj) {
+            obj.startInspect(); // start inspection
+            if ((obj.claimReservation(resource.getProducer().getIndex())
+                    || ignoreReservations || !obj.isReservedWithin(resource.getLifeTime()))
+                    && eval.add(obj, def.evaluateResource(obj.getObject())) && eval.isFinal()) {
+                allocate(resource, eval);
+                obj.endInspect(); // end inspection
+                return true;
             }
+            obj.endInspect(); // end inspection
         }
-        failedReservations++;
         return false;
     }
     
@@ -397,10 +312,6 @@ public class RenderObjectMap {
         RenderObject obj = objectMap.get(objectId);
         if (obj != null) {
             obj.reserve(index);
-            officialReservations++;
-            if (context.getEventCapture() != null) {
-                context.getEventCapture().reserveObject(objectId, index);
-            }
             return true;
         }
         return false;
@@ -416,9 +327,6 @@ public class RenderObjectMap {
             RenderObject obj = objectMap.remove(id);
             if (obj != null) {
                 obj.dispose();
-                if (context.getEventCapture() != null) {
-                    context.getEventCapture().disposeObject(id);
-                }
             }
         }
     }
@@ -440,19 +348,7 @@ public class RenderObjectMap {
         }
         return false;
     }
-    
-    /**
-     * Should be called only when a new rendering frame begins (before rendering).
-     */
-    public void newFrame() {
-        totalAllocations = 0;
-        officialReservations = 0;
-        completedReservations = 0;
-        failedReservations = 0;
-        objectsCreated = 0;
-        objectsReallocated = 0;
-        flushedObjects = 0;
-    }
+
     /**
      * Clears reservations of all tracked render objects.
      */
@@ -467,19 +363,7 @@ public class RenderObjectMap {
      * Any render objects that have not been used for a number of frames are disposed.
      */
     public void flushMap() {
-        totalObjects = objectMap.size();
-        GraphEventCapture cap = context.getEventCapture();
-        if (cap != null) cap.flushObjects(totalObjects);
-        flushCollection(objectMap.values(), cap);
-        if (cap != null) {
-            cap.value("totalAllocations", totalAllocations);
-            cap.value("officialReservations", officialReservations);
-            cap.value("completedReservations", completedReservations);
-            cap.value("failedReservations", failedReservations);
-            cap.value("objectsCreated", objectsCreated);
-            cap.value("objectsReallocated", objectsReallocated);
-            cap.value("flushedObjects", flushedObjects);
-        }
+        flushCollection(objectMap.values());
     }
     /**
      * Flushes the given object cache.
@@ -487,7 +371,7 @@ public class RenderObjectMap {
      * @param cache 
      */
     public void flushCache(ResourceCache cache) {
-        flushCollection(cache.values(), context.getEventCapture());
+        flushCollection(cache.values());
     }
     /**
      * Clears the map and cache.
@@ -495,30 +379,26 @@ public class RenderObjectMap {
      * All tracked render objects are disposed.
      */
     public void clearMap() {
-        GraphEventCapture cap = context.getEventCapture();
-        disposeCollection(objectMap.values(), cap);
+        disposeCollection(objectMap.values());
         objectMap.clear();
     }
     
-    private void flushCollection(Iterable<RenderObject> iterable, GraphEventCapture cap) {
+    private void flushCollection(Iterable<RenderObject> iterable) {
         for (Iterator<RenderObject> it = iterable.iterator(); it.hasNext();) {
             RenderObject obj = it.next();
             if (obj.isAcquired()) {
                 throw new IllegalStateException(obj + " is not released.");
             }
             if (!obj.tickTimeout()) {
-                if (cap != null) cap.disposeObject(obj.getId());
                 obj.dispose();
                 it.remove();
-                flushedObjects++;
                 continue;
             }
             obj.setConstant(false);
         }
     }
-    private void disposeCollection(Iterable<RenderObject> iterable, GraphEventCapture cap) {
+    private void disposeCollection(Iterable<RenderObject> iterable) {
         for (RenderObject obj : iterable) {
-            if (cap != null) cap.disposeObject(obj.getId());
             obj.dispose();
         }
     }
@@ -543,77 +423,6 @@ public class RenderObjectMap {
      */
     public int getStaticTimeout() {
         return staticTimeout;
-    }
-    /**
-     * Get the total number of allocations that occured during the last render frame.
-     * 
-     * @return 
-     */
-    public int getTotalAllocations() {
-        return totalAllocations;
-    }
-    /**
-     * Gets the number of official reservations that occured during the last
-     * render frame.
-     * <p>
-     * An official reservation is one made using {@link #reserve(long, int)}.
-     * 
-     * @return 
-     */
-    public int getOfficialReservations() {
-        return officialReservations;
-    }
-    /**
-     * Gets the number of completed reservations that occured during the
-     * last render frame.
-     * <p>
-     * A completed reservation is declared and allocated.
-     * 
-     * @return 
-     */
-    public int getCompletedReservations() {
-        return completedReservations;
-    }
-    /**
-     * Gets the number of incomplete or failed reservations that occured
-     * during the last render frame.
-     * 
-     * @return 
-     */
-    public int getFailedReservations() {
-        return failedReservations;
-    }
-    /**
-     * Gets the number of render objects created during the last render frame.
-     * 
-     * @return 
-     */
-    public int getObjectsCreated() {
-        return objectsCreated;
-    }
-    /**
-     * Gets the number of reallocations that occured during the last render frame.
-     * 
-     * @return 
-     */
-    public int getObjectsReallocated() {
-        return objectsReallocated;
-    }
-    /**
-     * Gets the number of render objects present before flushing.
-     * 
-     * @return 
-     */
-    public int getTotalObjects() {
-        return totalObjects;
-    }
-    /**
-     * Gets the number of render objects disposed during flushing.
-     * 
-     * @return 
-     */
-    public int getFlushedObjects() {
-        return flushedObjects;
     }
     
 }

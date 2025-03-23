@@ -20,14 +20,18 @@ public class IntArrayDef extends AbstractArrayDef<int[]> {
         return new int[size + padding];
     }
     @Override
-    public int[] applyDirectResource(Object resource) {
+    public float evaluateResource(Object resource) {
         if (resource instanceof int[]) {
             int[] array = (int[])resource;
             if (array.length >= size) {
-                return array;
+                return 0;
             }
         }
-        return null;
+        return Float.POSITIVE_INFINITY;
+    }
+    @Override
+    public int[] applyResource(Object resource) {
+        return (int[])resource;
     }
     
 }

@@ -30,10 +30,10 @@ public class ShadowMapDef extends AbstractResourceDef<ShadowMap> {
         return new ShadowMap(mapDef.createResource());
     }
     @Override
-    public ShadowMap applyDirectResource(Object resource) {
+    public ShadowMap evaluateResource(Object resource) {
         if (resource instanceof ShadowMap) {
             ShadowMap shadow = (ShadowMap)resource;
-            Texture2D map = mapDef.applyDirectResource(shadow.getMap());
+            Texture2D map = mapDef.evaluateResource(shadow.getMap());
             if (map != null) {
                 return shadow;
             }

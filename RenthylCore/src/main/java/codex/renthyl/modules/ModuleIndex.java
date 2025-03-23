@@ -91,7 +91,7 @@ public final class ModuleIndex {
     
     /**
      * 
-     * @param index index to set to (not null)
+     * @param index index to add to (not null)
      * @return this
      */
     public ModuleIndex set(ModuleIndex index) {

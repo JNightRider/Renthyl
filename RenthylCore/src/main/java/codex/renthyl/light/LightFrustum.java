@@ -221,7 +221,7 @@ public class LightFrustum {
     }
     
     /**
-     * Writes the calculated frustum of the indexed light to a set of screenspace tiles.
+     * Writes the calculated frustum of the indexed light to a add of screenspace tiles.
      * 
      * @param tileIndices 2D lists containing light indices for each tile
      * @param tileInfo information about tile demensions

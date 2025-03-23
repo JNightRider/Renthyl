@@ -158,7 +158,7 @@ public class SceneEnqueuePass extends RenderPass {
         } else if (spatial instanceof Geometry) {
             Geometry g = (Geometry)spatial;
             if (g.getMaterial() == null) {
-                throw new IllegalStateException("No material is set for geometry: " + g.getName());
+                throw new IllegalStateException("No material is add for geometry: " + g.getName());
             }
             queue.queue.add(g);
         }
