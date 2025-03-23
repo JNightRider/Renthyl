@@ -16,11 +16,10 @@ import com.jme3.texture.Texture2D;
  */
 public class ShadowMapDef extends AbstractResourceDef<ShadowMap> {
 
-    private TextureDef<Texture2D> mapDef = TextureDef.texture2D();
+    private final TextureDef<Texture2D> mapDef = TextureDef.texture2D();
     
     public ShadowMapDef() {
         mapDef.setFormat(Image.Format.Depth);
-        mapDef.setAllowCasualAllocation(false);
         //mapDef.setShadowCompare(Texture.ShadowCompareMode.LessOrEqual);
         //mapDef.setMagFilter(Texture.MagFilter.Nearest);
         //mapDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
