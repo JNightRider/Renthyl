@@ -102,7 +102,6 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
     protected void prepare(FGRenderContext context) {
         int w = context.getWidth();
         int h = context.getHeight();
-        // TODO: make group implementation to handle definitions as well
         for (int i = 0; i < gbuffers.size(); i++) {
             gbuffers.getDef(i).setSize(w, h);
             declare(gbuffers.getDef(i), gbuffers.get(i));

@@ -190,16 +190,6 @@ public class GeometryQueue implements Iterable<Geometry>, Savable {
         }
         return null;
     }
-    private Integer[] reuseAvailableQueue() {
-        for (Iterator<Integer[]> it = availableQueues.iterator(); it.hasNext();) {
-            Integer[] q = it.next();
-            if (q.length >= size) {
-                it.remove();
-                return q;
-            }
-        }
-        return null;
-    }
     private void mergeWorldBoundInto(BoundingBox target) {
         target.mergeLocal(localBound);
         for (GeometryQueue q : internalQueues) {
@@ -260,10 +250,7 @@ public class GeometryQueue implements Iterable<Geometry>, Savable {
                     listSort.allocateStack(size);
                 }
                 if (queue == null || queue.length < size) {
-                    queue = reuseAvailableQueue();
-                    if (queue == null) {
-                        queue = new Integer[geometries.length];
-                    }
+                    queue = new Integer[geometries.length];
                     lastSortedSize = -1;
                 }
                 // Repopulate the index queue if there is a chance that
