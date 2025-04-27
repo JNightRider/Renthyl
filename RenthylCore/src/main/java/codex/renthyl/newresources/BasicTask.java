@@ -12,6 +12,7 @@ public class BasicTask implements RenderTask {
     private final Collection<Socket> sockets = new ArrayList<>();
     private final Socket<Texture2D> mySocket = new BasicSocket<>(this);
     private final AtomicBoolean claimed = new AtomicBoolean(false);
+    private boolean queued = false;
     private boolean complete = false;
     private int position = -1;
 
@@ -26,6 +27,9 @@ public class BasicTask implements RenderTask {
 
     @Override
     public void prepare() {
+        if (position < 0) {
+            throw new IllegalStateException("Task is being prepared, but is not properly queued.");
+        }
         for (Socket s : sockets) {
             s.reference(position);
         }
@@ -38,11 +42,14 @@ public class BasicTask implements RenderTask {
 
     @Override
     public void queue(ExecutionQueue queue) {
-        if (!queue.containsAtPosition(this, position)) {
-            position = queue.add(this);
+        if (!queued) {
+            // set flag immediately in anticipation of callbacks from sockets
+            queued = true;
+            // queue upstream before queueing this
             for (Socket s : sockets) {
                 s.queue(queue);
             }
+            position = queue.add(this);
         }
     }
 
@@ -70,7 +77,9 @@ public class BasicTask implements RenderTask {
     @Override
     public void reset() {
         // reset flags
+        queued = false;
         complete = false;
+        position = -1;
         // reset all sockets
         for (Socket s : sockets) {
             s.reset();

@@ -9,7 +9,7 @@ public class ModifyingSocket <T> extends BasicSocket<T> {
     @Override
     public boolean isUpstreamAvailable() {
         return upstream == null || (upstream.isAvailableToDownstream()
-                && getUpstreamRoot().getActiveReferences() == getActiveReferences() + 1);
+                && getUpstreamRoot().getActiveReferences() == getActiveReferences());
     }
 
 }

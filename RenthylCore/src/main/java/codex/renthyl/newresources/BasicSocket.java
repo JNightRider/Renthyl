@@ -62,6 +62,10 @@ public class BasicSocket <T> implements Socket<T> {
 
     @Override
     public void queue(ExecutionQueue queue) {
+        // queue upstream before queueing owning task
+        if (upstream != null) {
+            upstream.queue(queue);
+        }
         task.queue(queue);
     }
 

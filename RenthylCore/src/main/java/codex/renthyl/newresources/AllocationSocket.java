@@ -32,10 +32,9 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
         }
         if (resource == null) {
             // TODO: address concurrent issues with acquiring resources
-            if (allocated == null || def.evaluateResource(allocated.get()) == null) {
-                allocated = allocator.allocate(def);
-            } else {
-                allocated.acquire(startingPosition, endingPosition);
+            if (allocated == null || def.evaluateResource(allocated.get()) == null
+                    || !allocated.acquire(startingPosition, endingPosition)) {
+                allocated = allocator.allocate(def, startingPosition, endingPosition);
             }
             try {
                 resource = def.conformResource(allocated.get());

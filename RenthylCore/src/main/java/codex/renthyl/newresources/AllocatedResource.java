@@ -1,12 +1,13 @@
 package codex.renthyl.newresources;
 
 import java.util.BitSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class AllocatedResource <T> {
 
     private final long id;
     private final T resource;
-    private boolean acquired = false;
+    private final AtomicBoolean acquired = new AtomicBoolean(false);
     private final BitSet reservedPositions = new BitSet();
 
     public AllocatedResource(long id, T resource) {
@@ -15,10 +16,7 @@ public class AllocatedResource <T> {
     }
 
     public boolean acquire(int start, int end) {
-        if (acquired || isReserved(start, end)) {
-            return false;
-        }
-        return (acquired = true);
+        return !acquired.get() && !isReserved(start, end) && !acquired.getAndSet(true);
     }
 
     public T get() {
@@ -26,10 +24,9 @@ public class AllocatedResource <T> {
     }
 
     public void release() {
-        if (!acquired) {
+        if (!acquired.getAndSet(false)) {
             throw new IllegalStateException("Resource was not acquired.");
         }
-        acquired = false;
     }
 
     public void reserve(int position) {
