@@ -28,11 +28,11 @@
  */
 package codex.renthyl.resources;
 
-import codex.renthyl.modules.ModuleIndex;
 import codex.renthyl.definitions.ResourceDef;
-import com.jme3.util.NativeObject;
-import java.util.LinkedList;
-import java.util.function.Consumer;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
 
 /**
  * Handles a raw object used for rendering processes within a FrameGraph.
@@ -40,259 +40,86 @@ import java.util.function.Consumer;
  * @author codex
  * @param <T>
  */
-public class RenderObject <T> {
-    
-    private static final Consumer<Object> DEFAULT = object -> {};
-    private static final Consumer<NativeObject> NATIVE = object -> object.dispose();
-    
-    private static long nextId = 0;
-    
-    private final long id;
-    private final T object;
-    private final LinkedList<Reservation> reservations = new LinkedList<>();
-    private int timeoutDuration;
-    private int timeout = 0;
-    private boolean acquired = false;
-    private boolean constant = false;
-    private boolean inspect = false;
-    private final boolean allowCasualAllocation;
-    private final boolean allowReservations;
-    private Consumer disposer;
-    
-    /**
-     * 
-     * @param def
-     * @param object
-     * @param timeout 
-     */
-    public RenderObject(ResourceDef<T> def, T object, int timeout) {
-        this.id = nextId++;
-        if (object == null) {
-            throw new NullPointerException("Object cannot be null.");
-        }
-        this.object = object;
-        this.timeoutDuration = def.getStaticTimeout();
-        this.allowCasualAllocation = def.isAllowCasualAllocation();
-        this.allowReservations = def.isAllowReservations();
-        if (this.timeoutDuration < 0) {
-            this.timeoutDuration = timeout;
-        }
-        disposer = def.getDisposalMethod();
-        if (disposer != null);
-        else if (object instanceof NativeObject) {
-            this.disposer = NATIVE;
-        } else {
-            this.disposer = DEFAULT;
-        }
+public class RenderObject <T> implements ResourceWrapper<T> {
+
+    private final T resource;
+    private final int refresh;
+    private int timeout;
+    private boolean available = false;
+    private boolean checkout = false;
+    private final Collection<TimeFrame> reservations = new ArrayList<>();
+
+    public RenderObject(T resource, int timout) {
+        this.resource = resource;
+        this.refresh = this.timeout = timeout;
     }
-    
-    /**
-     * Starts an inspection of this object.
-     * <p>
-     * This blocks other threads from inspecting this object at the same time.
-     * Often, other threads will save this object for later, and continue inspecting
-     * other objects in the meantime.
-     * <p>
-     * Note that this is not a threadsafe operation, meaning some threads may "escape"
-     * this check. A synchronized block should be used to catch these exceptions.
-     * 
-     * @see #endInspect()
-     */
-    public void startInspect() {
-        inspect = true;
+    public RenderObject(ResourceDef<T> def) {
+        this(def.createResource(), def.getStaticTimeout());
     }
-    /**
-     * Ends an inspection of this object.
-     * 
-     * @see #startInspect()
-     */
-    public void endInspect() {
-        inspect = false;
-    }
-    /**
-     * Returns true if this object is currently being inspected.
-     * 
-     * @return 
-     */
-    public boolean isInspect() {
-        return inspect;
-    }
-    
-    /**
-     * Acquires this render object for use.
-     */
-    public void acquire() {
-        if (acquired) {
-            throw new IllegalStateException("Already acquired.");
-        }
-        timeout = timeoutDuration;
-        acquired = true;
-    }
-    /**
-     * Releases this render object from use.
-     */
-    public void release() {
-        if (!acquired) {
-            throw new IllegalStateException("Already released.");
-        }
-        acquired = false;
-    }
-    /**
-     * Reserves this render object for use at the specified render pass index.
-     * 
-     * @param index 
-     */
-    public void reserve(ModuleIndex index) {
-        if (allowReservations) {
-            reservations.add(new Reservation(index));
-        }
-    }
-    /**
-     * Disposes the internal object.
-     */
-    public void dispose() {
-        // ensure this cannot be acquired
-        acquired = true;
-        disposer.accept(object);
-    }
-    
-    /**
-     * Claims the reservation pertaining to the index.
-     * 
-     * @param index
-     * @return true if a reservation was claimed.
-     */
-    public boolean claimReservation(ModuleIndex index) {
-        if (allowReservations) for (Reservation r : reservations) {
-            if (r.claim(index)) return true;
-        }
-        return false;
-    }
-    /**
-     * Determine if reallocating this object with the context would
-     * result in a violation of a reservation.
-     * 
-     * @param frame
-     * @return true if this object is reserved within the timeframe
-     */
-    public boolean isReservedWithin(TimeFrame frame) {
-        if (allowReservations) for (Reservation r : reservations) {
-            if (r.violates(frame)) return true;
-        }
-        return false;
-    }
-    /**
-     * Clears all reservations.
-     */
-    public void clearReservations() {
-        reservations.clear();
-    }
-    
-    /**
-     * Decrements the integer tracking frames until the object is deemed
-     * abandoned.
-     * <p>
-     * Abandoned objects are removed and disposed.
-     * 
-     * @return true if the object is not considered abandoned
-     */
-    public boolean tickTimeout() {
-        return timeout-- > 0;
-    }
-    
-    /**
-     * Sets this as constant, which blocks reallocations until the rendering ends.
-     * 
-     * @param constant 
-     */
-    public void setConstant(boolean constant) {
-        this.constant = constant;
-    }
-    
-    /**
-     * Gets the id of this render object.
-     * 
-     * @return 
-     */
-    public long getId() {
-        return id;
-    }
-    /**
-     * Gets the internal object.
-     * 
-     * @return 
-     */
-    public T getObject() {
-        return object;
-    }
-    /**
-     * Returns true if this render object is acquired (and not yet released).
-     * 
-     * @return 
-     */
-    public boolean isAcquired() {
-        return acquired;
-    }
-    /**
-     * Returns true if this render object is constant.
-     * 
-     * @return 
-     */
-    public boolean isConstant() {
-        return constant;
-    }
-    /**
-     * Returns true if this object can be reallocated casually
-     * without an object id.
-     * 
-     * @return 
-     */
-    public boolean isAllowCasualAllocation() {
-        return allowCasualAllocation;
-    }
-    /**
-     * Returns true if this object can be reserved.
-     * 
-     * @return 
-     */
-    public boolean isAllowReservations() {
-        return allowReservations;
-    }
-    
+
     @Override
-    public String toString() {
-        return getClass().getSimpleName() + "[id=" + id + ", type=" + object.getClass().getName() + "]";
+    public void reference(TimeFrame time) {
+
     }
-    
-    /**
-     * Gets the next unique id of RenderObjects.
-     * 
-     * @return 
-     */
-    public static long getNextId() {
-        return nextId;
-    }
-    
-    private static class Reservation {
-        
-        private final ModuleIndex index;
-        private boolean claimed = false;
-        
-        public Reservation(ModuleIndex index) {
-            this.index = index;
+
+    @Override
+    public T acquire() {
+        if (!available) {
+            throw new IllegalStateException("Resource not available.");
         }
-        
-        public boolean claim(ModuleIndex index) {
-            if (this.index.equals(index)) {
-                claimed = true;
+        this.available = false;
+        this.timeout = refresh; // refresh
+        return resource;
+    }
+
+    @Override
+    public void release() {
+        available = true;
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void checkout(boolean checkout) {
+        this.checkout = checkout;
+    }
+
+    public boolean isCheckedOut() {
+        return checkout;
+    }
+
+    public T acquire() {
+        return resource;
+    }
+
+    public boolean cycleTimeout() {
+        return --timeout <= 0;
+    }
+
+    public void addReservation(TimeFrame timeFrame) {
+        reservations.add(timeFrame);
+    }
+
+    public boolean claimReservation(TimeFrame timeFrame) {
+        for (Iterator<TimeFrame> it = reservations.iterator(); it.hasNext();) {
+            TimeFrame t = it.next();
+            if (t.equals(timeFrame)) {
+                it.remove();
                 return true;
             }
-            return false;
         }
-        public boolean violates(TimeFrame frame) {
-            return !claimed && (frame.isAsync() || frame.getThreadIndex() != index.getThreadIndex());
-        }
-        
+        return false;
     }
-    
+
+    public boolean isReserved(TimeFrame timeFrame) {
+        for (TimeFrame t : reservations) {
+            if (t.overlaps(timeFrame)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

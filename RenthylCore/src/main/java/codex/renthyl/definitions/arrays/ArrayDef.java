@@ -5,6 +5,7 @@
 package codex.renthyl.definitions.arrays;
 
 import codex.boost.export.SavableObject;
+import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -35,17 +36,18 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
         return (T[])Array.newInstance(type, size + padding);
     }
     @Override
-    public float evaluateResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         Class component = resource.getClass().getComponentType();
         if (component != null && type.isAssignableFrom(component)) {
             T[] array = (T[])resource;
             if (array.length >= size) {
-                return 0;
+                return 0f;
             }
         }
-        return Float.POSITIVE_INFINITY;
+        return null;
     }
-    public T[] applyResource(Object resource) {
+    @Override
+    public T[] conformResource(Object resource) throws ResourceException {
         return (T[])resource;
     }
     @Override

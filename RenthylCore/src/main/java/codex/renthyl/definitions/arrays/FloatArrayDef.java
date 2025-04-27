@@ -4,6 +4,8 @@
  */
 package codex.renthyl.definitions.arrays;
 
+import codex.renthyl.resources.ResourceException;
+
 /**
  *
  * @author codex
@@ -20,16 +22,17 @@ public class FloatArrayDef extends AbstractArrayDef<float[]> {
         return new float[size + padding];
     }
     @Override
-    public float evaluateResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (resource instanceof float[]) {
             float[] array = (float[])resource;
             if (array.length >= size) {
-                return 0;
+                return 0f;
             }
         }
-        return Float.POSITIVE_INFINITY;
+        return null;
     }
-    public float[] applyResource(Object resource) {
+    @Override
+    public float[] conformResource(Object resource) throws ResourceException {
         return (float[])resource;
     }
     

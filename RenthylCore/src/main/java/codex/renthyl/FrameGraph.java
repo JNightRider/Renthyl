@@ -44,8 +44,6 @@ import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderThread;
 import com.jme3.asset.AssetManager;
-import com.jme3.opencl.CommandQueue;
-import com.jme3.opencl.Context;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.RendererException;
 import com.jme3.renderer.pipeline.RenderPipeline;

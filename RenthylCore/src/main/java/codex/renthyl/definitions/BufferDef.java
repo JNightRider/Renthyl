@@ -5,6 +5,7 @@
 package codex.renthyl.definitions;
 
 import codex.boost.export.SavableObject;
+import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -60,17 +61,17 @@ public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
         return buffer;
     }
     @Override
-    public float evaluateResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T buffer = (T)resource;
             if (buffer.capacity() >= size) {
-                return 0;
+                return 0f;
             }
         }
-        return Float.POSITIVE_INFINITY;
+        return null;
     }
     @Override
-    public T applyResource(Object resource) {
+    public T conformResource(Object resource) throws ResourceException {
         return prepareBuffer((T)resource);
     }
     

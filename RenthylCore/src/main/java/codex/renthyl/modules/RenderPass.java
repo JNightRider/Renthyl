@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import codex.renthyl.resources.tickets.TicketGroup;
 
@@ -210,7 +209,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * Reserves the {@link com.jme3.renderer.framegraph.RenderObject RenderObject} associated with the ticket.
      * 
      * @param ticket 
-     * @see ResourceList#reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket)
+     * @see ResourceList#reserve(ModuleIndex, codex.renthyl.resources.ResourceTicket)
      */
     protected void reserve(ResourceTicket ticket) {
         resources.reserve(index, ticket);
@@ -219,7 +218,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * Reserves each RenderObject associated with the tickets.
      * 
      * @param tickets
-     * @see ResourceList#reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#reserve(ModuleIndex, codex.renthyl.resources.ResourceTicket)
      */
     protected void reserve(ResourceTicket... tickets) {
         resources.reserve(index, tickets);
@@ -228,7 +227,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * Reserves each RenderObject associated with the tickets.
      * 
      * @param tickets
-     * @see ResourceList#reserve(codex.renthyl.modules.ModuleIndex, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#reserve(ModuleIndex, codex.renthyl.resources.ResourceTicket)
      */
     protected void reserve(Iterable<? extends ResourceTicket> tickets) {
         resources.reserve(index, tickets);
@@ -237,7 +236,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * References the resource associated with the ticket.
      * 
      * @param ticket 
-     * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#reference(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void reference(ResourceTicket ticket) {
         resources.reference(index, name, ticket);
@@ -246,7 +245,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * References each resource associated with the tickets.
      * 
      * @param tickets 
-     * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#reference(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void reference(ResourceTicket... tickets) {
         resources.reference(index, name, tickets);
@@ -255,7 +254,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * References each resource associated with the tickets.
      * 
      * @param tickets 
-     * @see ResourceList#reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#reference(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void reference(Iterable<? extends ResourceTicket> tickets) {
         resources.reference(index, name, tickets);
@@ -265,7 +264,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * null and contains a non-negative world index.
      * 
      * @param ticket
-     * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#referenceOptional(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void referenceOptional(ResourceTicket ticket) {
         resources.referenceOptional(index, name, ticket);
@@ -274,7 +273,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * Optionally references each resource associated with the tickets.
      * 
      * @param tickets 
-     * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#referenceOptional(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void referenceOptional(ResourceTicket... tickets) {
         resources.referenceOptional(index, name, tickets);
@@ -283,7 +282,7 @@ public abstract class RenderPass extends AbstractRenderModule implements Savable
      * Optionally references each resource associated with the tickets.
      * 
      * @param tickets 
-     * @see ResourceList#referenceOptional(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket) 
+     * @see ResourceList#referenceOptional(ModuleIndex, java.lang.String, codex.renthyl.resources.ResourceTicket)
      */
     protected void referenceOptional(Iterable<? extends ResourceTicket> tickets) {
         resources.referenceOptional(index, name, tickets);

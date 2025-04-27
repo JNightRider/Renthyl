@@ -4,6 +4,8 @@
  */
 package codex.renthyl.definitions;
 
+import codex.renthyl.resources.ResourceException;
+
 /**
  *
  * @author codex
@@ -21,11 +23,11 @@ public class SimpleDef <T> extends AbstractResourceDef<T> {
         return null;
     }
     @Override
-    public float evaluateResource(Object resource) {
-        return type.isAssignableFrom(resource.getClass()) ? 0 : Float.POSITIVE_INFINITY;
+    public Float evaluateResource(Object resource) {
+        return type.isAssignableFrom(resource.getClass()) ? 0f : null;
     }
     @Override
-    public T applyResource(Object resource) {
+    public T conformResource(Object resource) throws ResourceException {
         return (T)resource;
     }
     

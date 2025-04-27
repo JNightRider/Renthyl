@@ -6,6 +6,7 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.definitions.AbstractResourceDef;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.resources.ResourceException;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -30,27 +31,27 @@ public class ShadowMapDef extends AbstractResourceDef<ShadowMap> {
         return new ShadowMap(mapDef.createResource());
     }
     @Override
-    public float evaluateResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (resource instanceof ShadowMap) {
             ShadowMap shadow = (ShadowMap)resource;
             return mapDef.evaluateResource(shadow.getMap());
         } else if (resource instanceof Texture) {
             return mapDef.evaluateResource(resource);
         }
-        return Float.POSITIVE_INFINITY;
+        return null;
     }
     @Override
-    public ShadowMap applyResource(Object resource) {
+    public ShadowMap conformResource(Object resource) throws ResourceException {
         if (resource instanceof ShadowMap) {
             ShadowMap shadow = (ShadowMap)resource;
-            Texture2D tex = mapDef.applyResource(shadow.getMap());
+            Texture2D tex = mapDef.conformResource(shadow.getMap());
             if (tex != shadow.getMap()) {
                 return new ShadowMap(tex);
             } else {
                 return shadow;
             }
         } else if (resource instanceof Texture) {
-            return new ShadowMap(mapDef.applyResource(resource));
+            return new ShadowMap(mapDef.conformResource(resource));
         }
         return null;
     }

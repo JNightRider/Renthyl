@@ -29,6 +29,7 @@
 package codex.renthyl.definitions;
 
 import codex.boost.export.SavableObject;
+import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -42,7 +43,6 @@ import com.jme3.texture.image.ColorSpace;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -114,26 +114,26 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         return createTexture(img);
     }
     @Override
-    public float evaluateResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T tex = (T)resource;
             if (validateImage(tex.getImage())) {
-                return 0;
+                return 0f;
             }
         } else if (resource instanceof Texture) {
             if (validateImage(((Texture)resource).getImage())) {
-                return 1;
+                return 1f;
             }
         } else if (resource instanceof Image) {
             if (validateImage((Image)resource)) {
-                return 1;
+                return 1f;
             }
         }
-        return Float.POSITIVE_INFINITY;
+        return null;
     }
 
     @Override
-    public T applyResource(Object resource) {
+    public T conformResource(Object resource) throws ResourceException {
         if (type.isAssignableFrom(resource.getClass())) {
             T tex = (T)resource;
             setupTexture(tex);

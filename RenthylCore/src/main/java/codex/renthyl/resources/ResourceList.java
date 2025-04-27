@@ -113,13 +113,13 @@ public class ResourceList {
      *
      * @return 
      */
-    private <T> ResourceView<T> create(ResourceUser user, ResourceDef<T> def, String name) {
+    private int create(ResourceUser user, ResourceDef def) {
         if (nextSlot >= resources.size()) {
             // add resource to end of list
-            ResourceView res = new ResourceView(user, def, name, resources.size());
+            ResourceView res = new ResourceView(user, def);
             resources.add(res);
             nextSlot++;
-            return res;
+            return resources.size() - 1;
         } else {
             // Insert resource into available slot.
             // Note: storing and finding the first empty slot is not necessary
@@ -128,7 +128,7 @@ public class ResourceList {
             // this case should theoretically never occur anyway, and I may need
             // it in the future.
             int i = nextSlot;
-            ResourceView res = new ResourceView(user, def, name, i);
+            ResourceView res = new ResourceView(user, def);
             resources.set(i, res);
             // find next available slot
             while (++nextSlot < resources.size()) {
@@ -136,20 +136,20 @@ public class ResourceList {
                     break;
                 }
             }
-            return res;
+            return i;
         }
     }
-    private <T> ResourceView<T> locate(ResourceTicket<T> ticket) {
+    private <T> ResourceView<T> locate(Ticket<Integer, T> ticket) {
         return locate(ticket, true);
     }
-    private <T> ResourceView<T> locate(ResourceTicket<T> ticket, boolean failOnMiss) {
+    private <T> ResourceView<T> locate(Ticket<Integer, T> ticket, boolean failOnMiss) {
         if (ticket == null) {
             if (failOnMiss) {
                 throw new NullPointerException("Ticket cannot be null.");
             }
             return null;
         }
-        final int i = ticket.getWorldIndex();
+        final int i = ticket.getIndex();
         if (i < 0) {
             if (failOnMiss) {
                 throw new NullPointerException(ticket + " does not point to any resource (negative index).");
@@ -166,14 +166,14 @@ public class ResourceList {
             }
         }
         if (failOnMiss) {
-            throw new IndexOutOfBoundsException(ticket + " is out of bounds for size "+resources.size());
+            throw new IndexOutOfBoundsException(ticket + " is out of bounds for size " + resources.size());
         }
         return null;
     }
-    private ResourceView fastLocate(ResourceTicket ticket) {
+    private ResourceView fastLocate(Ticket<Integer, ?> ticket) {
         // Niavely fetches the resource without checking for potentially annoying
         // errors. I would avoid using this for most circumstances.
-        return resources.get(ticket.getWorldIndex());
+        return resources.get(ticket.getIndex());
     }
     private ResourceView remove(int index) {
         // It is faster and less error-prone to simply switch out the resource
@@ -185,18 +185,6 @@ public class ResourceList {
         }
         nextSlot = Math.min(nextSlot, index);
         return prev;
-    }
-    
-    /**
-     * Returns true if the ticket can be used to locate a resource.
-     * 
-     * @param ticket
-     * @return 
-     * @deprecated Use {@link ResourceTicket#validate(ResourceTicket)} instead.
-     */
-    @Deprecated
-    public boolean validate(ResourceTicket ticket) {
-        return ResourceTicket.validate(ticket);
     }
     
     /****************
@@ -232,14 +220,8 @@ public class ResourceList {
      * @param ticket stores indexing information, and can be used later to retrieve the created resource
      * @return given resource ticket
      */
-    public <T> ResourceTicket<T> declare(ResourceUser producer, ResourceDef<T> def, ResourceTicket<T> ticket) {
-        if (ticket.isBindFlagSet()) {
-            throw new IllegalStateException("Cannot declare with " + ticket + " because it is already bound.");
-        }
-        ResourceView resource = create(producer, def, ticket.getName());
-        ticket.setBindFlag();
-        ticket.setLocalIndex(resource.getIndex());
-        return ticket;
+    public void declare(ResourceUser producer, ResourceDef<T> def, Ticket<Integer, ?> ticket) {
+        ticket.setIndex(create(producer, def));
     }
     
     /**
@@ -266,7 +248,7 @@ public class ResourceList {
      * participate in or affect culling. This is suitable for resources that
      * require allocation management but are not shared with other passes.
      * <p>
-     * Attempting to {@link #reference(codex.renthyl.modules.ModuleIndex, java.lang.String, codex.renthyl.resources.tickets.ResourceTicket)
+     * Attempting to {@link #reference(ModuleIndex, java.lang.String, codex.renthyl.resources.tickets.ResourceTicket)
      * reference} a temporary resource will result in an exception.
      * 
      * @param <T>
@@ -298,11 +280,12 @@ public class ResourceList {
      * @param passIndex
      * @param ticket 
      */
-    public void reserve(ModuleIndex passIndex, ResourceTicket ticket) {
-        if (ticket.getObjectId() >= 0) {
-            map.reserve(ticket.getObjectId(), passIndex);
+    public void reserve(ModuleIndex passIndex, Ticket<Long, ?> ticket) {
+        long id = ticket.getIndex();
+        if (id >= 0) {
+            map.reserve(id, passIndex);
             //ticket.copyObjectTo(locate(ticket).getTicket());
-            locate(ticket).setObjectId(ticket.getObjectId());
+            //locate(ticket).setObjectId(ticket.getObjectId());
         }
     }
     
@@ -589,7 +572,7 @@ public class ResourceList {
      */
     public void claimWritePermissions(ResourceTicket ticket) {
         if (ResourceTicket.validate(ticket)) {
-            locate(ticket).claimWritePermissions();
+            locate(ticket).getWritePermission();
         }
     }
     
@@ -603,7 +586,7 @@ public class ResourceList {
     public void waitForReadPermission(ResourceTicket ticket, long timeoutMillis) {
         if (ResourceTicket.validate(ticket)) {
             try {
-                fastLocate(ticket).waitForReadPermissions(timeoutMillis);
+                fastLocate(ticket).getReadPermission(timeoutMillis);
             } catch (InterruptedException ex) {
                 throw new RuntimeException("Resource unreachable at " + ticket, ex);
             }

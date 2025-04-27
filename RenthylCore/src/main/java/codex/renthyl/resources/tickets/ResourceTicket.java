@@ -28,11 +28,8 @@
  */
 package codex.renthyl.resources.tickets;
 
-import codex.renthyl.export.TicketIndex;
-import codex.renthyl.resources.ResourceView;
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.Objects;
+import codex.renthyl.newresources.Socket;
+import codex.renthyl.resources.Ticket;
 
 /**
  * References a {@link RenderResource} by index.
@@ -45,263 +42,46 @@ import java.util.Objects;
  * @author codex
  * @param <T>
  */
-public class ResourceTicket <T> {
-    
-    public static final String RESERVED = "#";
-    public static final int INVALID = -1, FORCE_INVALID = -2;
-    
-    private final TicketGroup<T> group;
-    private String name;
-    private int localIndex = -1;
-    private long objectId = -1;
-    private boolean bound = false;
-    private ResourceTicket<T> source;
-    private final LinkedList<ResourceTicket<T>> targets = new LinkedList<>();
-    private TicketIndex exportIndex;
-    
+public class ResourceTicket <T> implements Ticket<Integer, T>, Socket<ResourceTicket<T>> {
+
+    private final String name;
+    private int index = -1;
+    private ResourceTicket<T> upstream;
+    private Ticket<Long, T> resourceRef = Ticket.ticket(-1L);
+
     public ResourceTicket(String name) {
-        this(null, name);
-    }
-    public ResourceTicket(TicketGroup<T> group, String name) {
-        this.group = group;
         this.name = name;
     }
-    
-    /**
-     * Sets the flag indicating that this ticket is currently bound to a ResourceView.
-     * That is, this ticket has been used to declare or reference a ResourceView,
-     * but has not yet released.
-     * <p>
-     * Called internally. <strong>Do not use.</strong>
-     */
-    public void setBindFlag() {
-        if (bound) {
-            throw new IllegalStateException("Cannot make multiple declarations/references with a single ticket: " + this);
+
+    @Override
+    public void setIndex(Integer index) {
+        this.index = index;
+    }
+    @Override
+    public Integer getIndex() {
+        if (upstream != null) {
+            return upstream.getIndex();
         }
-        bound = true;
+        return index;
     }
-    /**
-     * Clears the flag indicating that this ticket is currently bound to a ResourceView.
-     * <p>
-     * Called internally. <strong>Do not use.</strong>
-     * 
-     * @see #setBindFlag() 
-     */
-    public void clearBindFlag() {
-        bound = false;
+    @Override
+    public void setUpstream(ResourceTicket<T> upstream) {
+        this.upstream = upstream;
     }
-    /**
-     * Clears the bind flag and returns its previous value.
-     * <p>
-     * Called internally. <strong>Do not use.</strong>
-     * 
-     * @return 
-     * @see #setBindFlag()
-     */
-    public boolean pollBindFlag() {
-        boolean b = bound;
-        bound = false;
-        return b;
+
+    public void setResourceRef(Ticket<Long, T> resourceRef) {
+        this.resourceRef = resourceRef;
     }
-    
-    /**
-     * Clears all target tickets.
-     */
-    public void clearAllTargets() {
-        for (ResourceTicket<T> t : targets) {
-            t.source = null;
-        }
-        targets.clear();
-    }
-    
-    /**
-     * Sets the export index of this ticket.
-     * 
-     * @param exportIndex 
-     */
-    protected void setExportIndex(TicketIndex exportIndex) {
-        this.exportIndex = Objects.requireNonNull(exportIndex);
-    }
-    /**
-     * Clears the export index.
-     */
-    public void clearExportIndex() {
-        this.exportIndex = null;
-    }
-    /**
-     * Sets the source ticket.
-     * 
-     * @param source 
-     */
-    public void setSource(ResourceTicket source) {
-        if (this.source != source) {
-            if (source == this) {
-                throw new IllegalArgumentException("Ticket cannot have itself as its source.");
-            }
-            if (this.source != null) {
-                this.source.targets.remove(this);
-            }
-            if (group != null) {
-                group.ticketSourceChanged(this, source);
-            }
-            this.source = source;
-            if (this.source != null) {
-                this.source.targets.add(this);
-            }
-        }
-    }
-    /**
-     * Sets the name of this ticket.
-     * 
-     * @param name
-     * @return 
-     */
-    public ResourceTicket<T> setName(String name) {
-        this.name = name;
-        return this;
-    }
-    /**
-     * Sets the local index.
-     * <p>
-     * The local index is overriden if the source ticket is not null and
-     * the source's world index is not negative.
-     * 
-     * @param index
-     * @return 
-     */
-    public ResourceTicket<T> setLocalIndex(int index) {
-        this.localIndex = index;
-        return this;
-    }
-    /**
-     * Sets the object ID.
-     * 
-     * @param objectId 
-     */
-    public void setObjectId(long objectId) {
-        this.objectId = objectId;
-    }
-    
-    /**
-     * 
-     * @return 
-     */
+
     public String getName() {
         return name;
     }
-    /**
-     * 
-     * @return 
-     */
-    public TicketGroup<T> getGroup() {
-        return group;
-    }
-    /**
-     * Gets the world index.
-     * <p>
-     * World index for this ticket is inherited from this ticket's source. If the
-     * source ticket is null or its world index returns negative, this ticket's
-     * {@link #getLocalIndex() local index} will be returned instead.
-     * <p>
-     * The index, if not negative, corresponds to a {@link ResourceView}
-     * held by a {@link ResourceList}.
-     * 
-     * @return world index
-     */
-    public int getWorldIndex() {
-        if (source != null) {
-            int i = source.getWorldIndex();
-            if (i >= 0) return i;
-        }
-        return localIndex;
-    }
-    /**
-     * Returns the local index.
-     * <p>
-     * The index, if not negative, corresponds to a {@link ResourceView}
-     * held by a {@link ResourceList}.
-     * 
-     * @return local index
-     */
-    public int getLocalIndex() {
-        return localIndex;
-    }
-    /**
-     * The ID of the last object this ticket was associated with.
-     * 
-     * @return object ID, or -1 if this ticket was never associated with an object
-     */
-    public long getObjectId() {
-        return objectId;
-    }
-    /**
-     * 
-     * @return 
-     */
-    public ResourceTicket<T> getSource() {
-        return source;
-    }
-    /**
-     * Returns true if this ticket is currently associated with a ResourceView.
-     * That is, if this ticket was used to declare or reference a ResourceView
-     * and has not yet released.
-     * 
-     * @return 
-     */
-    public boolean isBindFlagSet() {
-        return bound;
-    }
-    /**
-     * Returns true if this source ticket is not null.
-     * 
-     * @return 
-     */
-    public boolean hasSource() {
-        return source != null;
-    }
-    /**
-     * Gets all tickets depending on this ticket.
-     * 
-     * @return 
-     */
-    public Collection<ResourceTicket<T>> getTargets() {
-        return targets;
-    }
-    /**
-     * Gets the export index of this ticket.
-     * 
-     * @return 
-     */
-    public TicketIndex getExportIndex() {
-        return exportIndex;
-    }
-    
     @Override
-    public String toString() {
-        return "Ticket[name=" + name + ", worldIndex=" + getWorldIndex() + "]";
+    public ResourceTicket<T> getUpstream() {
+        return upstream;
     }
-    
-    /**
-     * Returns true if the ticket is valid for locating a resource.
-     * <p>
-     * A ticket is only valid if it is not null and its {@link #getWorldIndex() worldIndex}
-     * is greater than or equal to zero.
-     * 
-     * @param ticket
-     * @return true if ticket is valid
-     */
-    public static boolean validate(ResourceTicket ticket) {
-        return ticket != null && ticket.getWorldIndex() >= 0;
+    public Ticket<Long, T> getResourceRef() {
+        return resourceRef;
     }
-    
-    /**
-     * 
-     * @param name 
-     */
-    public static void validateUserTicketName(String name) {
-        if (name.startsWith(RESERVED)) {
-            throw new IllegalArgumentException("Cannot start ticket name with reserved \""+RESERVED+"\".");
-        }
-    }
-    
+
 }

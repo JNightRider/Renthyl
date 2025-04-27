@@ -1,0 +1,80 @@
+Render Cycle:
+1. update
+2. _queueing
+3. _prepare
+4. execute
+5. reset
+
+Queue Position (detailing where the task is located in the execution queue)
+Input Set
+Output Set (inputs and outputs could possibly be merged)
+Execution
+
+"Tasks" are members with multiple inputs/outputs and perform a task.
+"ResourceWrappers" are members that have one output passing along their resource.
+In reality, tasks and resource wrappers are the same.
+
+Tasks that wish to create a resource to use will pose them as inputs, and will connect an "AllocatedResourceWrapper" to it by default.
+    Pro: flexibility in how resources are allocated. Instead of going through an allocation process, the user can override the default input to be more efficient.
+    Con: takes control over the necessary resource out of the tasks grasp.
+        This could be solved by making input sockets monitor and/or conform incoming resources.
+    Con: possibly introduces resource modification problems.
+        * This could be solved by introducing "queueing hints" that influence the order in which tasks are executed. In this case, the sockets would broadcast a strong "resource modification hint" detailing the queueing algorithm to queue the task as late as possible in the resource's lifetime. Meaning "after everything else finishes, transfer to this". This may need to be a feature anyway?
+
+How are members connected? I think that having sockets is the best approach. Each socket can reference an upstream socket from which it receives incoming resources. Should "output sockets" be able to reference an upstream socket?
+    Pro: gives the ability to override resources produced by a task. Not really an amazing feature.
+    Pro: input and output sockets can be treated the same.
+    Con: obfuscates the lifetime of resources.
+
+What should manage resources? Ideally, resources should be managed solely by the tasks that create them. For that, the tasks need callbacks for various possible stages in the resources lifetime, most importantly it no longer being used. Tasks are associated with any number of different resources, so the responsibility falls on sockets to correctly manage the resources.
+
+How should resources be represented? I see two ways to share resources:
+1. Sockets recursively request the resource from their upstream socket.
+2. Sockets pull the resource down from the upstream socket.
+The first method centralizes access to the resource, which I really like. It is also persistent which gives more control over the resource. I see no clear reason to choose 2 over 1.
+
+Most importantly, resources must have predictable lifetimes. The previous method was to tally the number of references and simultaneously build a timeline for the resource. My idea is to have sockets track the number of references, referencing cullables, and the timeline of their produced resources. The number of references is useful for determining exactly when the resource becomes redundent. The referencing cullables is used to determine culling. The timeline will of course be used in allocation situations.
+
+How should resources be modified? When a resource is finally released, the owning socket will do its normal cleanup, possibly destroying the resource for good. We need the socket to "hand over" the resource as-is. The most straight-forward solution is to add a method to socket specifically for this case.
+    Pro: straightforward and easy to do.
+    Con: requires extra API for a possibly fringe feature.
+    Con: could collide with automatic resource allocation.
+Another solution is to artifically extend the resource's lifetime according to further references.
+    Pro: works well with resource management.
+    Con: the information necessary to forward to the original socket may not be available when the modifying socket is evaluated.
+Another solution is to "link" the two sockets together so their information is shared at the proper time.
+    Pro: works well with resource management.
+    Con: how does the outgoing socket communicate with the incoming socket?
+This shouldn't be a complicated, built-in feature!!! So how do I get it to work with only implementation? Maybe resources should be encapsulated with something that also associates it with an ID? Resources that look different can be the same under the hood because of how ResourceDef works, so it that would probably be a good idea anyway. No, that wouldn't work. After the original socket is done with its resource, it could do anything with it, even destroy it. The purpose of the ExtensionSocket is to ensure the original socket doesn't do that and instead hand over responsibility to the ExtensionSocket. That requires a special method be made to hand over responsibility. What else could that be used for?
+
+A new idea to simultaneously execute and cull the graph:
+When a task is executed, it also executes its upstream sockets, which execute their tasks. Tasks that have already executed return without doing anything. Tasks that should be "culled" will implicitely not be executed. The tasks that are always executed are registered with the FrameGraph which simply executes each registered task without worrying at all! The only problem this method poses is scheduling resources. I think this can be solved by instead queueing using this method, and then simply executing each task in order in the queue. In order to solidify the correct order in multithreaded renders, tasks can be temporarily skipped if their upstream tasks have not executed yet.
+
+Reserving is the only reason scheduling exists. If there were a better way to handle reservations, then such shenanigans wouldn't be necessary. Tasks could be run in any order on the fly. One idea I have is to simply remove the reserved resource from regular allocation before any execution.
+    Pro: doesn't require a strict schedule.
+    Con: destroys allocation paradigm.
+What about executing tasks the same way tasks are (or would be) queued?
+
+How should resources be transformed into the correct form? The most straightforward answer is to only allow Sockets of like types to
+connect. But what if the resource is not the same type as the receiving socket, but the socket can transform it (such as image to texture)? This means that any socket type should be able to plug into any given socket, which means the upstream acquire call returns an Object object rather than a T object. An obvious solution would be to have the receiving socket apply a ResourceDef to the incoming resource, but that will lead to a lot of overhead as ResourceDefs evaluate resources that require no mutation at all.
+Perhaps a better solution would be to require upstream sockets to match downstream sockets, but then make a special task that mutate
+
+Here's another idea for queueing tasks: create a constraint set that a process solves to be as efficient as possible. If the solving process is too intensive, make a cheap guess at first and improve it from frame to frame.
+How would this constraint set be compiled? Each element would be the form of: this task after another task. This reveals a weakness with the current design: connections are not concrete... sockets would be required to internally tally these connections with implementation.
+
+I could do the constraint set idea directly, IF sockets publicly expose their owning task, which I don't want.
+
+How can a modifying socket detect when to run?
+* Blocks until everything that references the top upstream socket are complete, EXCEPT the ones that are downstream from this socket.
+* Blocks until literally nothing else can be done? Introduces bottlenecks.
+* Queue sorts tasks into stages. The modifying task includes a hint to be moved as low as possible. This could be done, but requires breadth-first traversal of the graph.
+
+Really, a resource barrier needs to be placed just before the modifying socket. How does the resource barrier know when all other resource usages are completed? What about not queueing, but instead starting from the graph roots and executing referencers from there? That destroys resource allocation.
+
+Perhaps I'm overthinking this. I'm assuming that the modifying socket must function almost exactly like any other socket. But in what way could it possibly work differently? The reason it is supposed to work this way is to provide a stable resource schedule. I'VE GOT IT!!! The modifying socket will track the number of references it sees from downstream. When the number of active references at the root socket is equal to that number (plus one for the modifying socket), then the modifying task runs.
+
+ResourceDefs do two things: select a resource to use, and transform a resource into the correct form. The should accept Objects are parameters (not some sort of wrapper) to maintain flexibility. There is a really good chance I will want to use them in different places as well. This could be done fairly easily if it weren't that the ResourceAllocator needs to also return the resource's ID, so that requesters can reserve and specifically select the resource by the ID. Technically the same thing could be done using the resource itself, but that gets into hashing issues I really don't want to deal with.
+
+
+
+

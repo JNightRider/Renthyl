@@ -30,6 +30,8 @@ package codex.renthyl.resources;
 
 import codex.renthyl.modules.ModuleIndex;
 
+import java.util.Objects;
+
 /**
  * Represents a period of time starting at the start of the indexed pass, and
  * lasting for the duration of a number of following passes.
@@ -47,19 +49,11 @@ public class TimeFrame {
     private int thread;
     private int start, length;
     private boolean async = false;
-    
-    /**
-     * 
-     */
+
     private TimeFrame() {}
-    /**
-     * 
-     * @param index
-     * @param length 
-     */
-    public TimeFrame(ModuleIndex index, int length) {
-        this.thread = index.getThreadIndex();
-        this.start = index.getQueueIndex();
+    public TimeFrame(int thread, int start, int length) {
+        this.thread = thread;
+        this.start = start;
         this.length = length;
         if (this.start < 0) {
             throw new IllegalArgumentException("Pass index cannot be negative.");
@@ -68,12 +62,10 @@ public class TimeFrame {
             throw new IllegalArgumentException("Length cannot be negative.");
         }
     }
-    
-    /**
-     * Extends the length so that this time frame includes the given index.
-     * 
-     * @param passIndex 
-     */
+    public TimeFrame(ModuleIndex index, int length) {
+        this(index.getThreadIndex(), index.getQueueIndex(), length);
+    }
+
     public void extendTo(ModuleIndex passIndex) {
         if (passIndex.getThreadIndex() != thread) {
             async = true;
@@ -81,12 +73,6 @@ public class TimeFrame {
             length = Math.max(length, passIndex.getQueueIndex()-start);
         }
     }
-    /**
-     * Copies this to the target time frame.
-     * 
-     * @param target
-     * @return 
-     */
     public TimeFrame copyTo(TimeFrame target) {
         if (target == null) {
             target = new TimeFrame();
@@ -97,11 +83,6 @@ public class TimeFrame {
         target.async = async;
         return target;
     }
-    /**
-     * Merges the given timeframe into this timeframe.
-     * 
-     * @param frame 
-     */
     public void merge(TimeFrame frame) {
         int end = Math.max(start+length, frame.start+frame.length);
         start = Math.min(start, frame.start);
@@ -111,67 +92,42 @@ public class TimeFrame {
             length = end-start;
         }
     }
-    
-    /**
-     * Gets the index of the thread this timeframe is based from.
-     * 
-     * @return 
-     */
+
     public int getThreadIndex() {
         return thread;
     }
-    /**
-     * Gets index of the first pass this time frame includes.
-     * 
-     * @return 
-     */
     public int getStartQueueIndex() {
         return start;
     }
-    /**
-     * Gets the length.
-     * 
-     * @return 
-     */
     public int getLength() {
         return length;
     }
-    /**
-     * Gets index of the last pass this time frame includes.
-     * 
-     * @return 
-     */
     public int getEndQueueIndex() {
         return start+length;
     }
-    /**
-     * Returns true if this timeframe is asynchronous.
-     * <p>
-     * An asynchronous timeframe's end index is unreliable.
-     * 
-     * @return 
-     */
     public boolean isAsync() {
         return async;
     }
-    
-    /**
-     * Returns true if this time frame overlaps the given time frame.
-     * 
-     * @param time
-     * @return 
-     */
+
     public boolean overlaps(TimeFrame time) {
         return start <= time.start+time.length && start+length >= time.start;
     }
-    /**
-     * Returns true if this time frame includes the given index.
-     * 
-     * @param index
-     * @return 
-     */
+    public boolean overlaps(ModuleIndex pos) {
+        return pos.queueIndex >= start && pos.queueIndex <= start + length && (async || pos.threadIndex == thread);
+    }
     public boolean includes(int index) {
         return start <= index && start+length >= index;
     }
-    
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        TimeFrame timeFrame = (TimeFrame) o;
+        return thread == timeFrame.thread && start == timeFrame.start && length == timeFrame.length && async == timeFrame.async;
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hash(thread, start, length, async);
+    }
+
 }

@@ -28,8 +28,7 @@
  */
 package codex.renthyl.definitions;
 
-import codex.renthyl.resources.EvaluatedResource;
-import codex.renthyl.resources.RenderObject;
+import codex.renthyl.resources.ResourceException;
 
 import java.util.function.Consumer;
 
@@ -55,14 +54,14 @@ public interface ResourceDef <T> {
      * @param resource
      * @return the resource if approved, otherwise null
      */
-    float evaluateResource(Object resource);
+    Float evaluateResource(Object resource);
 
     /**
      * Configures the resource for allocation once it has been chosen.
      *
      * @param resource
      */
-    T applyResource(Object resource);
+    T conformResource(Object resource) throws ResourceException;
     
     /**
      * Returns the number of frames which the resource must be
