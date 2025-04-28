@@ -36,11 +36,6 @@ public class BasicTask implements RenderTask {
     }
 
     @Override
-    public boolean ready() {
-        return sockets.stream().allMatch(Socket::isUpstreamAvailable);
-    }
-
-    @Override
     public void queue(ExecutionQueue queue) {
         if (!queued) {
             // set flag immediately in anticipation of callbacks from sockets
@@ -51,6 +46,11 @@ public class BasicTask implements RenderTask {
             }
             position = queue.add(this);
         }
+    }
+
+    @Override
+    public boolean ready() {
+        return sockets.stream().allMatch(Socket::isUpstreamAvailable);
     }
 
     @Override

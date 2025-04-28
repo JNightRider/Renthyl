@@ -28,6 +28,7 @@
  */
 package codex.renthyl.definitions;
 
+import codex.renthyl.newresources.Disposer;
 import codex.renthyl.resources.ResourceException;
 
 import java.util.function.Consumer;
@@ -39,7 +40,7 @@ import java.util.function.Consumer;
  * @author codex
  * @param <T>
  */
-public interface ResourceDef <T> {
+public interface ResourceDef <T> extends Disposer<T> {
     
     /**
      * Creates a new resources from scratch.
@@ -52,9 +53,9 @@ public interface ResourceDef <T> {
      * Checks if the resource can be allocated.
      * 
      * @param resource
-     * @return the resource if approved, otherwise null
+     * @return evaluation score of the resource
      */
-    Float evaluateResource(Object resource);
+    Comparable evaluateResource(Object resource);
 
     /**
      * Configures the resource for allocation once it has been chosen.
@@ -62,83 +63,16 @@ public interface ResourceDef <T> {
      * @param resource
      */
     T conformResource(Object resource) throws ResourceException;
-    
+
     /**
-     * Returns the number of frames which the resource must be
-     * static (unused throughout rendering) before it is disposed.
-     * <p>
-     * If negative, the default timeout value will be used instead.
-     * 
-     * @return static timeout duration
+     * Tests if the evaluation score is final; that is, the corresponding
+     * resource is perfect according to this definition.
+     *
+     * @param score
+     * @return
      */
-    default int getStaticTimeout() {
-        return -1;
-    }
-    
-    /**
-     * Gets the Consumer used to dispose of a resource.
-     * 
-     * @return resource disposer, or null
-     */
-    default Consumer<T> getDisposalMethod() {
-        return null;
-    }
-    
-    /**
-     * Returns true if resources can be reallocated to this definition.
-     * 
-     * @return 
-     */
-    default boolean isUseExisting() {
-        return true;
-    }
-    
-    /**
-     * Returns true if reallocation of this definition's resource is allowed
-     * casually without a specific object id.
-     * 
-     * @return 
-     */
-    default boolean isAllowCasualAllocation() {
-        return true;
-    }
-    
-    /**
-     * Returns true if reserving this definition's resource is allowed.
-     * 
-     * @return 
-     */
-    default boolean isAllowReservations() {
-        return true;
-    }
-    
-    /**
-     * Returns true if the resource should be disposed after being
-     * released and having no users.
-     * 
-     * @return 
-     */
-    default boolean isDisposeOnRelease() {
-        return false;
-    }
-    
-    /**
-     * Returns true if the resource can be read concurrently.
-     * 
-     * @return 
-     */
-    default boolean isReadConcurrent() {
-        return true;
-    }
-    
-    /**
-     * Disposes the resource using the disposal method, if not null.
-     * 
-     * @param resource 
-     */
-    default void dispose(T resource) {
-        Consumer<T> d = getDisposalMethod();
-        if (d != null) d.accept(resource);
+    default boolean isPerfectEvaluation(Float score) {
+        return score != null && score <= 0f;
     }
     
 }

@@ -5,9 +5,9 @@ import codex.renthyl.resources.ResourceException;
 
 public class AllocationSocket<T> extends ModifyingSocket<T> {
 
-    private final ResourceAllocator<AllocatedResource> allocator;
+    private final ResourceAllocator allocator;
     private final ResourceDef<T> def;
-    private AllocatedResource allocated;
+    private ResourceWrapper wrapper;
     private T resource;
     private int startingPosition = Integer.MAX_VALUE;
     private int endingPosition = -1;
@@ -32,12 +32,12 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
         }
         if (resource == null) {
             // TODO: address concurrent issues with acquiring resources
-            if (allocated == null || def.evaluateResource(allocated.get()) == null
-                    || !allocated.acquire(startingPosition, endingPosition)) {
-                allocated = allocator.allocate(def, startingPosition, endingPosition);
+            if (wrapper == null || def.evaluateResource(wrapper.get()) == null
+                    || !wrapper.acquire(startingPosition, endingPosition)) {
+                wrapper = allocator.allocate(def, startingPosition, endingPosition);
             }
             try {
-                resource = def.conformResource(allocated.get());
+                resource = def.conformResource(wrapper.get());
             } catch (ResourceException e) {
                 throw new RuntimeException("Failed to conform resource.", e);
             }
@@ -48,8 +48,8 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
     @Override
     public void release() {
         super.release();
-        if (allocated != null && activeRefs <= 0) {
-            allocated.release();
+        if (wrapper != null && activeRefs <= 0) {
+            wrapper.release();
             resource = null;
         }
     }

@@ -75,6 +75,6 @@ Perhaps I'm overthinking this. I'm assuming that the modifying socket must funct
 
 ResourceDefs do two things: select a resource to use, and transform a resource into the correct form. The should accept Objects are parameters (not some sort of wrapper) to maintain flexibility. There is a really good chance I will want to use them in different places as well. This could be done fairly easily if it weren't that the ResourceAllocator needs to also return the resource's ID, so that requesters can reserve and specifically select the resource by the ID. Technically the same thing could be done using the resource itself, but that gets into hashing issues I really don't want to deal with.
 
-
+For handling selected resources, I think each AllocationSocket (or ResourceDef) should maintain a list of acceptable resources sorted by best match first. When looking for resources to allocated, the ResourceDef simply iterates through the list until a good resource is found. This cuts down on the number of resources that must be tried, and thus reduces resource evaluations.
 
 
