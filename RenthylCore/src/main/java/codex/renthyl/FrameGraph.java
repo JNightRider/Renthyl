@@ -31,6 +31,9 @@ package codex.renthyl;
 import codex.renthyl.jobs.ExecutionJobList;
 import codex.boost.export.SavableObject;
 import codex.renthyl.modules.ModuleIndex;
+import codex.renthyl.newresources.BasicExecutionQueue;
+import codex.renthyl.newresources.Renderable;
+import codex.renthyl.newresources.RenderingQueue;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.asset.FrameGraphKey;
 import codex.renthyl.client.GraphSetting;
@@ -49,7 +52,13 @@ import com.jme3.renderer.RendererException;
 import com.jme3.renderer.pipeline.RenderPipeline;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Node;
+
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import codex.renthyl.jobs.FGJobExecutor;
@@ -120,648 +129,75 @@ import java.util.LinkedList;
  * 
  * @author codex
  */
-public class FrameGraph implements RenderPipeline<FGPipelineContext>, LayoutMember {
-    
-    private static final Logger LOG = Logger.getLogger(FrameGraph.class.getName());
-    private static final long THREAD_WAIT_TIMEOUT = 5000;
+public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<FGPipelineContext> {
+
     public static final Class<FGPipelineContext> CONTEXT_TYPE = FGPipelineContext.class;
-    
-    private final AssetManager assetManager;
-    private final ResourceList resources;
+
     private final FGRenderContext context;
-    private final JobEventHandler jobHandler;
-    private final ExecutionJobList jobList;
-    private final HashMap<String, Object> settings = new HashMap<>();
-    private final LinkedList<FGExecutionJob> asyncJobs = new LinkedList<>();
-    private FGJobExecutor executor;
-    private RenderThread root;
-    private String name = "FrameGraph";
-    private boolean layoutUpdateNeeded = true;
+    private final RenderingQueue queue;
     private boolean rendered = false;
-    private boolean debugPrint = false;
-    private int nextModuleId = 0;
-    private Node debugNode;
-    
-    /**
-     * Creates a new blank framegraph.
-     * 
-     * @param assetManager asset manager (not null)
-     */
-    public FrameGraph(AssetManager assetManager) {
-        this.assetManager = assetManager;
-        this.resources = new ResourceList(this);
+
+    public FrameGraph() {
+        this(new BasicExecutionQueue(Executors.newCachedThreadPool()));
+    }
+
+    public FrameGraph(RenderingQueue queue) {
         this.context = new FGRenderContext(this);
-        this.jobHandler = new JobEventHandler();
-        this.jobList = new ExecutionJobList(this.jobHandler, this.context);
-        this.root = new RenderThread(MainThreadIndexSource.INSTANCE);
-        this.root.initializeModule(this);
-    }
-    /**
-     * Creates a new framegraph from the given data.
-     * 
-     * @param assetManager
-     * @param data 
-     */
-    public FrameGraph(AssetManager assetManager, FrameGraphData data) {
-        this(assetManager);
-        applyData(data);
-    }
-    /**
-     * Creates a new framegraph from data obtained by the given asset key.
-     * 
-     * @param assetManager
-     * @param key 
-     */
-    public FrameGraph(AssetManager assetManager, FrameGraphKey key) {
-        this(assetManager, assetManager.loadAsset(key));
-    }
-    /**
-     * Creates a new framegraph from data obtained by the given asset name.
-     * 
-     * @param assetManager
-     * @param dataAsset 
-     */
-    public FrameGraph(AssetManager assetManager, String dataAsset) {
-        this(assetManager, assetManager.loadAsset(new FrameGraphKey(dataAsset)));
+        this.queue = queue;
     }
     
     @Override
     public FGPipelineContext fetchPipelineContext(RenderManager rm) {
         return rm.getContext(CONTEXT_TYPE);
     }
+
     @Override
     public void startRenderFrame(RenderManager rm) {
         // require that renthyl be initialized
         Renthyl.requireInitialized();
     }
+
     @Override
     public void pipelineRender(RenderManager rm, FGPipelineContext pContext, ViewPort vp, float tpf) {
-        
-        // Never render after an error has occured in rendering.
-        // Resources could easily have been left in a bad state.
-        if (jobHandler.errorOccured()) {
-            throw new RendererException("An error occured during a previous render frame. "
-                    + "Aborting because it is dangerous to proceed.");
-        }
-        
+
+        // target viewport
         rm.applyViewPort(vp);
         context.target(rm, pContext, vp, tpf);
-        
-        // update
-        if (!rendered) {
-            resources.beginRenderFrame(pContext.getRenderObjects());
-        }
-        root.updateModule(context, tpf);
-        
+
         // prepare
-        boolean updateNeeded = !context.isTemporalCulling() || layoutUpdateNeeded;
-        if (updateNeeded) {
-            jobList.flush();
-            root.queueModule(context, jobList, ModuleIndex.MAIN_THREAD);
+        for (Renderable t : this) {
+            t.queue(queue);
         }
-        root.prepareRender(context);
-        resources.applyFutureReferences();
-        
-        // cull modules and resources
-        if (updateNeeded) {
-            root.countReferences();
-            resources.cullUnreferenced();
-            layoutUpdateNeeded = false;
+        for (Renderable t : queue) {
+            t.update(tpf);
         }
-        
-        // execute
-        FGJobExecutor ex = fetchExecutor(pContext);
-        jobHandler.start(jobList.getNumActiveJobs());
-        ex.submitExecutionJobs(jobList.gatherActiveAsyncJobs(asyncJobs));
-        jobList.getMainJob().run();
-        jobHandler.waitForActiveJobs(THREAD_WAIT_TIMEOUT);
-        if (jobHandler.errorOccured()) {
-            throw new RendererException("An error occured while executing a job.");
-        }
-        
+        queue.forEach(Renderable::prepare);
+
+        // render
+        final int numRenderWorkers = 1;
+        queue.render(numRenderWorkers, context);
+
         // reset
-        context.popActiveModes();
-        root.resetRender(context);
-        pContext.getRenderObjects().clearReservations();
-        resources.reset();
-        asyncJobs.clear();
+        queue.forEach(Renderable::reset);
+        queue.flush();
         rm.getRenderer().clearClipRect();
-        
         rendered = true;
         
     }
+
     @Override
     public boolean hasRenderedThisFrame() {
         return rendered;
     }
+
     @Override
     public void endRenderFrame(RenderManager rm) {
-        root.renderingComplete();
-        resources.endRenderFrame();
         rendered = false;
     }
-    @Override
-    public void setLayoutUpdateNeeded() {
-        layoutUpdateNeeded = true;
-    }
-    @Override
-    public String toString() {
-        return "FrameGraph ("+name+")";
-    }
-    
-    private FGJobExecutor fetchExecutor(FGPipelineContext pContext) {
-        return executor != null ? executor : pContext.getDefaultExecutor();
-    }
-    
-    /**
-     * Adds the pass to end of the root container.
-     * 
-     * @param <T>
-     * @param module
-     * @return given pass
-     */
-    public <T extends RenderModule> T add(T module) {
-        root.add(module);
-        return module;
-    }
-    
-    /**
-     * Adds the module at the index in the root container.
-     * 
-     * @param <T>
-     * @param module
-     * @param index
-     * @return 
-     */
-    public <T extends RenderModule> T add(T module, int index) {
-        root.add(module, index);
-        return module;
-    }
-    
-    /**
-     * Adds an array of passes connected in series to the framegraph.
-     * <p>
-     * The named input ticket on each pass (except the first) is connected to
-     * the named output ticket on the previous pass, creating a series of connected
-     * passes. The array length determines the number of passes that will be added
-     * and connected.
-     * <p>
-     * Null elements of the array are replaced using the Function.
-     * 
-     * @param <T>
-     * @param array array of passes (elements may be null)
-     * @param factory creates passes where array elements are null (may be null)
-     * @param inTicket name of the input ticket on each pass
-     * @param outTicket name of the output ticket on each pass
-     * @return array of passes
-     */
-    public <T extends RenderModule> T[] addLoop(T[] array, Function<Integer, T> factory,
-            String inTicket, String outTicket) {
-        root.addLoop(array, -1, factory, inTicket, outTicket);
-        return array;
-    }
-    
-    /**
-     * Adds an array of passes connected in series to the framegraph.
-     * <p>
-     * The named input ticket on each pass (except the first) is connected to
-     * the named output ticket on the previous pass.
-     * 
-     * @param <T>
-     * @param array array of passes (elements may be null)
-     * @param index index that passes are added to
-     * @param function creates passes where array elements are null (may be null)
-     * @param inTicket name of the input ticket on each pass
-     * @param outTicket name of the output ticket on each pass
-     * @return array of passes
-     */
-    public <T extends RenderModule> T[] addLoop(T[] array, int index,
-            Function<Integer, T> function, String inTicket, String outTicket) {
-        root.addLoop(array, index, function, inTicket, outTicket);
-        return array;
-    }
-    
-    /**
-     * Gets the first pass that qualifies.
-     * 
-     * @param <T>
-     * @param by
-     * @return first qualifying pass, or null
-     */
-    public <T extends RenderModule> T get(ModuleLocator<T> by) {
-        return (T)root.get(by);
-    }
-    
-    /**
-     * Registers the object under the name in the settings map.
-     * <p>
-     * Registered objects can be referenced by passes by name. Any existing
-     * object already registered under the name will be replaced.
-     * 
-     * @param <T>
-     * @param name
-     * @param object
-     * @return given object
-     */
-    public <T> T setSetting(String name, T object) {
-        settings.put(name, object);
-        return object;
-    }
-    
-    /**
-     * Registers the object under the name in the settings map, and creates
-     * a {@link GraphSetting} with the same name.
-     * 
-     * @param <T>
-     * @param name
-     * @param object
-     * @param defaultValue
-     * @return created graph setting
-     * @see #setSetting(java.lang.String, java.lang.Object)
-     */
-    public <T> GraphSetting<T> setSetting(String name, T object, T defaultValue) {
-        setSetting(name, object);
-        return new GraphSetting<>(name, defaultValue);
-    }
-    
-    /**
-     * Sets an integer in the settings map based on a boolean value.
-     * <p>
-     * If the boolean is true, 0 is written, otherwise -1 is written. Commonly
-     * used to enable/disable features by switching a {@link Junction} to 0 or -1.
-     * 
-     * @param name
-     * @param enable
-     * @return 
-     * @see #setSetting(java.lang.String, java.lang.Object)
-     */
-    public int enableFeature(String name, boolean enable) {
-        return setSetting(name, enable ? 0 : -1);
-    }
-    
-    /**
-     * Enables the named feature if it is disabled, and vise versa.
-     * 
-     * @param name
-     * @return 
-     * @see #enableFeature(java.lang.String, boolean)
-     */
-    public boolean toggleFeature(String name) {
-        return enableFeature(name, !isFeatureEnabled(name)) == 0;
-    }
-    
-    /**
-     * Gets the object registered under the name in the settings map,
-     * or null if none is registered.
-     * 
-     * @param <T>
-     * @param name
-     * @return registered object, or null
-     */
-    public <T> T getSetting(String name) {
-        Object obj = settings.get(name);
-        if (obj != null) {
-            return (T)obj;
-        } else {
-            return null;
-        }
-    }
-    
-    /**
-     * Gets the object of the type registered under the name in
-     * the settings map.
-     * 
-     * @param <T>
-     * @param name
-     * @param type
-     * @return registered object, or null
-     */
-    public <T> T getSetting(String name, Class<T> type) {
-        Object obj = settings.get(name);
-        if (obj != null && type.isAssignableFrom(obj.getClass())) {
-            return (T)obj;
-        } else {
-            return null;
-        }
-    }
-    
-    /**
-     * Returns true if the named feature is enabled.
-     * 
-     * @param name
-     * @return 
-     * @see #enableFeature(java.lang.String, boolean) 
-     */
-    public boolean isFeatureEnabled(String name) {
-        Integer feature = getSetting(name, Integer.class);
-        return feature != null && feature == 0;
-    }
-    
-    /**
-     * Removes the object registered under the name in the settings map.
-     * 
-     * @param <T>
-     * @param name
-     * @return removed object, or null
-     */
-    public <T> T removeSetting(String name) {
-        Object obj = settings.remove(name);
-        if (obj != null) {
-            return (T)obj;
-        } else {
-            return null;
-        }
-    }
-    
-    /**
-     * Gets the settings map.
-     * <p>
-     * The returned map may be modified.
-     * 
-     * @return 
-     */
-    public HashMap<String, Object> getSettingsMap() {
-        return settings;
-    }
-    
-    /**
-     * Sets the executor responsible for executing this FrameGraph
-     * asynchronously.
-     * 
-     * @param executor 
-     */
-    public void setExecutor(FGJobExecutor executor) {
-        this.executor = executor;
-    }
-    
-    /**
-     * Sets the name of this FrameGraph.
-     * 
-     * @param name 
-     */
-    public void setName(String name) {
-        this.name = name;
-    }
-    
-    /**
-     * Enables temporal culling.
-     * <p>
-     * Temporal culling forces the FrameGraph into rendering the same jobs of the
-     * previous frame. Modules that were executed last frame are guaranteed to
-     * execute, and modules that were culled last frame are guaranteed not to
-     * be prepared or executed. This makes the rendering process more efficient,
-     * as the many processes can be outright skipped.
-     * <p>
-     * If the FrameGraph's layout does change (such as adding/removing a module or
-     * connecting/disconnecting tickets), {@link #setLayoutUpdateNeeded()} must be
-     * called, otherwise the changes may not be recognized or an exception may occur.
-     * For most operations (especially common operations), {@link #setLayoutUpdateNeeded()}
-     * is called automatically.
-     * <p>
-     * default=true (enabled)
-     * 
-     * @param temporalCulling 
-     */
-    public void setTemporalCulling(boolean temporalCulling) {
-        context.setTemporalCulling(temporalCulling);
-    }
-    
-    /**
-     * Enables printing of information useful for debugging.
-     * <p>
-     * default=false
-     * 
-     * @param debugPrint 
-     */
-    public void enableDebugPrint(boolean debugPrint) {
-        this.debugPrint = debugPrint;
-    }
-    
-    /**
-     * Gets the root container for this FrameGraph that all modules
-     * are descended from.
-     * 
-     * @return 
-     */
-    public RenderContainer getRoot() {
-        return root;
-    }
-    
-    /**
-     * Gets the {@link AssetManager} assigned to this FrameGraph.
-     * 
-     * @return 
-     */
-    public AssetManager getAssetManager() {
-        return assetManager;
-    }
-    
-    /**
-     * Gets the {@link ResourceList} that manages resources for this FrameGraph.
-     * 
-     * @return 
-     */
-    public ResourceList getResources() {
-        return resources;
-    }
-    
-    /**
-     * Gets the rendering context.
-     * 
-     * @return 
-     */
-    public FGRenderContext getContext() {
-        return context;
-    }
-    
-    /**
-     * Gets the RenderManager.
-     * 
-     * @return 
-     */
-    public RenderManager getRenderManager() {
-        return context.getRenderManager();
-    }
-    
-    /**
-     * Gets the executor responsible for executing this FrameGraph
-     * asynchronously.
-     * 
-     * @return 
-     */
-    public FGJobExecutor getExecutor() {
-        return executor;
-    }
-    
-    /**
-     * Gets the name of this framegraph.
-     * 
-     * @return 
-     */
-    public String getName() {
-        return name;
-    }
-    
-    /**
-     * Gets the node used for debug visualization.
-     * 
-     * @return 
-     */
-    public Node getDebugNode() {
-        if (debugNode == null) {
-            debugNode = new Node("FrameGraphDebugNode");
-        }
-        return debugNode;
-    }
-    
-    /**
-     * 
-     * @return 
-     * @see #setTemporalCulling(boolean) 
-     */
-    public boolean isTemporalCulling() {
-        return context.isTemporalCulling();
-    }
-    
-    /**
-     * 
-     * @return 
-     * @see #setLayoutUpdateNeeded() 
-     */
-    public boolean isLayoutUpdateNeeded() {
-        return layoutUpdateNeeded;
-    }
-    
-    /**
-     * Returns true if this framegraph is running asynchronously.
-     * 
-     * @return 
-     */
-    public boolean isAsync() {
-        return jobList.getNumActiveJobs() > 1;
-    }
-    
-    /**
-     * 
-     * @return 
-     */
-    public boolean isDebugPrintEnabled() {
-        return debugPrint;
-    }
-    
-    /**
-     * Applies the {@link FrameGraphData} to this FrameGraph.
-     * 
-     * @param data
-     * @return 
-     */
-    public final FrameGraph applyData(FrameGraphData data) {
-        name = data.getName();
-        for (SavableObject obj : data.getSettings()) {
-            setSetting(obj.getName(), obj.getObject());
-        }
-        return applyData(data.getModules());
-    }
-    
-    /**
-     * Applies the {@link ModuleGraphData} to this FrameGraph.
-     * 
-     * @param data
-     * @return this instance
-     * @throws IllegalStateException if the tree root is already a member of a FrameGraph
-     */
-    public final FrameGraph applyData(ModuleGraphData data) {
-        if (root != null) {
-            root.cleanupModule();
-        }
-        root = data.getRootModule(RenderThread.class);
-        if (root.isAssigned()) {
-            throw new IllegalStateException("Cannot apply module root that is already a member of a FrameGraph.");
-        }
-        root.setThreadIndexSource(MainThreadIndexSource.INSTANCE);
-        root.initializeModule(this);
-        setLayoutUpdateNeeded();
-        return this;
-    }
-    
-    /**
-     * Applies the {@link ModuleGraphData} to this FrameGraph.
-     * 
-     * @param data
-     * @return this instance
-     * @throws ClassCastException if the object is not an instance of {@link ModuleGraphData}.
-     * @throws NullPointerException if the object is null
-     */
-    public FrameGraph applyData(Object data) {
-        if (data != null) {
-            if (data instanceof FrameGraphData) {
-                return applyData((FrameGraphData)data);
-            } else if (data instanceof ModuleGraphData) {
-                return applyData((ModuleGraphData)data);
-            } else {
-                throw new ClassCastException(data.getClass()+" cannot be accepted as usable data.");
-            }
-        } else {
-            throw new NullPointerException("Data cannot be null.");
-        }
-    }
-    
-    /**
-     * Loads and applies {@link ModuleGraphData} from the key.
-     * 
-     * @param key
-     * @return 
-     */
-    public FrameGraph loadData(FrameGraphKey key) {
-        return applyData(assetManager.loadAsset(key));
-    }
-    
-    /**
-     * Loads and applies {@link ModuleGraphData} at the specified asset path.
-     * 
-     * @param assetPath
-     * @return 
-     */
-    public FrameGraph loadData(String assetPath) {
-        return applyData(assetManager.loadAsset(new FrameGraphKey(assetPath)));
-    }
-    
-    /**
-     * Creates an exportable version of this FrameGraph as {@link FrameGraphData}.
-     * 
-     * @return 
-     */
-    public FrameGraphData createData() {
-        return new FrameGraphData(this);
-    }
-    
-    /**
-     * Creates exportable version of this FrameGraph as {@link ModuleGraphData}.
-     * 
-     * @return 
-     */
-    public ModuleGraphData createModuleData() {
-        return new ModuleGraphData(root);
-    }
-    
-    /**
-     * Returns the next unique module id for this FrameGraph.
-     * 
-     * @return 
-     */
-    public final int getNextId() {
-        return nextModuleId++;
-    }
-    
-    private static final class MainThreadIndexSource implements GraphSource<Integer> {
 
-        public static final MainThreadIndexSource INSTANCE = new MainThreadIndexSource();
-        
-        @Override
-        public Integer getGraphValue(FrameGraph frameGraph, ViewPort viewPort) {
-            return ModuleIndex.MAIN_THREAD;
-        }
-        
+    public <T extends Renderable> T add(T task) {
+        super.add(task);
+        return task;
     }
     
 }

@@ -1,48 +1,170 @@
 package codex.renthyl.newresources;
 
-import java.util.Iterator;
+import codex.renthyl.FGRenderContext;
+
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class BasicExecutionQueue implements ExecutionQueue {
+public class BasicExecutionQueue implements RenderingQueue {
 
-    private final ConcurrentLinkedQueue<Executable> queue = new ConcurrentLinkedQueue<>();
+    private final ExecutorService service;
+    private final List<Worker> activeWorkers = new ArrayList<>();
+    private final List<Renderable> staged = new ArrayList<>();
+    private final Queue<Renderable> queue = new ConcurrentLinkedQueue<>();
+    private final Lock lock = new ReentrantLock();
+    private final Condition inactive = lock.newCondition();
+    private Exception error;
+
+    public BasicExecutionQueue(ExecutorService service) {
+        this.service = service;
+    }
 
     @Override
-    public int add(Executable ex) {
-        queue.add(ex);
+    public int add(Renderable r) {
+        staged.add(r);
         return queue.size() - 1;
     }
 
     @Override
-    public void executeNext(Worker worker) {
-        for (Iterator<Executable> it = queue.iterator(); it.hasNext();) {
-            Executable ex = it.next();
-            if (worker.run(ex)) {
-                it.remove();
-                break;
+    public void render(int workers, FGRenderContext context) {
+        if (workers <= 0) {
+            throw new IllegalArgumentException("Cannot have fewer than one worker.");
+        }
+        while (activeWorkers.size() < workers) {
+            activeWorkers.add(new Worker(activeWorkers.size(), context));
+        }
+        while (activeWorkers.size() > workers) {
+            activeWorkers.removeLast();
+        }
+        queue.addAll(staged);
+        Worker main = activeWorkers.getFirst();
+        for (Worker w : activeWorkers) {
+            if (w != main) {
+                service.execute(w);
             }
+        }
+        main.run();
+        if (error != null) {
+            throw new RuntimeException("Rendering failed with exception: " + error.getMessage(), error);
+        }
+    }
+
+    public void execute(Worker worker) throws InterruptedException, TimeoutException {
+        while (!queue.isEmpty() && error == null) {
+            int size = queue.size();
+            for (Iterator<Renderable> it = queue.iterator(); it.hasNext(); ) {
+                if (error != null) {
+                    break;
+                }
+                Renderable ex = it.next();
+                // submit task for execution
+                if (worker.submit(ex)) {
+                    worker.render(); // render submitted task
+                    it.remove();
+                    lock.lock();
+                    inactive.signalAll();
+                    lock.unlock();
+                    break;
+                }
+            }
+            if (size != queue.size() || error != null) {
+                continue;
+            }
+            // worker has become inactive
+            // if all workers end up here at once, a deadlock has occured
+            lock.lock();
+            while (size == queue.size() && error == null) {
+                if (!inactive.await(5000, TimeUnit.MILLISECONDS)) {
+                    throw new TimeoutException("Worker timed out waiting for tasks to complete.");
+                }
+            }
+            lock.unlock();
         }
     }
 
     @Override
-    public boolean containsAtPosition(Executable ex, int position) {
-        // TODO: this is not very efficient
-        return queue.contains(ex);
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return queue.isEmpty();
-    }
-
-    @Override
-    public void clear() {
+    public void flush() {
         queue.clear();
+        staged.clear();
     }
 
     @Override
-    public Iterator<Executable> iterator() {
-        return queue.iterator();
+    public Iterator<Renderable> iterator() {
+        return staged.iterator();
+    }
+
+    public void submitError(Exception error) {
+        if (this.error != null) {
+            return;
+        }
+        lock.lock();
+        if (this.error == null) {
+            this.error = error;
+            inactive.signalAll();
+        }
+        lock.unlock();
+    }
+
+    public class Worker implements Runnable, RenderWorker {
+
+        private final int index;
+        private final FGRenderContext context;
+        private Renderable task;
+        private boolean complete = false;
+
+        public Worker(int index, FGRenderContext context) {
+            this.index = index;
+            this.context = context;
+        }
+
+        @Override
+        public void run() {
+            try {
+                BasicExecutionQueue.this.execute(this);
+            } catch (TimeoutException e) {
+                submitError(new RuntimeException("Worker timed out waiting for runnable tasks.", e));
+            } catch (InterruptedException e) {
+                submitError(new RuntimeException("Worker interrupted waiting for runnable tasks.", e));
+            }
+        }
+
+        @Override
+        public int getThreadIndex() {
+            return index;
+        }
+
+        public boolean submit(Renderable task) {
+            if (this.task != null || complete || !task.claim(this)) {
+                return false;
+            }
+            this.task = task;
+            return true;
+        }
+
+        public void render() {
+            if (task == null) {
+                throw new NullPointerException("No renderable task submitted to execute.");
+            }
+            try {
+                task.render(context);
+            } catch (Exception ex) {
+                submitError(ex);
+            } finally {
+                task = null;
+            }
+        }
+
+        public void clean() {
+            task = null;
+            complete = false;
+        }
+
     }
 
 }

@@ -1,8 +1,8 @@
 package codex.renthyl.newresources;
 
-public class ModifyingSocket <T> extends BasicSocket<T> {
+public class ModifyingSocket <T> extends TransitSocket<T> {
 
-    public ModifyingSocket(RenderTask task) {
+    public ModifyingSocket(Renderable task) {
         super(task);
     }
 

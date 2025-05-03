@@ -14,4 +14,8 @@ public interface Socket <T> extends Queueable, Referenceable {
 
     void reset();
 
+    static <T> TransitSocket<T> create(Renderable task) {
+        return new TransitSocket<>(task);
+    }
+
 }

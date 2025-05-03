@@ -1,12 +1,12 @@
 package codex.renthyl.newresources;
 
-public class BasicSocket <T> implements Socket<T> {
+public class TransitSocket<T> implements Socket<T> {
 
-    protected final RenderTask task;
+    protected final Renderable task;
     protected Socket<T> upstream;
     protected int activeRefs = 0;
 
-    public BasicSocket(RenderTask task) {
+    public TransitSocket(Renderable task) {
         this.task = task;
     }
 
@@ -30,7 +30,7 @@ public class BasicSocket <T> implements Socket<T> {
 
     @Override
     public boolean isAvailableToDownstream() {
-        return task.isComplete();
+        return task.isRenderingComplete();
     }
 
     @Override
@@ -61,7 +61,7 @@ public class BasicSocket <T> implements Socket<T> {
     }
 
     @Override
-    public void queue(ExecutionQueue queue) {
+    public void queue(RenderingQueue queue) {
         // queue upstream before queueing owning task
         if (upstream != null) {
             upstream.queue(queue);
@@ -74,7 +74,7 @@ public class BasicSocket <T> implements Socket<T> {
         return activeRefs;
     }
 
-    protected Socket<T> getUpstreamRoot() {
+    public Socket<T> getUpstreamRoot() {
         Socket<T> up = this;
         while (up.getUpstream() != null) {
             up = up.getUpstream();

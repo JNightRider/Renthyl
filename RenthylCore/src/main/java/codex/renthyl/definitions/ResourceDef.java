@@ -55,7 +55,7 @@ public interface ResourceDef <T> extends Disposer<T> {
      * @param resource
      * @return evaluation score of the resource
      */
-    Comparable evaluateResource(Object resource);
+    Float evaluateResource(Object resource);
 
     /**
      * Configures the resource for allocation once it has been chosen.

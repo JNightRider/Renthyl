@@ -12,7 +12,7 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
     private int startingPosition = Integer.MAX_VALUE;
     private int endingPosition = -1;
 
-    public AllocationSocket(RenderTask task, ResourceAllocator allocator, ResourceDef<T> def) {
+    public AllocationSocket(Renderable task, ResourceAllocator allocator, ResourceDef<T> def) {
         super(task);
         this.allocator = allocator;
         this.def = def;
