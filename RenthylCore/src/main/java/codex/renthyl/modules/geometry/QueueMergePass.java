@@ -29,13 +29,8 @@
 package codex.renthyl.modules.geometry;
 
 import codex.renthyl.FGRenderContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.DynamicTicketList;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketGroup;
-import codex.renthyl.resources.tickets.TicketList;
+import codex.renthyl.newresources.*;
 
 /**
  * Merges a specified number of {@link GeometryQueue}s into one output queue.
@@ -51,42 +46,37 @@ import codex.renthyl.resources.tickets.TicketList;
  * 
  * @author codex
  */
-public class QueueMergePass extends RenderPass {
-    
-    private DynamicTicketList<GeometryQueue> queues;
-    private ResourceTicket<GeometryQueue> result;
-    private final GeometryQueue target = new GeometryQueue();
+public class QueueMergePass extends RenderTask {
 
-    public QueueMergePass() {}
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        result = addOutput("Result");
+    private final DynamicSocketList<TransitiveSocket<GeometryQueue>, GeometryQueue> queues
+            = new DynamicSocketList<>(this, () -> new TransitiveSocket<>(this));
+    private final ValueSocket<GeometryQueue> result = new ValueSocket<>(this, new GeometryQueue());
+
+    public QueueMergePass() {
+        addSockets(queues, result);
     }
+
     @Override
-    protected TicketGroup createMainInputGroup(String name) {
-        return (queues = new DynamicTicketList<>(name));
-    }
-    @Override
-    protected void prepare(FGRenderContext context) {
-        declare(null, result);
-        referenceOptional(queues);
-    }
-    @Override
-    protected void execute(FGRenderContext context) {
-        GeometryQueue[] array = acquireArrayOrElse(queues, n -> new GeometryQueue[n], null);
-        for (GeometryQueue q : array) {
-            if (q != null) {
-                target.add(q);
+    protected void renderTask(FGRenderContext context) {
+        queues.stream().map(Socket::acquire).forEach(g -> {
+            if (g != null) {
+                result.getValue().add(g);
             }
-        }
-        resources.setPrimitive(result, target);
+        });
     }
+
     @Override
-    protected void reset(FGRenderContext context) {
-        target.clear();
+    public void reset() {
+        super.reset();
+        queues.flushTerminalSockets();
     }
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
+
+    public DynamicSocketList<?, GeometryQueue> getQueues() {
+        return queues;
+    }
+
+    public Socket<GeometryQueue> getResult() {
+        return result;
+    }
     
 }

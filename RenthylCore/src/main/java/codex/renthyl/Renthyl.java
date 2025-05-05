@@ -7,9 +7,12 @@ package codex.renthyl;
 import codex.boost.material.ImmediateShader;
 import codex.renthyl.jobs.DefaultJobExecutor;
 import codex.renthyl.modules.ControlRenderPass;
+import codex.renthyl.modules.OutputPass;
+import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.newresources.MapToListPass;
 import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
@@ -106,15 +109,22 @@ public final class Renthyl {
     public static FrameGraph forward(AssetManager assetManager) {
         
         FrameGraph fg = new FrameGraph(assetManager);
-        fg.setName("Forward");
         
-        fg.add(new ControlRenderPass());
-        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.add(new QueueMergePass());
-        OutputGeometryPass out = fg.add(new OutputGeometryPass());
-        
-        merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
-        out.makeInput(merge, "Result", "Geometry");
+        fg.addTask(new ControlRenderPass());
+        SceneEnqueuePass enqueue = fg.addTask(SceneEnqueuePass.withLegacyQueues());
+        MapToListPass<String, GeometryQueue> queueTransfer = new MapToListPass<>(new String[] {
+                SceneEnqueuePass.OPAQUE, SceneEnqueuePass.SKY, SceneEnqueuePass.TRANSPARENT,
+                SceneEnqueuePass.GUI, SceneEnqueuePass.TRANSLUCENT});
+        QueueMergePass merge = fg.addTask(new QueueMergePass());
+        GeometryPass geometry = fg.addTask(new GeometryPass());
+        OutputPass out = fg.addTask(new OutputPass());
+
+        queueTransfer.getMap().setUpstream(enqueue.getQueues());
+        merge.getQueues().setUpstream(queueTransfer.getList());
+        geometry.getGeometry().setUpstream(merge.getResult());
+
+        out.getColor().setUpstream(geometry.getOutColor());
+        out.getDepth().setUpstream(geometry.getOutDepth());
         
         return fg;
         
@@ -197,6 +207,7 @@ public final class Renthyl {
     public DefaultJobExecutor getBaseExecutor() {
         return defaultExecutor;
     }
+
     /**
      * Gets the logging level used when a connection attempt fails
      * to connect anything.

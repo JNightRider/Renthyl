@@ -11,7 +11,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class BasicExecutionQueue implements RenderingQueue {
+public class BasicRenderingQueue implements RenderingQueue {
 
     private final ExecutorService service;
     private final List<Worker> activeWorkers = new ArrayList<>();
@@ -21,7 +21,7 @@ public class BasicExecutionQueue implements RenderingQueue {
     private final Condition inactive = lock.newCondition();
     private Exception error;
 
-    public BasicExecutionQueue(ExecutorService service) {
+    public BasicRenderingQueue(ExecutorService service) {
         this.service = service;
     }
 
@@ -126,7 +126,7 @@ public class BasicExecutionQueue implements RenderingQueue {
         @Override
         public void run() {
             try {
-                BasicExecutionQueue.this.execute(this);
+                BasicRenderingQueue.this.execute(this);
             } catch (TimeoutException e) {
                 submitError(new RuntimeException("Worker timed out waiting for runnable tasks.", e));
             } catch (InterruptedException e) {

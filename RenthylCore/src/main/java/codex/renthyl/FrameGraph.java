@@ -28,44 +28,22 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.jobs.ExecutionJobList;
-import codex.boost.export.SavableObject;
-import codex.renthyl.modules.ModuleIndex;
-import codex.renthyl.newresources.BasicExecutionQueue;
+import codex.renthyl.newresources.BasicRenderingQueue;
 import codex.renthyl.newresources.Renderable;
 import codex.renthyl.newresources.RenderingQueue;
 import codex.renthyl.resources.ResourceList;
-import codex.renthyl.asset.FrameGraphKey;
-import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
-import codex.renthyl.export.FrameGraphData;
-import codex.renthyl.export.ModuleGraphData;
-import codex.renthyl.jobs.FGExecutionJob;
-import codex.renthyl.jobs.JobEventHandler;
-import codex.renthyl.modules.Junction;
-import codex.renthyl.modules.ModuleLocator;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderThread;
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
-import com.jme3.renderer.RendererException;
 import com.jme3.renderer.pipeline.RenderPipeline;
 import com.jme3.renderer.ViewPort;
-import com.jme3.scene.Node;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
-import java.util.logging.Logger;
-import codex.renthyl.jobs.FGJobExecutor;
-import codex.renthyl.modules.LayoutMember;
-import codex.renthyl.modules.RenderModule;
+
 import codex.renthyl.modules.RenderPass;
-import java.util.LinkedList;
 
 /**
  * Manages render passes, dependencies, and resources in a node-based parameter system.
@@ -137,12 +115,12 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
     private final RenderingQueue queue;
     private boolean rendered = false;
 
-    public FrameGraph() {
-        this(new BasicExecutionQueue(Executors.newCachedThreadPool()));
+    public FrameGraph(AssetManager assetManager) {
+        this(assetManager, new BasicRenderingQueue(Executors.newCachedThreadPool()));
     }
 
-    public FrameGraph(RenderingQueue queue) {
-        this.context = new FGRenderContext(this);
+    public FrameGraph(AssetManager assetManager, RenderingQueue queue) {
+        this.context = new FGRenderContext(assetManager);
         this.queue = queue;
     }
     
@@ -195,8 +173,8 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         rendered = false;
     }
 
-    public <T extends Renderable> T add(T task) {
-        super.add(task);
+    public <T extends Renderable> T addTask(T task) {
+        add(task);
         return task;
     }
     

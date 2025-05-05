@@ -1,17 +1,20 @@
 package codex.renthyl.newresources;
 
-public class TransitSocket<T> implements Socket<T> {
+public class TransitiveSocket<T> implements Socket<T> {
 
     protected final Renderable task;
     protected Socket<T> upstream;
     protected int activeRefs = 0;
 
-    public TransitSocket(Renderable task) {
+    public TransitiveSocket(Renderable task) {
         this.task = task;
     }
 
     @Override
     public void setUpstream(Socket<T> upstream) {
+        if (activeRefs > 0) {
+            throw new IllegalStateException("Cannot have active references.");
+        }
         this.upstream = upstream;
     }
 
@@ -74,7 +77,7 @@ public class TransitSocket<T> implements Socket<T> {
         return activeRefs;
     }
 
-    public Socket<T> getUpstreamRoot() {
+    public Socket<T> getUpstreamTerminal() {
         Socket<T> up = this;
         while (up.getUpstream() != null) {
             up = up.getUpstream();

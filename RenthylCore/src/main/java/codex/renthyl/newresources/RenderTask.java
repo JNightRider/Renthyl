@@ -1,9 +1,9 @@
 package codex.renthyl.newresources;
 
 import codex.renthyl.FGRenderContext;
-import com.jme3.texture.Texture2D;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -11,17 +11,21 @@ public abstract class RenderTask implements Renderable {
 
     private static final int UNQUEUED = -2, QUEUING = -1, QUEUED = 0;
 
-    protected final Collection<Socket> sockets;
+    protected final FrameBufferManager buffers = new FrameBufferManager();
+    private final Collection<Socket> sockets = new ArrayList<>();
     private final AtomicBoolean claimed = new AtomicBoolean(false);
     private boolean complete = false;
     private int position = -1;
 
-    public RenderTask() {
-        this(new ArrayList<>());
-    }
-
-    protected RenderTask(Collection<Socket> sockets) {
-        this.sockets = sockets;
+    @Override
+    public void queue(RenderingQueue queue) {
+        if (position < QUEUING) {
+            // set flag immediately in anticipation of callbacks from sockets
+            position = QUEUING;
+            // queue upstream before queueing this
+            sockets.forEach(s -> s.queue(queue));
+            position = queue.add(this);
+        }
     }
 
     @Override
@@ -32,22 +36,7 @@ public abstract class RenderTask implements Renderable {
         if (position < QUEUED) {
             throw new IllegalStateException("Task is being prepared, but is not properly queued.");
         }
-        for (Socket s : sockets) {
-            s.reference(position);
-        }
-    }
-
-    @Override
-    public void queue(RenderingQueue queue) {
-        if (position < QUEUING) {
-            // set flag immediately in anticipation of callbacks from sockets
-            position = QUEUING;
-            // queue upstream before queueing this
-            for (Socket s : sockets) {
-                s.queue(queue);
-            }
-            position = queue.add(this);
-        }
+        sockets.forEach(s -> s.reference(position));
     }
 
     @Override
@@ -60,7 +49,7 @@ public abstract class RenderTask implements Renderable {
         // get resource from socket
         //Texture2D myTexture = mySocket.acquire();
         // do rendering stuff...
-        execute(context);
+        renderTask(context);
         // release sockets
         sockets.forEach(Referenceable::release);
         // I feel this could be done better somehow, but not really a big deal
@@ -78,13 +67,26 @@ public abstract class RenderTask implements Renderable {
         claimed.set(false);
         complete = false;
         position = UNQUEUED;
-        // reset all sockets
-        for (Socket s : sockets) {
-            s.reset();
-        }
+        // flush buffers
+        buffers.flush();
+        // reset sockets
+        sockets.forEach(Socket::reset);
     }
 
-    protected abstract void execute(FGRenderContext context);
+    protected <T extends Socket> T addSocket(T socket) {
+        sockets.add(socket);
+        return socket;
+    }
+
+    protected void addSockets(Socket... sockets) {
+        this.sockets.addAll(Arrays.asList(sockets));
+    }
+
+    protected void removeSocket(Socket socket) {
+        sockets.remove(socket);
+    }
+
+    protected abstract void renderTask(FGRenderContext context);
 
     public boolean isClaimed() {
         return claimed.get();

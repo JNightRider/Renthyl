@@ -29,16 +29,11 @@
 package codex.renthyl.modules.geometry;
 
 import codex.renthyl.FGRenderContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderEnvironment;
 import codex.renthyl.draw.RenderMode;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.newresources.*;
 import codex.renthyl.util.GeometryRenderHandler;
-import com.jme3.renderer.Camera;
-import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
@@ -59,57 +54,39 @@ import com.jme3.texture.Texture2D;
  * 
  * @author codex
  */
-public class GeometryPass extends RenderPass {
-    
-    private ResourceTicket<Texture2D> inColor, inDepth, outColor, outDepth;
-    private ResourceTicket<GeometryQueue> geometry;
-    private ResourceTicket<RenderEnvironment> environment;
+public class GeometryPass extends RenderTask {
+
+    private final Socket<GeometryQueue> geometry = new TransitiveSocket<>(this);
+    private final Socket<Texture2D> outColor, outDepth;
+    private final Socket<Texture2D> inColor = new TransitiveSocket<>(this);
+    private final Socket<Texture2D> inDepth = new TransitiveSocket<>(this);
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
-    
-    public GeometryPass() {}
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        inColor = addInput("Color");
-        inDepth = addInput("Depth");
-        geometry = addInput("Geometry");
-        environment = addInput("Environment");
-        outColor = addOutput("Color");
-        outDepth = addOutput("Depth");
+
+    public GeometryPass(ResourceAllocator allocator) {
+        addSockets(geometry, inColor, inDepth);
+        outColor = addSocket(new AllocationSocket<>(this, allocator, colorDef));
+        outDepth = addSocket(new AllocationSocket<>(this, allocator, depthDef));
         colorDef.setFormatFlexible(true);
         depthDef.setFormatFlexible(true);
     }
+
     @Override
-    protected void prepare(FGRenderContext context) {
-        int w = context.getWidth();
-        int h = context.getHeight();
-        colorDef.setSize(w, h);
-        depthDef.setSize(w, h);
-        declare(colorDef, outColor);
-        declare(depthDef, outDepth);
-        reserve(outColor, outDepth);
-        reference(geometry);
-        referenceOptional(inColor, inDepth);
-    }
-    @Override
-    protected void execute(FGRenderContext context) {
-        FrameBuffer fb = getFrameBuffer(context, 1);
-        resources.acquireColorTarget(fb, outColor);
-        resources.acquireDepthTarget(fb, outDepth);
-        //context.registerMode(RenderMode.background(ColorRGBA.BlackNoAlpha));
+    protected void renderTask(FGRenderContext context) {
+
+        colorDef.setSize(context.getWidth(), context.getHeight());
+        depthDef.setSize(colorDef);
+
+        FBuffer fb = buffers.getFrameBuffer(context.getWidth(), context.getHeight(), 1);
+        fb.setColorTargets(outColor.acquire());
+        fb.setDepthTarget(outDepth.acquire());
         context.registerMode(RenderMode.frameBuffer(fb));
         context.clearBuffers();
-        //System.out.println(inColor.getWorldIndex() + "   " + inColor.getLocalIndex());
-        //System.out.println(resources.acquireOrElse(inColor, null) + "    " + resources.acquireOrElse(inDepth, null));
-        context.renderTextures(resources.acquireOrElse(inColor, null), resources.acquireOrElse(inDepth, null));
-        resources.acquire(geometry).render(context, geometryHandler);
+        context.renderTextures(inColor.acquire(), inDepth.acquire());
+        geometry.acquire().render(context, geometryHandler);
+
     }
-    @Override
-    protected void reset(FGRenderContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
 
     public void setGeometryHandler(GeometryRenderHandler geometryHandler) {
         this.geometryHandler = geometryHandler;
@@ -126,5 +103,25 @@ public class GeometryPass extends RenderPass {
     public GeometryRenderHandler getGeometryHandler() {
         return geometryHandler;
     }
-    
+
+    public Socket<GeometryQueue> getGeometry() {
+        return geometry;
+    }
+
+    public Socket<Texture2D> getOutColor() {
+        return outColor;
+    }
+
+    public Socket<Texture2D> getOutDepth() {
+        return outDepth;
+    }
+
+    public Socket<Texture2D> getInColor() {
+        return inColor;
+    }
+
+    public Socket<Texture2D> getInDepth() {
+        return inDepth;
+    }
+
 }

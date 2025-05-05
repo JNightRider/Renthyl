@@ -31,7 +31,6 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
             return upstream.acquire();
         }
         if (resource == null) {
-            // TODO: address concurrent issues with acquiring resources
             if (wrapper == null || def.evaluateResource(wrapper.get()) == null
                     || !wrapper.acquire(startingPosition, endingPosition)) {
                 wrapper = allocator.allocate(def, startingPosition, endingPosition);

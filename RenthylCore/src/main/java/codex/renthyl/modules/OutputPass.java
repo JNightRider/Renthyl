@@ -29,15 +29,10 @@
 package codex.renthyl.modules;
 
 import codex.renthyl.FGRenderContext;
-import codex.renthyl.FrameGraph;
-import codex.renthyl.draw.RenderMode;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.newresources.RenderTask;
+import codex.renthyl.newresources.Socket;
+import codex.renthyl.newresources.TransitiveSocket;
 import com.jme3.texture.Texture2D;
-import java.io.IOException;
 
 /**
  * Renders a add of color and depth textures on a fullscreen quad to the
@@ -45,53 +40,34 @@ import java.io.IOException;
  * 
  * @author codex
  */
-public class OutputPass extends RenderPass {
-    
-    private ResourceTicket<Texture2D> color, depth;
-    private Float alphaDiscard;
+public class OutputPass extends RenderTask {
+
+    private final Socket<Texture2D> color = new TransitiveSocket<>(this);
+    private final Socket<Texture2D> depth = new TransitiveSocket<>(this);
+    private final Float alphaDiscard;
 
     public OutputPass() {
         this(null);
     }
     public OutputPass(Float alphaDiscard) {
         this.alphaDiscard = alphaDiscard;
+        addSockets(color, depth);
     }
-    
+
     @Override
-    protected void initialize(FrameGraph frameGraph) {
-        color = addInput("Color");
-        depth = addInput("Depth");
-    }
-    @Override
-    protected void prepare(FGRenderContext context) {
-        referenceOptional(color, depth);
-    }
-    @Override
-    protected void execute(FGRenderContext context) {
-        Texture2D colorTex = resources.acquireOrElse(color, null);
-        Texture2D depthTex = resources.acquireOrElse(depth, null);
+    protected void renderTask(FGRenderContext context) {
         if (alphaDiscard != null) {
             context.getScreen().setAlphaDiscard(alphaDiscard);
         }
-        context.renderTextures(colorTex, depthTex);
+        context.renderTextures(color.acquire(), depth.acquire());
     }
-    @Override
-    protected void reset(FGRenderContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
-    @Override
-    public boolean isUsed() {
-        return color.hasSource() || depth.hasSource();
+
+    public Socket<Texture2D> getColor() {
+        return color;
     }
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        OutputCapsule out = ex.getCapsule(this);
-        out.write(alphaDiscard, "AlphaDiscard", -1);
+
+    public Socket<Texture2D> getDepth() {
+        return depth;
     }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        InputCapsule in = im.getCapsule(this);
-        alphaDiscard = in.readFloat("AlphaDiscard", -1);
-    }
-    
+
 }

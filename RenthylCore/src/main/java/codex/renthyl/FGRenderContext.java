@@ -33,6 +33,7 @@ import codex.renthyl.draw.RenderEnvironment;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.util.FullScreenQuad;
 import codex.renthyl.draw.RenderMode;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.opencl.CommandQueue;
 import com.jme3.opencl.Context;
@@ -58,105 +59,72 @@ import java.util.ArrayDeque;
  * @author codex
  */
 public class FGRenderContext {
-    
-    private final FrameGraph frameGraph;
+
+    private final AssetManager assetManager;
     private RenderManager renderManager;
     private FGPipelineContext context;
     private ViewPort viewPort;
+    private int width, height;
     private float tpf;
     private final FullScreenQuad screen;
-    private boolean temporalCulling = true;
     
     private final ArrayDeque<RenderMode> activeModes = new ArrayDeque<>();
     private final DepthRange depth = new DepthRange();
     private final RenderEnvironment baseEnv = new RenderEnvironment();
 
-    /**
-     * 
-     * @param frameGraph
-     */
-    public FGRenderContext(FrameGraph frameGraph) {
-        this.frameGraph = frameGraph;
-        this.screen = new FullScreenQuad(this.frameGraph.getAssetManager());
+    public FGRenderContext(AssetManager assetManager) {
+        this.assetManager = assetManager;
+        this.screen = new FullScreenQuad(assetManager);
     }
-    
-    /**
-     * Targets this context to the viewport.
-     * 
-     * @param rm
-     * @param context
-     * @param vp
-     * @param tpf 
-     */
+
     public void target(RenderManager rm, FGPipelineContext context, ViewPort vp, float tpf) {
         this.renderManager = rm;
         this.context = context;
         this.viewPort = vp;
         this.tpf = tpf;
-        if (this.viewPort == null) {
-            throw new NullPointerException("ViewPort cannot be null.");
+        Renderer r = getRenderer();
+        r.setFrameBuffer(vp.getOutputFrameBuffer());
+        this.renderManager.setCamera(vp.getCamera(), false);
+        if (viewPort.isClearDepth() || viewPort.isClearColor() || viewPort.isClearStencil()) {
+            if (viewPort.isClearColor()) {
+                r.setBackgroundColor(viewPort.getBackgroundColor());
+            }
+            r.clearBuffers(viewPort.isClearColor(), viewPort.isClearDepth(), viewPort.isClearStencil());
         }
+        width = this.viewPort.getCamera().getWidth();
+        height = this.viewPort.getCamera().getHeight();
         baseEnv.fromRenderManager(this.renderManager);
         baseEnv.fromViewPort(this.viewPort);
-    }
-    /**
-     * Returns true if the context is ready for rendering.
-     *
-     * @return
-     */
-    public boolean isReady() {
-        return renderManager != null && viewPort != null;
     }
     
     public void registerMode(RenderMode mode) {
         activeModes.addFirst(mode);
         mode.apply(this);
     }
+
     public void clearBuffers() {
         clearBuffers(true, true, true);
     }
+
     public void clearBuffers(boolean color, boolean depth, boolean stencil) {
         getRenderer().clearBuffers(color, depth, stencil);
     }
-    
-    /**
-     * Applies saved render settings, except the framebuffer.
-     */
+
     public void popActiveModes() {
         for (RenderMode m : activeModes) {
             m.reset(this);
         }
         activeModes.clear();
     }
-    
-    /**
-     * Renders the material on a fullscreen quad.
-     * 
-     * @param mat 
-     */
+
     public void renderFullscreen(Material mat) {
         screen.render(renderManager, mat);
     }
-    /**
-     * Renders the color and depth textures on a fullscreen quad, where
-     * the color texture informs the color, and the depth texture informs
-     * the depth.
-     * <p>
-     * If both color and depth are null, no rendering will be performed
-     * 
-     * @param color color texture, or null
-     * @param depth depth texture, or null
-     */
+
     public void renderTextures(Texture2D color, Texture2D depth) {
         screen.render(renderManager, color, depth);
     }
-    
-    /**
-     * Renders the geometries mesh.
-     * 
-     * @param renderer
-     * @param geometry 
-     */
+
     public static void renderMeshFromGeometry(Renderer renderer, Geometry geometry) {
         /*
          * Copyright (c) 2009-2024 jMonkeyEngine
@@ -174,20 +142,11 @@ public class FGRenderContext {
             renderer.renderMesh(mesh, lodLevel, 1, null);
         }
     }
-    
-    /**
-     * 
-     * @param cam 
-     */
+
     public void setCamera(Camera cam) {
         renderManager.setCamera(cam, cam.isParallelProjection());
     }
-    /**
-     * Updates the RenderManager with the given camera's properties only if
-     * the given camera is the camera currently being used for rendering.
-     * 
-     * @param cam 
-     */
+
     public void updateCamera(Camera cam) {
         if (cam == renderManager.getCurrentCamera()) {
             renderManager.setCamera(cam, cam.isParallelProjection());
@@ -199,86 +158,34 @@ public class FGRenderContext {
         this.depth.apply(getRenderer());
     }
 
-    /**
-     * Enables culling based on culling results from the previous frame.
-     * <p>
-     * If not enabled, each module in the graph must be prepared and re-culled every frame
-     * regardless of whether it will actually be executed. Temporal culling allows those
-     * processes to be skipped if no layout update has been raised.
-     *
-     * @param temporalCulling 
-     */
-    protected void setTemporalCulling(boolean temporalCulling) {
-        this.temporalCulling = temporalCulling;
+    public AssetManager getAssetManager() {
+        return assetManager;
     }
-    
-    /**
-     * 
-     * @return 
-     */
-    public FrameGraph getFrameGraph() {
-        return frameGraph;
-    }
-    /**
-     * Gets the resource list belonging to the framegraph.
-     * 
-     * @return 
-     */
-    public ResourceList getResources() {
-        return frameGraph.getResources();
-    }
-    /**
-     * Gets the render manager.
-     * 
-     * @return 
-     */
+
     public RenderManager getRenderManager() {
         return renderManager;
     }
-    /**
-     * Gets the context for the FrameGraph pipeline.
-     * 
-     * @return 
-     */
+
     public FGPipelineContext getPipelineContext() {
         return context;
     }
-    /**
-     * Gets the viewport currently being rendered.
-     * 
-     * @return 
-     */
+
     public ViewPort getViewPort() {
         return viewPort;
     }
-    /**
-     * 
-     * @return 
-     */
+
     public Camera getCurrentCamera() {
         return renderManager.getCurrentCamera();
     }
-    /**
-     * Gets the profiler.
-     * 
-     * @return app profiler, or null
-     */
+
     public AppProfiler getProfiler() {
         return renderManager.getProfiler();
     }
-    /**
-     * Gets the renderer held by the render manager.
-     * 
-     * @return 
-     */
+
     public Renderer getRenderer() {
         return renderManager.getRenderer();
     }
-    /**
-     * Gets the render queue held by the viewport.
-     * 
-     * @return 
-     */
+
     public RenderQueue getRenderQueue() {
         if (viewPort != null) {
             return viewPort.getQueue();
@@ -286,80 +193,28 @@ public class FGRenderContext {
             return null;
         }
     }
-    /**
-     * Gets the fullscreen quad used for fullscreen renders.
-     * 
-     * @return 
-     */
+
     public FullScreenQuad getScreen() {
         return screen;
     }
-    /**
-     * Gets the current depth range.
-     * 
-     * @param store
-     * @return 
-     */
+
     public DepthRange getDepth(DepthRange store) {
         if (store == null) {
             store = new DepthRange();
         }
         return store.set(depth);
     }
-    /**
-     * Gets the time per frame.
-     * 
-     * @return 
-     */
+
     public float getTpf() {
         return tpf;
     }
-    /**
-     * Gets the camera width.
-     * 
-     * @return 
-     */
+
     public int getWidth() {
-        return viewPort.getCamera().getWidth();
+        return width;
     }
-    /**
-     * Gets the camera height.
-     * 
-     * @return 
-     */
+
     public int getHeight() {
-        return viewPort.getCamera().getHeight();
-    }
-    /**
-     * Returns true if the FrameGraph is asynchronous.
-     * 
-     * @return 
-     */
-    public boolean isAsync() {
-        return frameGraph.isAsync();
-    }
-    /**
-     * Returns true if temporal culling is enabled.
-     * <p>
-     * Temporal culling culls modules that were culled last frame
-     * from being considered this frame. This assumes that the layout
-     * of the FrameGraph has not changed.
-     * <p>
-     * Temporal culling can be enabled or disabled
-     * 
-     * @return 
-     */
-    public boolean isTemporalCulling() {
-        return temporalCulling;
-    }
-    
-    /**
-     * Returns true if the app profiler is not null.
-     * 
-     * @return 
-     */
-    public boolean isProfilerAvailable() {
-        return renderManager.getProfiler() != null;
+        return height;
     }
     
 }

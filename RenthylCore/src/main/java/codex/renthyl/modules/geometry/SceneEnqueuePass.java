@@ -28,43 +28,28 @@
  */
 package codex.renthyl.modules.geometry;
 
-import codex.boost.export.SavableObject;
-import codex.renthyl.modules.RenderPass;
 import codex.renthyl.FGRenderContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.boost.render.DepthRange;
 import codex.renthyl.draw.RenderMode;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.util.SpatialWorldParam;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
-import com.jme3.export.Savable;
+import codex.renthyl.newresources.*;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.GuiComparator;
 import com.jme3.renderer.queue.OpaqueComparator;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.TransparentComparator;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+
+import java.util.*;
 
 /**
  * Enqueues geometries into different {@link GeometryQueue}s based on world
  * render bucket value.
  * <p>
- * Outputs vary based on what GeometryQueues are added. If default queues are
- * added (via {@link #SceneEnqueuePass(boolean, boolean)}), then the outputs
- * include: "Opaque", "Sky", "Transparent", "Gui", "Translucent". All outputs
- * are GeometryQueues.
- * <p>
  * A geometry is placed in queues according to the userdata found at
- * {@link #QUEUE} (expected as String) according to ancestor inheritance, or the
+ * {@link #QUEUE_PARAM} (expected as String) according to ancestor inheritance, or the
  * value returned by {@link Geometry#getQueueBucket()} (converted to String).
  * Userdata value (if found) trumps queue bucket value.
  * <p>
@@ -74,158 +59,96 @@ import java.util.List;
  * 
  * @author codex
  */
-public class SceneEnqueuePass extends RenderPass {
-    
+public class SceneEnqueuePass extends RenderTask {
+
+    public static final String QUEUE_PARAM = "GeometryRenderQueue";
+    public static final String INHERIT_QUEUE = RenderQueue.Bucket.Inherit.name();
+
     public static final String SINGLE_QUEUE = "Queue";
-    public static final String
-            OPAQUE = "Opaque",
-            SKY = "Sky",
-            TRANSPARENT = "Transparent",
-            GUI = "Gui",
-            TRANSLUCENT = "Translucent";
-    
-    private final HashMap<String, Queue> queues = new HashMap<>();
+    public static final String OPAQUE = "Opaque", SKY = "Sky",
+            TRANSPARENT = "Transparent", GUI = "Gui", TRANSLUCENT = "Translucent";
+
+    private final SocketMap<String, ValueSocket<GeometryQueue>, GeometryQueue> queueMap = new SocketMap<>(this);
     private String defaultQueue;
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        for (Queue b : queues.values()) {
-            b.geometry = addOutput(b.name);
-        }
+
+    public SceneEnqueuePass() {
+        addSockets(queueMap);
     }
+
     @Override
-    protected void prepare(FGRenderContext context) {
-        for (Queue b : queues.values()) {
-            declare(null, b.geometry);
-        }
-    }
-    @Override
-    protected void execute(FGRenderContext context) {
+    protected void renderTask(FGRenderContext context) {
         ViewPort vp = context.getViewPort();
         List<Spatial> scenes = vp.getScenes();
-        for (int i = scenes.size()-1; i >= 0; i--) {
+        for (int i = scenes.size() - 1; i >= 0; i--) {
             vp.getCamera().setPlaneState(0);
-            queueSubScene(context, scenes.get(i));
+            queueSubScene(context, scenes.get(i), defaultQueue);
         }
-        for (Queue b : queues.values()) {
-            resources.setPrimitive(b.geometry, b.queue);
-        }
+        queueMap.values().forEach(Socket::release);
     }
-    @Override
-    protected void reset(FGRenderContext context) {
-        for (Queue b : queues.values()) {
-            b.queue.clear();
-        }
-    }
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule out = ex.getCapsule(this);
-        ArrayList<Queue> list = new ArrayList<>();
-        list.addAll(queues.values());
-        out.writeSavableArrayList(list, "buckets", new ArrayList<>());
-        out.write(defaultQueue, "defaultQueue", OPAQUE);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule in = im.getCapsule(this);
-        ArrayList<Savable> list = in.readSavableArrayList("buckets", new ArrayList<>());
-        for (Savable s : list) {
-            Queue b = (Queue)s;
-            queues.put(b.name, b);
-        }
-        defaultQueue = in.readString("defaultQueue", OPAQUE);
-    }
-    
-    private void queueSubScene(FGRenderContext context, Spatial spatial) {
+
+    private void queueSubScene(FGRenderContext context, Spatial spatial, String parentParam) {
         // get target bucket
-        SpatialWorldParam.RenderQueueParam.apply(spatial);
-        String value = SpatialWorldParam.RenderQueueParam.getWorldValue(spatial);
-        if (value == null) {
-            throw new NullPointerException("World render queue value was not calculated correctly.");
+        String queueParam = spatial.getUserData(QUEUE_PARAM);
+        if (queueParam == null) {
+            queueParam = spatial.getQueueBucket().name();
         }
-        Queue queue = queues.get(value);
-        if (queue == null) {
-            queue = queues.get(defaultQueue);
+        if (queueParam.equals(INHERIT_QUEUE)) {
+            queueParam = parentParam;
         }
         if (spatial instanceof Node) {
             for (Spatial s : ((Node)spatial).getChildren()) {
-                queueSubScene(context, s);
+                queueSubScene(context, s, queueParam);
             }
         } else if (spatial instanceof Geometry) {
             Geometry g = (Geometry)spatial;
             if (g.getMaterial() == null) {
-                throw new IllegalStateException("No material is add for geometry: " + g.getName());
+                throw new IllegalStateException("No material present for geometry: " + g.getName());
             }
-            queue.queue.add(g);
+            ValueSocket<GeometryQueue> queueSocket = queueMap.get(queueParam);
+            if (queueSocket != null) {
+                queueSocket.getValue().add(g);
+            }
         }
     }
     
-    public final SceneEnqueuePass add(String name, GeometryQueue queue) {
-        if (isAssigned()) {
-            throw new IllegalStateException("Cannot add queues while assigned to a framegraph.");
-        }
+    public void addQueue(String name, GeometryQueue queue) {
         if (defaultQueue == null) {
             defaultQueue = name;
         }
-        queues.put(name, new Queue(name, queue));
-        return this;
+        queueMap.put(name, new ValueSocket<>(this, Objects.requireNonNull(queue, "GeometryQueue cannot be null.")));
     }
+
     public void setDefaultQueue(String defaultQueue) {
         this.defaultQueue = defaultQueue;
     }
+
     public String getDefaultQueue() {
         return defaultQueue;
+    }
+
+    public SocketMap<String, ?, GeometryQueue> getQueues() {
+        return queueMap;
     }
     
     public static SceneEnqueuePass withLegacyQueues() {
         SceneEnqueuePass p = new SceneEnqueuePass();
-        p.add(OPAQUE, new GeometryQueue(new OpaqueComparator()));
-        p.add(TRANSPARENT, new GeometryQueue(new TransparentComparator()));
-        p.add(TRANSLUCENT, new GeometryQueue(new TransparentComparator()));
+        p.addQueue(OPAQUE, new GeometryQueue(new OpaqueComparator()));
+        p.addQueue(TRANSPARENT, new GeometryQueue(new TransparentComparator()));
+        p.addQueue(TRANSLUCENT, new GeometryQueue(new TransparentComparator()));
         GeometryQueue sky = new GeometryQueue();
         sky.addMode(RenderMode.depthRange(DepthRange.REAR));
-        p.add(SKY, sky);
+        p.addQueue(SKY, sky);
         GeometryQueue gui = new GeometryQueue(new GuiComparator());
         gui.addMode(RenderMode.depthRange(DepthRange.FRONT));
         gui.addMode(RenderMode.parallelProjection(true));
-        p.add(GUI, gui);
+        p.addQueue(GUI, gui);
         return p;
     }
+
     public static SceneEnqueuePass withSingleQueue() {
         SceneEnqueuePass p = new SceneEnqueuePass();
-        p.add(SINGLE_QUEUE, new GeometryQueue(new OpaqueComparator()));
+        p.addQueue(SINGLE_QUEUE, new GeometryQueue(new OpaqueComparator()));
         return p;
-    }
-    
-    private static class Queue implements Savable {
-        
-        public String name;
-        public GeometryQueue queue;
-        public ResourceTicket<GeometryQueue> geometry;
-        
-        public Queue() {}
-        public Queue(String name, GeometryQueue queue) {
-            this.name = name;
-            this.queue = queue;
-        }
-
-        @Override
-        public void write(JmeExporter ex) throws IOException {
-            OutputCapsule out = ex.getCapsule(this);
-            out.write(name, "name", "Opaque");
-            out.write(queue, "queue", new GeometryQueue());
-        }
-        @Override
-        public void read(JmeImporter im) throws IOException {
-            InputCapsule in = im.getCapsule(this);
-            name = in.readString("name", "Opaque");
-            queue = SavableObject.readSavable(in, "queue", GeometryQueue.class, new GeometryQueue());
-        }
-        
     }
     
 }

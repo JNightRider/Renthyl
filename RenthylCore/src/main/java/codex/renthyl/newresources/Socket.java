@@ -14,8 +14,9 @@ public interface Socket <T> extends Queueable, Referenceable {
 
     void reset();
 
-    static <T> TransitSocket<T> create(Renderable task) {
-        return new TransitSocket<>(task);
+    default T acquire(T orElse) {
+        T resource = acquire();
+        return resource != null ? resource : orElse;
     }
 
 }

@@ -30,6 +30,8 @@ package codex.renthyl.modules;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
+import codex.renthyl.newresources.RenderTask;
+import codex.renthyl.newresources.RenderingQueue;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.SceneGraphIterator;
@@ -39,29 +41,17 @@ import com.jme3.scene.Spatial;
  *
  * @author codex
  */
-public class ControlRenderPass extends RenderPass {
+public class ControlRenderPass extends RenderTask {
 
     @Override
-    protected void initialize(FrameGraph frameGraph) {}
-    @Override
-    protected void prepare(FGRenderContext context) {}
-    @Override
-    protected void execute(FGRenderContext context) {
+    protected void renderTask(FGRenderContext context) {
         RenderManager rm = context.getRenderManager();
         ViewPort vp = context.getViewPort();
-        for (Spatial scene : context.getViewPort().getScenes()) {
+        for (Spatial scene : vp.getScenes()) {
             for (Spatial s : new SceneGraphIterator(scene)) {
                 s.runControlRender(rm, vp);
             }
         }
     }
-    @Override
-    protected void reset(FGRenderContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
-    @Override
-    public boolean isUsed() {
-        return true;
-    }
-    
+
 }

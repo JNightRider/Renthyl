@@ -1,6 +1,6 @@
 package codex.renthyl.newresources;
 
-public class ModifyingSocket <T> extends TransitSocket<T> {
+public class ModifyingSocket <T> extends TransitiveSocket<T> {
 
     public ModifyingSocket(Renderable task) {
         super(task);
@@ -9,7 +9,7 @@ public class ModifyingSocket <T> extends TransitSocket<T> {
     @Override
     public boolean isUpstreamAvailable() {
         return upstream == null || (upstream.isAvailableToDownstream()
-                && getUpstreamRoot().getActiveReferences() == getActiveReferences());
+                && getUpstreamTerminal().getActiveReferences() == getActiveReferences());
     }
 
 }
