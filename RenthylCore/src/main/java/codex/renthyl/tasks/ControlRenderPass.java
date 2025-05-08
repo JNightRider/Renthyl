@@ -26,51 +26,29 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.definitions;
+package codex.renthyl.tasks;
 
-import codex.renthyl.resources.Disposer;
-import codex.renthyl.resources.ResourceException;
+import codex.renthyl.FGRenderContext;
+import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
+import com.jme3.scene.SceneGraphIterator;
+import com.jme3.scene.Spatial;
 
 /**
- * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
- * reallocation, and disposal of related raw resources.
- * 
+ *
  * @author codex
- * @param <T>
  */
-public interface ResourceDef <T> extends Disposer<T> {
-    
-    /**
-     * Creates a new resources from scratch.
-     * 
-     * @return 
-     */
-    T createResource();
-    
-    /**
-     * Checks if the resource can be allocated.
-     * 
-     * @param resource
-     * @return evaluation score of the resource
-     */
-    Float evaluateResource(Object resource);
+public class ControlRenderPass extends RenderTask {
 
-    /**
-     * Configures the resource for allocation once it has been chosen.
-     *
-     * @param resource
-     */
-    T conformResource(Object resource) throws ResourceException;
-
-    /**
-     * Tests if the evaluation score is final; that is, the corresponding
-     * resource is perfect according to this definition.
-     *
-     * @param score
-     * @return
-     */
-    default boolean isPerfectEvaluation(Float score) {
-        return score != null && score <= 0f;
+    @Override
+    protected void renderTask(FGRenderContext context) {
+        RenderManager rm = context.getRenderManager();
+        ViewPort vp = context.getViewPort();
+        for (Spatial scene : vp.getScenes()) {
+            for (Spatial s : new SceneGraphIterator(scene)) {
+                s.runControlRender(rm, vp);
+            }
+        }
     }
-    
+
 }

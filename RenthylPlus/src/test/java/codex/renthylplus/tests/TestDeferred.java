@@ -32,7 +32,7 @@ import codex.renthyl.FrameGraph;
 import codex.renthylplus.RenthylPlus;
 import codex.renthyl.Renthyl;
 import codex.renthyl.client.MatParamTargetControl;
-import codex.renthyl.modules.Attribute;
+import codex.renthyl.tasks.Attribute;
 import codex.renthyl.modules.ModuleLocator;
 import codex.renthylplus.shadow.ShadowMapViewer;
 import com.jme3.environment.EnvironmentProbeControl;

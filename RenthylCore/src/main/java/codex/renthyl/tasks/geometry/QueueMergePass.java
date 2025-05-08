@@ -26,51 +26,51 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.definitions;
+package codex.renthyl.tasks.geometry;
 
-import codex.renthyl.resources.Disposer;
-import codex.renthyl.resources.ResourceException;
+import codex.renthyl.FGRenderContext;
+import codex.renthyl.GeometryQueue;
+import codex.renthyl.sockets.*;
+import codex.renthyl.tasks.RenderTask;
 
 /**
- * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
- * reallocation, and disposal of related raw resources.
+ * Merges a specified number of {@link GeometryQueue}s into one output queue.
+ * <p>
+ * Inputs:
+ * <ul>
+ *   <li>Queues[n] ({@link GeometryQueue}: queues to merge into one.</li>
+ * </ul>
+ * Outputs:
+ * <ul>
+ *   <li>Result ({@link GeometryQueue}): resulting geometry queue.</li>
+ * </ul>
  * 
  * @author codex
- * @param <T>
  */
-public interface ResourceDef <T> extends Disposer<T> {
-    
-    /**
-     * Creates a new resources from scratch.
-     * 
-     * @return 
-     */
-    T createResource();
-    
-    /**
-     * Checks if the resource can be allocated.
-     * 
-     * @param resource
-     * @return evaluation score of the resource
-     */
-    Float evaluateResource(Object resource);
+public class QueueMergePass extends RenderTask {
 
-    /**
-     * Configures the resource for allocation once it has been chosen.
-     *
-     * @param resource
-     */
-    T conformResource(Object resource) throws ResourceException;
+    private final CollectorSocket<GeometryQueue> queues = new CollectorSocket<>(this);
+    private final ValueSocket<GeometryQueue> result = new ValueSocket<>(this, new GeometryQueue());
 
-    /**
-     * Tests if the evaluation score is final; that is, the corresponding
-     * resource is perfect according to this definition.
-     *
-     * @param score
-     * @return
-     */
-    default boolean isPerfectEvaluation(Float score) {
-        return score != null && score <= 0f;
+    public QueueMergePass() {
+        addSockets(queues, result);
+    }
+
+    @Override
+    protected void renderTask(FGRenderContext context) {
+        for (GeometryQueue g : queues.acquire()) {
+            if (g != null) {
+                result.getValue().add(g);
+            }
+        }
+    }
+
+    public CollectorSocket<GeometryQueue> getQueues() {
+        return queues;
+    }
+
+    public Socket<GeometryQueue> getResult() {
+        return result;
     }
     
 }

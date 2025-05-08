@@ -8,11 +8,12 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.draw.RenderMode;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.modules.protocol.FilterProtocol;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketSelector;
-import codex.renthyl.resources.tickets.TicketSignature;
+import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.AllocationSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.tasks.RenderTask;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.OutputCapsule;
 import com.jme3.material.Material;
@@ -26,13 +27,23 @@ import java.util.ArrayList;
  *
  * @author codex
  */
-public abstract class JmeFilterPass extends RenderPass implements FilterProtocol {
+public abstract class JmeFilterPass extends RenderTask {
 
     protected ResourceTicket<Texture2D> sceneColor, sceneDepth;
     protected ResourceTicket<Texture2D> result;
     private final ArrayList<Subpass> subpasses = new ArrayList<>();
     private boolean enabled = true;
-    
+
+    protected final ResourceAllocator allocator;
+    protected final TransitiveSocket<Texture2D> colorSocket = new TransitiveSocket<>(this);
+    protected final TransitiveSocket<Texture2D> depthSocket = new TransitiveSocket<>(this);
+    protected final TransitiveSocket<Texture2D> resultSocket = new TransitiveSocket<>(this);
+
+    public JmeFilterPass(ResourceAllocator allocator) {
+        this.allocator = allocator;
+        addSockets(colorSocket, depthSocket, resultSocket);
+    }
+
     @Override
     protected void initialize(FrameGraph frameGraph) {
         sceneColor = addInput("Color");
@@ -188,6 +199,7 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
     
     protected <T extends Subpass> T add(T pass) {
         subpasses.add(pass);
+
         return pass;
     }
     protected void clearSubpasses() {
@@ -206,28 +218,23 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
         return enabled;
     }
     
-    public class Subpass {
+    public class Subpass extends RenderTask {
         
         private final Material material;
-        private final ResourceTicket<Texture2D> ticket;
         private final TextureDef<Texture2D> def = TextureDef.texture2D();
-        private final boolean useColor, useDepth;
+        private final AllocationSocket<Texture2D> result = new AllocationSocket<>(JmeFilterPass.this, allocator, def);
+        private final boolean color, depth;
         private Texture2D targetTexture;
-        
-        public Subpass(String name, Material material) {
-            this(name, material, true, false);
-        }
-        public Subpass(String name, Material material, boolean useColor, boolean useDepth) {
-            this.ticket = new ResourceTicket<>(name);
+
+        public Subpass(Material material, boolean color, boolean depth) {
             this.material = material;
-            this.useColor = useColor;
-            this.useDepth = useDepth;
+            this.color = color;
+            this.depth = depth;
         }
-        public Subpass(Material material) {
-            this(null, material, true, false);
-        }
-        public Subpass(Material material, boolean useColor, boolean useDepth) {
-            this(null, material, useColor, useDepth);
+
+        @Override
+        protected void renderTask(FGRenderContext context) {
+
         }
         
         public void releaseTargetTexture() {
@@ -247,16 +254,13 @@ public abstract class JmeFilterPass extends RenderPass implements FilterProtocol
         public TextureDef<Texture2D> getDef() {
             return def;
         }
-        public boolean isUseColor() {
-            return useColor;
-        }
-        public boolean isUseDepth() {
-            return useDepth;
+        public AllocationSocket<Texture2D> getResult() {
+            return result;
         }
         public Texture2D getRenderedTexture() {
             return targetTexture;
         }
-        
+
     }
     
 }

@@ -28,9 +28,9 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.newresources.BasicRenderingQueue;
-import codex.renthyl.newresources.Renderable;
-import codex.renthyl.newresources.RenderingQueue;
+import codex.renthyl.render.BasicRenderingQueue;
+import codex.renthyl.render.Renderable;
+import codex.renthyl.render.RenderingQueue;
 import codex.renthyl.resources.ResourceList;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.modules.RenderContainer;
@@ -41,7 +41,7 @@ import com.jme3.renderer.pipeline.RenderPipeline;
 import com.jme3.renderer.ViewPort;
 
 import java.util.ArrayList;
-import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 
 import codex.renthyl.modules.RenderPass;
 
@@ -114,9 +114,14 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
     private final FGRenderContext context;
     private final RenderingQueue queue;
     private boolean rendered = false;
+    private int numWorkers = 1;
 
     public FrameGraph(AssetManager assetManager) {
-        this(assetManager, new BasicRenderingQueue(Executors.newCachedThreadPool()));
+        this(assetManager, new BasicRenderingQueue());
+    }
+
+    public FrameGraph(AssetManager assetManager, Executor service) {
+        this(assetManager, new BasicRenderingQueue(service));
     }
 
     public FrameGraph(AssetManager assetManager, RenderingQueue queue) {
@@ -125,8 +130,8 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
     }
     
     @Override
-    public FGPipelineContext fetchPipelineContext(RenderManager rm) {
-        return rm.getContext(CONTEXT_TYPE);
+    public FGPipelineContext fetchPipelineContext(RenderManager renderManager) {
+        return renderManager.getOrCreateContext(FGPipelineContext.class, rm -> new FGPipelineContext());
     }
 
     @Override
@@ -146,18 +151,14 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         for (Renderable t : this) {
             t.queue(queue);
         }
-        for (Renderable t : queue) {
-            t.update(tpf);
-        }
-        queue.forEach(Renderable::prepare);
+        queue.update(tpf);
+        queue.prepare();
 
         // render
-        final int numRenderWorkers = 1;
-        queue.render(numRenderWorkers, context);
+        queue.render(numWorkers, context);
 
         // reset
-        queue.forEach(Renderable::reset);
-        queue.flush();
+        queue.reset();
         rm.getRenderer().clearClipRect();
         rendered = true;
         
@@ -177,5 +178,13 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         add(task);
         return task;
     }
-    
+
+    public void setNumWorkers(int numWorkers) {
+        this.numWorkers = numWorkers;
+    }
+
+    public int getNumWorkers() {
+        return numWorkers;
+    }
+
 }

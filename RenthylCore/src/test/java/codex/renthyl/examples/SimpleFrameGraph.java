@@ -6,11 +6,11 @@ package codex.renthyl.examples;
 
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
-import codex.renthyl.modules.ControlRenderPass;
-import codex.renthyl.modules.OutputPass;
-import codex.renthyl.modules.geometry.GeometryPass;
-import codex.renthyl.modules.geometry.QueueMergePass;
-import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.tasks.ControlRenderPass;
+import codex.renthyl.tasks.OutputPass;
+import codex.renthyl.tasks.geometry.GeometryPass;
+import codex.renthyl.tasks.geometry.QueueMergePass;
+import codex.renthyl.tasks.geometry.SceneEnqueuePass;
 import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;

@@ -29,18 +29,18 @@
 package codex.renthylplus;
 
 import codex.renthyl.FrameGraph;
-import codex.renthyl.modules.Attribute;
-import codex.renthyl.modules.OutputPass;
+import codex.renthyl.tasks.Attribute;
+import codex.renthyl.tasks.OutputPass;
 import codex.renthyl.modules.Junction;
-import codex.renthyl.modules.geometry.SceneEnqueuePass;
-import codex.renthyl.modules.geometry.QueueMergePass;
+import codex.renthyl.tasks.geometry.SceneEnqueuePass;
+import codex.renthyl.tasks.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthylplus.deferred.DeferredGBufferPass;
 import codex.renthylplus.deferred.DeferredPass;
 import codex.renthylplus.light.LightImagePass;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.light.TiledRenderGrid;
-import codex.renthyl.modules.ControlRenderPass;
+import codex.renthyl.tasks.ControlRenderPass;
 import codex.renthyl.modules.GroupJunction;
 import codex.renthyl.modules.RenderThread;
 import codex.renthyl.resources.tickets.TicketSelector;

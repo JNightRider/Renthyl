@@ -28,8 +28,6 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.resources.RenderObjectMap;
-import codex.renthyl.jobs.FGJobExecutor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.pipeline.PipelineContext;
@@ -43,15 +41,10 @@ import java.util.logging.Logger;
 public class FGPipelineContext implements PipelineContext {
     
     private static final Logger LOG = Logger.getLogger(FGPipelineContext.class.getName());
-    
-    private final RenderObjectMap renderObjects;
-    private FGJobExecutor defaultExecutor;
+
     private boolean rendered = false;
     
-    public FGPipelineContext(Renthyl renthyl) {
-        renderObjects = new RenderObjectMap(this);
-        defaultExecutor = renthyl.getBaseExecutor();
-    }
+    public FGPipelineContext() {}
 
     @Override
     public boolean startViewPortRender(RenderManager rm, ViewPort vp) {
@@ -63,19 +56,7 @@ public class FGPipelineContext implements PipelineContext {
     }
     @Override
     public void endContextRenderFrame(RenderManager rm) {
-        renderObjects.flushMap();
         rendered = false;
-    }
-    
-    public void setDefaultExecutor(FGJobExecutor executor) {
-        defaultExecutor = (executor != null ? executor : Renthyl.getInstance().getBaseExecutor());
-    }
-    
-    public RenderObjectMap getRenderObjects() {
-        return renderObjects;
-    }
-    public FGJobExecutor getDefaultExecutor() {
-        return defaultExecutor;
     }
     
 }

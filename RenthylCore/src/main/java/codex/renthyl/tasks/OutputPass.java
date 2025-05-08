@@ -26,51 +26,48 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.definitions;
+package codex.renthyl.tasks;
 
-import codex.renthyl.resources.Disposer;
-import codex.renthyl.resources.ResourceException;
+import codex.renthyl.FGRenderContext;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
+import com.jme3.texture.Texture2D;
 
 /**
- * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
- * reallocation, and disposal of related raw resources.
+ * Renders a add of color and depth textures on a fullscreen quad to the
+ * viewport's output framebuffer.
  * 
  * @author codex
- * @param <T>
  */
-public interface ResourceDef <T> extends Disposer<T> {
-    
-    /**
-     * Creates a new resources from scratch.
-     * 
-     * @return 
-     */
-    T createResource();
-    
-    /**
-     * Checks if the resource can be allocated.
-     * 
-     * @param resource
-     * @return evaluation score of the resource
-     */
-    Float evaluateResource(Object resource);
+public class OutputPass extends RenderTask {
 
-    /**
-     * Configures the resource for allocation once it has been chosen.
-     *
-     * @param resource
-     */
-    T conformResource(Object resource) throws ResourceException;
+    private final PointerSocket<Texture2D> color = new TransitiveSocket<>(this);
+    private final PointerSocket<Texture2D> depth = new TransitiveSocket<>(this);
+    private final Float alphaDiscard;
 
-    /**
-     * Tests if the evaluation score is final; that is, the corresponding
-     * resource is perfect according to this definition.
-     *
-     * @param score
-     * @return
-     */
-    default boolean isPerfectEvaluation(Float score) {
-        return score != null && score <= 0f;
+    public OutputPass() {
+        this(null);
     }
-    
+    public OutputPass(Float alphaDiscard) {
+        this.alphaDiscard = alphaDiscard;
+        addSockets(color, depth);
+    }
+
+    @Override
+    protected void renderTask(FGRenderContext context) {
+        if (alphaDiscard != null) {
+            context.getScreen().setAlphaDiscard(alphaDiscard);
+        }
+        context.renderTextures(color.acquire(), depth.acquire());
+    }
+
+    public PointerSocket<Texture2D> getColor() {
+        return color;
+    }
+
+    public PointerSocket<Texture2D> getDepth() {
+        return depth;
+    }
+
 }

@@ -4,13 +4,9 @@
  */
 package codex.renthyl.examples;
 
-import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
-import codex.renthyl.modules.ControlRenderPass;
-import codex.renthyl.modules.OutputPass;
-import codex.renthyl.modules.geometry.GeometryPass;
-import codex.renthyl.modules.geometry.QueueMergePass;
-import codex.renthyl.modules.geometry.SceneEnqueuePass;
+import codex.renthyl.render.RenderThreadManager;
+import codex.renthyl.resources.ResourceAllocationState;
 import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;
@@ -47,10 +43,18 @@ public class TestForward extends SimpleApplication {
         
         // Increase the camera's speed.
         flyCam.setMoveSpeed(10f);
+
+        // create a resource allocator to handle resources
+        ResourceAllocationState allocator = new ResourceAllocationState();
+        stateManager.attach(allocator);
+
+        // create an executor to handle multithreaded execution
+        RenderThreadManager threads = new RenderThreadManager();
+        stateManager.attach(threads);
         
         // create the framegraph
         Renthyl.initialize(this);
-        viewPort.setPipeline(Renthyl.forward(assetManager));
+        viewPort.setPipeline(Renthyl.forward(assetManager, allocator));
         
     }
     
