@@ -350,6 +350,20 @@ public class FrameGraphContext implements PipelineContext {
             setValue(new CameraState(renderManager.getCurrentCamera(), orthogonal));
         }
 
+        public Camera pushResize(Camera store, int width, int height, boolean fixAspect) {
+            if (width != active.getCamera().getWidth() || height != active.getCamera().getHeight()) {
+                if (store == null) {
+                    store = active.getCamera().clone();
+                } else {
+                    store.copyFrom(active.getCamera());
+                }
+                pushValue(store, active.isOrthogonal());
+                return store;
+            }
+            pushValue(active);
+            return null;
+        }
+
     }
     
 }

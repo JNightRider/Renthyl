@@ -2,7 +2,6 @@ package codex.renthyl.render;
 
 import codex.renthyl.geometry.Visibility;
 import com.jme3.bounding.BoundingVolume;
-import com.jme3.math.FastMath;
 import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
@@ -20,6 +19,14 @@ public class CameraState {
 
     public void applyToContext(RenderManager rm) {
         rm.setCamera(camera, orthogonal);
+    }
+
+    public void resize(int width, int height, boolean fixAspect) {
+        camera.resize(width, height, fixAspect);
+    }
+
+    public void copyFrom(CameraState camera) {
+        this.camera.copyFrom(camera.getCamera());
     }
 
     public Visibility visible(BoundingVolume volume) {

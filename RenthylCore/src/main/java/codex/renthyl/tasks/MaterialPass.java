@@ -1,43 +1,51 @@
 package codex.renthyl.tasks;
 
+import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
-import codex.renthyl.util.FBuffer;
-import codex.renthyl.util.FrameBufferManager;
 import com.jme3.material.Material;
 import com.jme3.material.MaterialDef;
+import com.jme3.renderer.Camera;
+import com.jme3.texture.FrameBuffer;
+import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class PostProcessPass extends RenderTask {
-
-    public static final String SCENE_COLOR = "Texture";
-    public static final String SCENE_DEPTH = "DepthTexture";
+public class MaterialPass extends RenderTask {
 
     protected final Material material;
     protected final SocketMap<String, ValueSocket<Object>, Object> parameters = new SocketMap<>(this, new HashMap<>());
-    protected final AllocationSocket<Texture2D> result;
-    protected final FrameBufferManager buffers = new FrameBufferManager();
+    private final AllocationSocket<Texture2D> result;
+    private final AllocationSocket<FrameBuffer> frameBuffer;
+    private final FrameBufferDef bufferDef = new FrameBufferDef();
+    private final Camera camera = new Camera(1024, 1024);
 
-    public PostProcessPass(ResourceAllocator allocator, ResourceDef<Texture2D> def, Material material) {
+    public MaterialPass(ResourceAllocator allocator, Material material, ResourceDef<Texture2D> def) {
         this.material = material;
         result = addSocket(new AllocationSocket<>(this, allocator, def));
+        frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         addSockets(parameters);
-        parameters.put(SCENE_COLOR, new ValueSocket<>(this));
-        parameters.put(SCENE_DEPTH, new ValueSocket<>(this));
     }
 
     @Override
     protected void renderTask() {
-        Texture2D target = result.acquire();
-        FBuffer fb = buffers.getFrameBuffer(target.getImage().getWidth(), target.getImage().getHeight(), 1);
-        fb.setColorTargets(result.acquire());
+
+        // camera
+        Texture target = result.acquire();
+        context.getCamera().pushResize(camera, target.getImage().getWidth(), target.getImage().getHeight(), false);
+
+        // framebuffer
+        bufferDef.setColorTargets(target);
+        FrameBuffer fb = frameBuffer.acquire();
         context.getFrameBuffer().pushValue(fb);
         context.clearBuffers();
+
+        // material
         Map<String, Object> map = parameters.acquire();
         MaterialDef matdef = material.getMaterialDef();
         for (Map.Entry<String, Object> e : map.entrySet()) {
@@ -50,14 +58,14 @@ public class PostProcessPass extends RenderTask {
                 }
             }
         }
-        context.renderFullscreen(material);
-        context.getFrameBuffer().pop();
-    }
 
-    @Override
-    public void reset() {
-        super.reset();
-        buffers.flush();
+        // render
+        context.renderFullscreen(material);
+
+        // reset settings
+        context.getFrameBuffer().pop();
+        context.getCamera().pop();
+
     }
 
     public void setParameter(String name, Object value) {
@@ -70,14 +78,6 @@ public class PostProcessPass extends RenderTask {
 
     public ValueSocket<Object> getParameter(String name) {
         return parameters.get(name);
-    }
-
-    public ValueSocket<Object> getColor() {
-        return parameters.get(SCENE_COLOR);
-    }
-
-    public ValueSocket<Object> getDepth() {
-        return parameters.get(SCENE_COLOR);
     }
 
     public PointerSocket<Texture2D> getResult() {

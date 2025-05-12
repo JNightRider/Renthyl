@@ -34,8 +34,6 @@ import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.RenderTask;
-import codex.renthyl.util.FBuffer;
-import codex.renthyl.util.FrameBufferManager;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
@@ -87,7 +85,6 @@ public class GeometryPass extends RenderTask {
         // configure definitions
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(context.getWidth(), context.getHeight());
-        bufferDef.setSize(context.getWidth(), context.getHeight(), 1);
         bufferDef.setColorTargets(outColor.acquire());
         bufferDef.setDepthTarget(outDepth.acquire());
 
