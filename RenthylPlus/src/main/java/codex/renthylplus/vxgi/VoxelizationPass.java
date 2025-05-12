@@ -8,12 +8,11 @@ import codex.jmecompute.WorkSize;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.jmecompute.opengl.Glsl;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
-import codex.renthyl.Visibility;
+import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.geometry.Visibility;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
@@ -96,7 +95,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         voxelDef.setWrap(Texture.WrapMode.EdgeClamp);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(voxelDef, voxels);
         declare(renderTargetDef, renderTarget);
         reserve(voxels, renderTarget);
@@ -104,7 +103,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         referenceOptional(gridSize, ambient, lightContribution, temporalVoxels);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         // add voxel grid size from source
         int n = resources.acquireOrElse(gridSize, VoxelEnvSetupPass.DEFAULT_VOXEL_GRID_SIZE);
@@ -174,11 +173,11 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public void renderGeometry(FGRenderContext context, Geometry g) {
+    public void renderGeometry(FrameGraphContext context, Geometry g) {
         // adapt material to geometry's pbr material
         transferParam(g, VarType.Vector4, "BaseColor", ColorRGBA.White);
         transferParam(g, VarType.Texture2D, "BaseColorMap", null);
@@ -191,7 +190,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         context.getRenderManager().renderGeometry(g);
     }
     @Override
-    public Visibility evaluateSpatialVisibility(FGRenderContext context, Spatial spatial, Visibility parent, boolean gui) {
+    public Visibility evaluateSpatialVisibility(FrameGraphContext context, Spatial spatial, Visibility parent, boolean gui) {
         Spatial.CullHint hint = spatial.getCullHint();
         BoundingVolume volume = spatial.getWorldBound();
         return Visibility.get(hint == Spatial.CullHint.Never

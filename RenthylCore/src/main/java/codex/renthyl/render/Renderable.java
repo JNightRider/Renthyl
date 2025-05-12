@@ -1,7 +1,5 @@
 package codex.renthyl.render;
 
-import codex.renthyl.FGRenderContext;
-
 public interface Renderable extends Queueable {
 
     void update(float tpf);
@@ -10,7 +8,7 @@ public interface Renderable extends Queueable {
 
     boolean claim(RenderWorker worker);
 
-    void render(FGRenderContext context);
+    void render();
 
     boolean isRenderingComplete();
 

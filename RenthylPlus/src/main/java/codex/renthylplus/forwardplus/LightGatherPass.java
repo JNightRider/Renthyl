@@ -7,7 +7,7 @@ package codex.renthylplus.forwardplus;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.BufferDef;
 import codex.renthyl.modules.RenderPass;
@@ -38,13 +38,13 @@ public class LightGatherPass extends RenderPass {
                 "RenthylPlus/Shaders/ForwardPlus/LightTileGather.glsl");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(overlapDef, overlap);
         reserve(overlap);
         reference(lights, depthRangeTiles);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         LightList lightList = resources.acquire(lights);
         Texture2D tiles = resources.acquire(depthRangeTiles);
@@ -64,7 +64,7 @@ public class LightGatherPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

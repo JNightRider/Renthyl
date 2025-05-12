@@ -3,10 +3,6 @@ package codex.renthyl.sockets;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.RenderingQueue;
 
-import java.util.Iterator;
-import java.util.Spliterators;
-import java.util.function.Consumer;
-
 public class TransitiveSocket<T> implements PointerSocket<T> {
 
     protected final Renderable task;
@@ -40,13 +36,13 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     }
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return task.isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return task.isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return upstream == null || upstream.isAvailableToDownstream();
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return upstream == null || upstream.isAvailableToDownstream(queuePosition);
     }
 
     @Override
@@ -55,12 +51,12 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
         if (upstream != null) {
-            upstream.release();
+            upstream.release(queuePosition);
         }
     }
 

@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
@@ -70,7 +70,7 @@ public class DepthOfFieldPass extends JmeFilterPass {
         material.setBoolean("DebugUnfocus", debugUnfocus);
         add(new Subpass(material, true, true) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 xScale = 1.0f / getDef().getWidth();
                 yScale = 1.0f / getDef().getHeight();
                 material.setFloat("XScale", blurScale * xScale);

@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
@@ -73,7 +73,7 @@ public class RadialBlurPass extends JmeFilterPass {
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/RadialBlur.j3md");
         add(new Subpass(material, true, false) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 material.setFloat("SampleDist", sampleDist);
                 material.setFloat("SampleStrength", sampleStrength);
                 material.setParam("Samples", VarType.FloatArray, samples);

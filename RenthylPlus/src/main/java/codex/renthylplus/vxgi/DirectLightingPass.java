@@ -5,11 +5,10 @@
 package codex.renthylplus.vxgi;
 
 import codex.boost.material.MaterialAdapter;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.DefinedTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -67,7 +66,7 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         assetManager = frameGraph.getAssetManager();
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(colorDef, color);
         declare(depthDef, depth);
         materials.declareAll(resources, this);
@@ -77,7 +76,7 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         referenceOptional(lightContribution);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         screenSize.set(context.getWidth(), context.getHeight());
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(colorDef);
@@ -95,13 +94,13 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         resources.acquire(geometry).render(context, this);
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         colorTargets.clear();
     }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public void renderGeometry(FGRenderContext context, Geometry g) {
+    public void renderGeometry(FrameGraphContext context, Geometry g) {
         Material m = g.getMaterial();
         if (!adapter.adaptMaterial(assetManager, m, TECHNIQUE.getTargetValue())) {
             return;

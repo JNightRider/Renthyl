@@ -31,10 +31,8 @@ package codex.renthyl;
 import codex.renthyl.render.BasicRenderingQueue;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.RenderingQueue;
-import codex.renthyl.resources.ResourceList;
-import codex.renthyl.client.GraphSource;
-import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.RenderThread;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.tasks.SynchronizedAttribute;
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.pipeline.RenderPipeline;
@@ -43,76 +41,11 @@ import com.jme3.renderer.ViewPort;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 
-import codex.renthyl.modules.RenderPass;
+public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<FrameGraphContext> {
 
-/**
- * Manages render passes, dependencies, and resources in a node-based parameter system.
- * <p>
- * Rendering is a complicated task, involving many parameters and resources. The framegraph
- * aims to simplify rendering from the user's perspective, and limit the creation, binding,
- * and destruction of resources wherever possible.
- * <p>
- * Passes are expected to declare or reference beforehand the resources they plan on using
- * during execution. These declarations are stored in a ResourceList as
- * {@link codex.renthyl.resources.ResourceView ResourceViews}, which are used to determine
- * how resources (such as textures) should be allocated and which passes should be culled.
- * <p>
- * During rendering (called execution), passes then expected ask the ResourceList
- * for the resource the declared or referenced earlier. If the resource does not already
- * exist (is virtual), the manager will either create a new resource or allocate an existing
- * unused resource that qualifies based on the description provided when declared.
- * <p>
- * To understand how resources are managed, see {@link ResourceList} documentation.
- * <p>
- * FrameGraph execution generally occurs in four steps:
- * <ol>
- *  <li><strong>Preparation.</strong> Passes declare, reserve, and reference resources
- * during this step.</li>
- *  <li><strong>Culling.</strong> The resource manager determines which resources and
- * passes are unused, and culls them. This can often save loads of resources, as many
- * passes may not used for large parts of the application.</li>
- *  <li><strong>Execution.</strong> Passes that were not culled acquire the resources
- * they need, and perform rendering operations. All passes are expected to release
- * all resources they declared or referenced in the first step, however, this is done
- * automatically by {@link RenderPass}.</li>
- *  <li><strong>Reset.</strong> Passes perform whatever post-rendering cleanup is necessary.</li>
- * </ol>
- * Passes are organized in a scenegraph-like structure, where {@link RenderContainer RenderContainers}
- * act as nodes which can contain any number of other modules (such as {@link RenderPass RenderPasses}).
- * Modules are executed <em>depth-first</em>, meaning a RenderContainer executes all
- * its child modules before the next module in the original queue.
- * <pre>
- *        E F G
- *        -----
- *          |
- * -&gt; A B C D H I -&gt;</pre>
- * <em>Modules are executed alphabetically starting with {@code A} and ending with
- * {@code I}. Module {@code D} is a RenderContainer containing modules {@code E},
- * {@code F}, and {@code G}.</em>
- * <p>
- * The reason for this setup, rather than a direct linear queue, is so that specific
- * groups of modules can be organized independently of other module groups. An
- * example of this is a {@code codex.renthyl.modules.RenderLoop RenderLoop}, which
- * programmatically generates modules within itself to simulate looping.
- * <p>
- * This setup also gracefully allows for multithreading via {@link RenderThread RenderThreads}.
- * Any descendent of a RenderThread module is executed on the same worker thread as the
- * RenderThread. RenderThreads can be used anywhere within the tree, and multiple
- * RenderThreads can use the same worker thread.
- * <p>
- * Communication is allowed between game logic and FrameGraph internals through
- * {@link GraphSource} and {@link codex.renthyl.client.GraphTarget GraphTarget}.
- * The FrameGraph facilitates this communication by providing a settings map, which
- * acts as a mediator between game logic and internals.
- * 
- * @author codex
- */
-public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<FGPipelineContext> {
-
-    public static final Class<FGPipelineContext> CONTEXT_TYPE = FGPipelineContext.class;
-
-    private final FGRenderContext context;
+    private final AssetManager assetManager;
     private final RenderingQueue queue;
+    private final SynchronizedAttribute<FrameGraphContext> contextAttr = new SynchronizedAttribute<>();
     private boolean rendered = false;
     private int numWorkers = 1;
 
@@ -125,27 +58,24 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
     }
 
     public FrameGraph(AssetManager assetManager, RenderingQueue queue) {
-        this.context = new FGRenderContext(assetManager);
+        this.assetManager = assetManager;
         this.queue = queue;
     }
     
     @Override
-    public FGPipelineContext fetchPipelineContext(RenderManager renderManager) {
-        return renderManager.getOrCreateContext(FGPipelineContext.class, rm -> new FGPipelineContext());
+    public FrameGraphContext fetchPipelineContext(RenderManager renderManager) {
+        return renderManager.getOrCreateContext(FrameGraphContext.class, rm -> new FrameGraphContext(assetManager, rm));
     }
 
     @Override
-    public void startRenderFrame(RenderManager rm) {
-        // require that renthyl be initialized
-        Renthyl.requireInitialized();
-    }
+    public void startRenderFrame(RenderManager rm) {}
 
     @Override
-    public void pipelineRender(RenderManager rm, FGPipelineContext pContext, ViewPort vp, float tpf) {
+    public void pipelineRender(RenderManager rm, FrameGraphContext pContext, ViewPort vp, float tpf) {
 
         // target viewport
-        rm.applyViewPort(vp);
-        context.target(rm, pContext, vp, tpf);
+        contextAttr.setValue(pContext);
+        pContext.target(vp, tpf);
 
         // prepare
         for (Renderable t : this) {
@@ -155,11 +85,12 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         queue.prepare();
 
         // render
-        queue.render(numWorkers, context);
+        queue.render(numWorkers);
 
         // reset
         queue.reset();
         rm.getRenderer().clearClipRect();
+        pContext.resetAllRenderSettings();
         rendered = true;
         
     }
@@ -185,6 +116,10 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
 
     public int getNumWorkers() {
         return numWorkers;
+    }
+
+    public Socket<FrameGraphContext> getContext() {
+        return contextAttr;
     }
 
 }

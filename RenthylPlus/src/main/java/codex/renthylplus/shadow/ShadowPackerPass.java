@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -25,11 +25,11 @@ public class ShadowPackerPass extends RenderPass {
     @Override
     protected void initialize(FrameGraph frameGraph) {}
     @Override
-    protected void prepare(FGRenderContext context) {}
+    protected void prepare(FrameGraphContext context) {}
     @Override
-    protected void execute(FGRenderContext context) {}
+    protected void execute(FrameGraphContext context) {}
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

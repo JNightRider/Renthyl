@@ -29,11 +29,10 @@
 package codex.renthylplus.deferred;
 
 import codex.boost.material.MaterialAdapter;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketSelector;
@@ -99,7 +98,7 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
         this.assetManager = frameGraph.getAssetManager();
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         int w = context.getWidth();
         int h = context.getHeight();
         for (int i = 0; i < gbuffers.size(); i++) {
@@ -111,7 +110,7 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
         reference(geometry);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         FrameBuffer fb = getFrameBuffer(context, 1);
         fb.setMultiTarget(true);
         resources.acquireColorTargets(fb, gbuffers.select(TicketSelector.before(4), new LinkedList()));
@@ -124,13 +123,13 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
         resources.setPrimitive(skipped, skipQueue);
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         skipQueue.clear();
     }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public void renderGeometry(FGRenderContext context, Geometry geom) {
+    public void renderGeometry(FrameGraphContext context, Geometry geom) {
         Material material = geom.getMaterial();
         if (!adapter.adaptMaterial(assetManager, material, GBUFFER_PASS)) {
             skipQueue.add(geom);

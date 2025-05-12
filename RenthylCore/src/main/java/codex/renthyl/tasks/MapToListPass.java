@@ -1,6 +1,6 @@
 package codex.renthyl.tasks;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.sockets.Socket;
@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class MapToListPass <K, R> extends RenderTask {
+public class MapToListPass <K, R> extends AbstractTask {
 
     private final K[] order;
     private final TransitiveSocket<Map<K, R>> map = new TransitiveSocket<>(this);
@@ -31,7 +31,7 @@ public class MapToListPass <K, R> extends RenderTask {
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {
+    protected void renderTask() {
         Map<K, R> inMap = map.acquire();
         if (order != null) {
             for (K key : order) {
@@ -51,7 +51,7 @@ public class MapToListPass <K, R> extends RenderTask {
         list.getValue().clear();
     }
 
-    public Socket<Map<K, R>> getMap() {
+    public PointerSocket<Map<K, R>> getMap() {
         return map;
     }
 

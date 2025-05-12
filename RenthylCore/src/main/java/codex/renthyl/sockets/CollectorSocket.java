@@ -7,12 +7,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public class CollectorSocket <T> implements Socket<List<T>> {
 
     private final Renderable task;
-    private final List<Socket<Collection<T>>> collectionSources = new ArrayList<>();
-    private final List<Socket<Map<Object, T>>> mapSources = new ArrayList<>();
+    private final List<Socket<? extends Collection<T>>> collectionSources = new ArrayList<>();
+    private final List<Socket<? extends Map<?, T>>> mapSources = new ArrayList<>();
     private final List<Socket<T>> sources = new ArrayList<>();
     private final List<T> target;
     private int activeRefs = 0;
@@ -29,26 +30,27 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     public void update(float tpf) {}
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return task.isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return task.isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return collectionSources.stream().allMatch(Socket::isAvailableToDownstream)
-                && mapSources.stream().allMatch(Socket::isAvailableToDownstream)
-                && sources.stream().allMatch(Socket::isAvailableToDownstream);
+    public boolean isUpstreamAvailable(int queuePosition) {
+        Predicate<Socket> p = s -> s.isAvailableToDownstream(queuePosition);
+        return collectionSources.stream().allMatch(p)
+                && mapSources.stream().allMatch(p)
+                && sources.stream().allMatch(p);
     }
 
     @Override
     public List<T> acquire() {
-        for (Socket<Collection<T>> s : collectionSources) {
+        for (Socket<? extends Collection<T>> s : collectionSources) {
             Collection<T> v = s.acquire();
             if (v != null) {
                 target.addAll(v);
             }
         }
-        for (Socket<Map<Object, T>> s : mapSources) {
+        for (Socket<? extends Map<?, T>> s : mapSources) {
             Map<?, T> v = s.acquire();
             if (v != null) {
                 target.addAll(v.values());
@@ -70,10 +72,10 @@ public class CollectorSocket <T> implements Socket<List<T>> {
 
     @Override
     public void queue(RenderingQueue queue) {
-        for (Socket<Collection<T>> s : collectionSources) {
+        for (Socket<? extends Collection<T>> s : collectionSources) {
             s.queue(queue);
         }
-        for (Socket<Map<Object, T>> s : mapSources) {
+        for (Socket<? extends Map<?, T>> s : mapSources) {
             s.queue(queue);
         }
         for (Socket<T> s : sources) {
@@ -85,10 +87,10 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     @Override
     public void reference(int queuePosition) {
         activeRefs++;
-        for (Socket<Collection<T>> s : collectionSources) {
+        for (Socket<? extends Collection<T>> s : collectionSources) {
             s.reference(queuePosition);
         }
-        for (Socket<Map<Object, T>> s : mapSources) {
+        for (Socket<? extends Map<?, T>> s : mapSources) {
             s.reference(queuePosition);
         }
         for (Socket<T> s : sources) {
@@ -97,13 +99,13 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
-        collectionSources.forEach(Socket::release);
-        mapSources.forEach(Socket::release);
-        sources.forEach(Socket::release);
+        collectionSources.forEach(s -> s.release(queuePosition));
+        mapSources.forEach(s -> s.release(queuePosition));
+        sources.forEach(s -> s.release(queuePosition));
     }
 
     @Override
@@ -114,10 +116,10 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     @Override
     public int getResourceUsage() {
         int usage = activeRefs;
-        for (Socket<Collection<T>> s : collectionSources) {
+        for (Socket<? extends Collection<T>> s : collectionSources) {
             usage = Math.max(usage, s.getResourceUsage());
         }
-        for (Socket<Map<Object, T>> s : mapSources) {
+        for (Socket<? extends Map<?, T>> s : mapSources) {
             usage = Math.max(usage, s.getResourceUsage());
         }
         for (Socket<T> s : sources) {
@@ -126,22 +128,22 @@ public class CollectorSocket <T> implements Socket<List<T>> {
         return usage;
     }
 
-    public void addCollectionSource(Socket<Collection<T>> source) {
+    public void addCollectionSource(Socket<? extends Collection<T>> source) {
         assertNoActiveReferences();
         collectionSources.add(source);
     }
 
-    public void addCollectionSource(int index, Socket<Collection<T>> source) {
+    public void addCollectionSource(int index, Socket<? extends Collection<T>> source) {
         assertNoActiveReferences();
         collectionSources.add(index, source);
     }
 
-    public void addMapSource(Socket<Map<Object, T>> source) {
+    public void addMapSource(Socket<? extends Map<?, T>> source) {
         assertNoActiveReferences();
         mapSources.add(source);
     }
 
-    public void addMapSource(int index, Socket<Map<Object, T>> source) {
+    public void addMapSource(int index, Socket<? extends Map<?, T>> source) {
         assertNoActiveReferences();
         mapSources.add(index, source);
     }
@@ -156,17 +158,17 @@ public class CollectorSocket <T> implements Socket<List<T>> {
         sources.add(index, source);
     }
 
-    public void removeCollectionSource(Socket<Collection<T>> source) {
+    public void removeCollectionSource(Socket source) {
         assertNoActiveReferences();
         collectionSources.remove(source);
     }
 
-    public void removeMapSource(Socket<Map<?, T>> source) {
+    public void removeMapSource(Socket source) {
         assertNoActiveReferences();
         mapSources.remove(source);
     }
 
-    public void removeSource(Socket<T> source) {
+    public void removeSource(Socket source) {
         assertNoActiveReferences();
         sources.remove(source);
     }

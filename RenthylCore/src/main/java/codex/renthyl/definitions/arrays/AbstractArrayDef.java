@@ -4,7 +4,7 @@
  */
 package codex.renthyl.definitions.arrays;
 
-import codex.renthyl.definitions.AbstractResourceDef;
+import codex.renthyl.definitions.ResourceDef;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -17,7 +17,7 @@ import java.io.IOException;
  * @author codex
  * @param <T>
  */
-public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implements Savable {
+public abstract class AbstractArrayDef <T> implements ResourceDef<T>, Savable {
 
     protected int size;
     protected int padding;
@@ -30,11 +30,15 @@ public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implem
     }
 
     @Override
+    public void dispose(T array) {}
+
+    @Override
     public void write(JmeExporter ex) throws IOException {
         OutputCapsule out = ex.getCapsule(this);
         out.write(size, "size", 1);
         out.write(padding, "padding", 0);
     }
+
     @Override
     public void read(JmeImporter im) throws IOException {
         InputCapsule in = im.getCapsule(this);

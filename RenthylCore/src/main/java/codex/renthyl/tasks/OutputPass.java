@@ -28,9 +28,7 @@
  */
 package codex.renthyl.tasks;
 
-import codex.renthyl.FGRenderContext;
 import codex.renthyl.sockets.PointerSocket;
-import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import com.jme3.texture.Texture2D;
 
@@ -55,7 +53,7 @@ public class OutputPass extends RenderTask {
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {
+    protected void renderTask() {
         if (alphaDiscard != null) {
             context.getScreen().setAlphaDiscard(alphaDiscard);
         }

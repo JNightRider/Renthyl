@@ -4,7 +4,6 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.definitions.AbstractResourceDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceException;
 import com.jme3.texture.Image;

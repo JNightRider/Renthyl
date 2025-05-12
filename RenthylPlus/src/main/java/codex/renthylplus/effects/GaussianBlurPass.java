@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -63,11 +63,11 @@ public class GaussianBlurPass extends JmeFilterPass {
         hBlurMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/HGaussianBlur.j3md");
         Subpass hBlurPass = add(new Subpass(hBlurMat, true, false) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 getDef().setSize(screenWidth, screenHeight);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 hBlurMat.setFloat("Size", screenWidth);
                 hBlurMat.setFloat("Scale", blurScale);
             }
@@ -77,11 +77,11 @@ public class GaussianBlurPass extends JmeFilterPass {
         vBlurMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/VGaussianBlur.j3md");
         Subpass vBlurPass = add(new Subpass(vBlurMat, false, false) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 getDef().setSize(screenWidth, screenHeight);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 vBlurMat.setTexture("Texture", hBlurPass.getRenderedTexture());
                 vBlurMat.setFloat("Size", screenHeight);
                 vBlurMat.setFloat("Scale", blurScale);
@@ -90,7 +90,7 @@ public class GaussianBlurPass extends JmeFilterPass {
         
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         // multiple acquire calls with the same ticket is perfectly fine
         Texture2D inColor = resources.acquire(sceneColor);
         screenWidth = (int)Math.max(1, (inColor.getImage().getWidth() / downSamplingFactor));

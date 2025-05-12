@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.modules.RenderPass;
@@ -32,11 +32,11 @@ public class VoxelEnvSetupPass extends RenderPass {
         voxelBounds = addOutput("Bounds");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declarePrimitive(voxelGridSize, voxelBounds);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         BoundingBox box = GraphSource.get(bounds, DEFAULT_VOXEL_BOUNDS, context);
         int size = GraphSource.get(gridSize, DEFAULT_VOXEL_GRID_SIZE, context);
         if (size <= 0) {
@@ -46,7 +46,7 @@ public class VoxelEnvSetupPass extends RenderPass {
         resources.setPrimitive(voxelBounds, box);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
 

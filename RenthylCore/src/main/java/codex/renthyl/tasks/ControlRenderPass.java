@@ -28,7 +28,6 @@
  */
 package codex.renthyl.tasks;
 
-import codex.renthyl.FGRenderContext;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.SceneGraphIterator;
@@ -41,7 +40,7 @@ import com.jme3.scene.Spatial;
 public class ControlRenderPass extends RenderTask {
 
     @Override
-    protected void renderTask(FGRenderContext context) {
+    protected void renderTask() {
         RenderManager rm = context.getRenderManager();
         ViewPort vp = context.getViewPort();
         for (Spatial scene : vp.getScenes()) {

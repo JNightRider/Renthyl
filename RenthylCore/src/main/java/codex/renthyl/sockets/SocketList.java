@@ -33,13 +33,13 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     }
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return task.isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return task.isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return (upstream == null || upstream.isAvailableToDownstream()) && stream().allMatch(Socket::isUpstreamAvailable);
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return (upstream == null || upstream.isAvailableToDownstream(queuePosition)) && stream().allMatch(t -> t.isUpstreamAvailable(queuePosition));
     }
 
     @Override
@@ -77,14 +77,14 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
         if (upstream != null) {
-            upstream.release();
+            upstream.release(queuePosition);
         }
-        forEach(Socket::release);
+        forEach(t -> t.release(queuePosition));
     }
 
     @Override

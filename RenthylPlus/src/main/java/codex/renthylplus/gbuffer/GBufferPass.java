@@ -1,10 +1,9 @@
 package codex.renthylplus.gbuffer;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketGroup;
@@ -26,20 +25,20 @@ public class GBufferPass extends RenderPass {
         return gbuffers = new GBufferGroup(name);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         gbuffers.declareAll(resources, this);
         reserve(gbuffers);
         reference(geometry);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         FrameBuffer fb = getFrameBuffer(context, 1);
         gbuffers.acquireRenderTargets(resources, fb);
         context.registerMode(RenderMode.frameBuffer(fb));
         resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
 

@@ -1,7 +1,5 @@
 package codex.renthyl.render;
 
-import codex.renthyl.FGRenderContext;
-
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
@@ -28,7 +26,7 @@ public class BasicRenderingQueue implements RenderingQueue {
     @Override
     public int add(Renderable r) {
         staged.add(r);
-        return queue.size() - 1;
+        return staged.size() - 1;
     }
 
     @Override
@@ -44,7 +42,7 @@ public class BasicRenderingQueue implements RenderingQueue {
     }
 
     @Override
-    public void render(int workers, FGRenderContext context) {
+    public void render(int workers) {
         if (workers > 1 && service == null) {
             throw new NullPointerException("No executor available for multithreading.");
         }
@@ -52,7 +50,7 @@ public class BasicRenderingQueue implements RenderingQueue {
             throw new IllegalArgumentException("Cannot have fewer than one worker.");
         }
         while (activeWorkers.size() < workers) {
-            activeWorkers.add(new Worker(activeWorkers.size(), context));
+            activeWorkers.add(new Worker(activeWorkers.size()));
         }
         while (activeWorkers.size() > workers) {
             activeWorkers.removeLast();
@@ -131,13 +129,11 @@ public class BasicRenderingQueue implements RenderingQueue {
     public class Worker implements Runnable, RenderWorker {
 
         private final int index;
-        private final FGRenderContext context;
         private Renderable task;
         private boolean complete = false;
 
-        public Worker(int index, FGRenderContext context) {
+        public Worker(int index) {
             this.index = index;
-            this.context = context;
         }
 
         @Override
@@ -169,7 +165,7 @@ public class BasicRenderingQueue implements RenderingQueue {
                 throw new NullPointerException("No renderable task submitted to execute.");
             }
             try {
-                task.render(context);
+                task.render();
             } catch (Exception ex) {
                 submitError(ex);
             } finally {

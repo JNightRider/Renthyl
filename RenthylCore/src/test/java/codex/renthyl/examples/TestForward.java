@@ -5,9 +5,7 @@
 package codex.renthyl.examples;
 
 import codex.renthyl.Renthyl;
-import codex.renthyl.render.RenderThreadManager;
 import codex.renthyl.resources.ResourceAllocationState;
-import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.app.SimpleApplication;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -47,13 +45,8 @@ public class TestForward extends SimpleApplication {
         // create a resource allocator to handle resources
         ResourceAllocationState allocator = new ResourceAllocationState();
         stateManager.attach(allocator);
-
-        // create an executor to handle multithreaded execution
-        RenderThreadManager threads = new RenderThreadManager();
-        stateManager.attach(threads);
         
         // create the framegraph
-        Renthyl.initialize(this);
         viewPort.setPipeline(Renthyl.forward(assetManager, allocator));
         
     }

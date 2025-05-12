@@ -29,7 +29,7 @@ import org.lwjgl.system.CustomBuffer;
  * @author codex
  * @param <T>
  */
-public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
+public class BufferDef <T extends Buffer> implements ResourceDef<T> {
 
     public static final Function<Integer, ByteBuffer> BYTE = n -> BufferUtils.createByteBuffer(n);
     public static final Function<Integer, IntBuffer> INT = n -> BufferUtils.createIntBuffer(n);
@@ -60,6 +60,7 @@ public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
         buffer.position(0);
         return buffer;
     }
+
     @Override
     public Float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
@@ -70,10 +71,14 @@ public class BufferDef <T extends Buffer> extends AbstractResourceDef<T> {
         }
         return null;
     }
+
     @Override
     public T conformResource(Object resource) throws ResourceException {
         return prepareBuffer((T)resource);
     }
+
+    @Override
+    public void dispose(T buffer) {}
     
     private T prepareBuffer(T buffer) {
         buffer.position(0).limit(size);

@@ -4,12 +4,12 @@
  */
 package codex.renthyl;
 
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.tasks.ControlRenderPass;
+import codex.renthyl.tasks.MapToListPass;
 import codex.renthyl.tasks.OutputPass;
 import codex.renthyl.tasks.geometry.GeometryPass;
-import codex.renthyl.tasks.geometry.QueueMergePass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
-import codex.renthyl.tasks.MapToListPass;
 import codex.renthyl.resources.ResourceAllocator;
 import com.jme3.asset.AssetManager;
 
@@ -40,14 +40,20 @@ public final class Renthyl {
         
         FrameGraph fg = new FrameGraph(assetManager);
         
-        fg.addTask(new ControlRenderPass());
-        SceneEnqueuePass enqueue = fg.addTask(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.addTask(new QueueMergePass());
-        GeometryPass geometry = fg.addTask(new GeometryPass(allocator));
+        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
         OutputPass out = fg.addTask(new OutputPass());
 
-        merge.getQueues().addMapSource(enqueue.getQueues());
-        geometry.getGeometry().setUpstream(merge.getResult());
+        SceneEnqueuePass enqueue = SceneEnqueuePass.withLegacyQueues();
+        MapToListPass<String, GeometryQueue> mapToList = new MapToListPass<>(new String[] {
+                SceneEnqueuePass.OPAQUE, SceneEnqueuePass.SKY, SceneEnqueuePass.TRANSPARENT, SceneEnqueuePass.GUI, SceneEnqueuePass.TRANSLUCENT});
+        GeometryPass geometry = new GeometryPass(allocator);
+
+        enqueue.setContext(fg.getContext());
+        geometry.setContext(fg.getContext());
+        out.setContext(fg.getContext());
+
+        mapToList.getMap().setUpstream(enqueue.getQueues());
+        geometry.getGeometry().addCollectionSource(mapToList.getList());
 
         out.getColor().setUpstream(geometry.getOutColor());
         out.getDepth().setUpstream(geometry.getOutDepth());

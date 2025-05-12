@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.arrays.FloatArrayDef;
 import codex.renthyl.modules.RenderPass;
@@ -47,14 +47,14 @@ public class LightArrayPass extends RenderPass {
         arrayDef.setPadding(0);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(arrayDef, lightArray);
         declarePrimitive(ambient, probes);
         reference(lights);
         referenceOptional(lightShadowMap);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         Collection<Light> list = resources.acquire(lights);
         arrayDef.setSize(list.size() * FLOATS_PER_LIGHT);
         Light[] shadows = resources.acquireOrElse(lightShadowMap, null);
@@ -106,7 +106,7 @@ public class LightArrayPass extends RenderPass {
         resources.setPrimitive(probes, probeList);
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         ambientColor.set(0, 0, 0, 0);
         probeList.clear();
     }

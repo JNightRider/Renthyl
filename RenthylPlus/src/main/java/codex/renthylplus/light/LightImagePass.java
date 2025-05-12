@@ -28,7 +28,7 @@
  */
 package codex.renthylplus.light;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.light.LightImagePacker;
@@ -116,7 +116,7 @@ public class LightImagePass extends RenderPass {
         indexDef.setWrap(Texture.WrapMode.EdgeClamp);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         for (ResourceTicket<Texture2D> t : textures) {
             declare(lightTexDef, t);
             reserve(t);
@@ -129,7 +129,7 @@ public class LightImagePass extends RenderPass {
         referenceOptional(tileInfo, lightShadowIndices);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         LightList lightList = resources.acquire(lights);
         TiledRenderGrid grid = resources.acquireOrElse(tileInfo, null);
         Light[] indexMap = resources.acquireOrElse(lightShadowIndices, null);
@@ -160,7 +160,7 @@ public class LightImagePass extends RenderPass {
         resources.setPrimitive(probes, probeList);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override

@@ -1,7 +1,5 @@
 package codex.renthyl.render;
 
-import codex.renthyl.FGRenderContext;
-
 public interface RenderingQueue extends Iterable<Renderable> {
 
     int add(Renderable ex);
@@ -10,7 +8,7 @@ public interface RenderingQueue extends Iterable<Renderable> {
 
     void prepare();
 
-    void render(int workers, FGRenderContext context);
+    void render(int workers);
 
     void reset();
 

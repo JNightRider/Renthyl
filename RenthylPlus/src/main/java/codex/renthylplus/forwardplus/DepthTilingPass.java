@@ -7,7 +7,7 @@ package codex.renthylplus.forwardplus;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
@@ -39,13 +39,13 @@ public class DepthTilingPass extends RenderPass {
                 "RenthylPlus/Shaders/DepthTileCompute.glsl");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(tileDef, depthRangeTiles);
         reserve(depthRangeTiles);
         reference(sceneDepth);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         Texture2D inTex = resources.acquire(sceneDepth);
         int w = inTex.getImage().getWidth() / tileSize;
         int h = inTex.getImage().getHeight() / tileSize;
@@ -55,7 +55,7 @@ public class DepthTilingPass extends RenderPass {
         shader.execute(new WorkSize(w, h, 1).offloadToLocal(tileSize));
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

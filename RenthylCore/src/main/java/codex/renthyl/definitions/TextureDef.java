@@ -56,7 +56,7 @@ import java.util.function.Function;
  * @author codex
  * @param <T>
  */
-public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
+public class TextureDef <T extends Texture> implements ResourceDef<T> {
     
     public static final Function<Image, Texture2D> TEXTURE_2D = img -> new Texture2D(img);
     public static final Function<Image, Texture3D> TEXTURE_3D = img -> new Texture3D(img);
@@ -131,7 +131,6 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         }
         return null;
     }
-
     @Override
     public T conformResource(Object resource) throws ResourceException {
         if (type.isAssignableFrom(resource.getClass())) {
@@ -152,12 +151,8 @@ public class TextureDef <T extends Texture> extends AbstractResourceDef<T> {
         return tex;
     }
     @Override
-    public Consumer<T> getDisposalMethod() {
-        return tex -> tex.getImage().dispose();
-    }
-    @Override
-    public boolean isDisposeOnRelease() {
-        return false;
+    public void dispose(T texture) {
+        texture.getImage().dispose();
     }
     
     protected T createTexture(Image img) {

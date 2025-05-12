@@ -8,11 +8,10 @@ import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.jmecompute.opengl.Glsl;
 import codex.jmecompute.opengl.uniforms.bufferobjects.VertexBufferShaderStorage;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.DefinedTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -74,13 +73,13 @@ public class PlexGeometryPass extends RenderPass implements GeometryRenderHandle
         return (outList = new DefinedTicketList<>(name));
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         outList.declareAll(resources, this);
         reserve(outList);
         reference(geometry);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         FrameBuffer fb = getFrameBuffer(context, 1);
         resources.acquireColorTarget(fb, outList.select(TicketSelector.name("Color")));
@@ -92,11 +91,11 @@ public class PlexGeometryPass extends RenderPass implements GeometryRenderHandle
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public void renderGeometry(FGRenderContext context, Geometry geometry) {
+    public void renderGeometry(FrameGraphContext context, Geometry geometry) {
         if (geometry.getMesh() instanceof PlexMesh) {
             renderPlexGeometry(context, geometry);
         } else {
@@ -104,7 +103,7 @@ public class PlexGeometryPass extends RenderPass implements GeometryRenderHandle
         }
     }
     
-    private void renderPlexGeometry(FGRenderContext context, Geometry geometry) {
+    private void renderPlexGeometry(FrameGraphContext context, Geometry geometry) {
         Camera cam = context.getCurrentCamera();
         PlexMesh mesh = (PlexMesh)geometry.getMesh();
         float dist = geometry.getWorldBound().distanceToEdge(cam.getLocation());

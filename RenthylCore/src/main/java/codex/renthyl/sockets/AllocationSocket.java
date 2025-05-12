@@ -48,8 +48,8 @@ public class AllocationSocket<T> extends ModifyingSocket<T> {
     }
 
     @Override
-    public void release() {
-        super.release();
+    public void release(int queuePosition) {
+        super.release(queuePosition);
         if (wrapper != null && activeRefs <= 0) {
             wrapper.release();
             resource = null;

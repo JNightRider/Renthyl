@@ -4,11 +4,10 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
@@ -47,14 +46,14 @@ public class VoxelVisualizerPass extends RenderPass {
         material.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(colorDef, color);
         declare(depthDef, depth);
         reserve(color, depth);
         reference(voxels, geometry, bounds);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(colorDef);
@@ -77,7 +76,7 @@ public class VoxelVisualizerPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

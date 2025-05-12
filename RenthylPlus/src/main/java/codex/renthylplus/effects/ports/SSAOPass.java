@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -100,7 +100,7 @@ public class SSAOPass extends JmeFilterPass {
         ssaoMat.setTexture("RandomMap", random);
         Subpass ssaoPass = add(new Subpass("ssao", ssaoMat, true, true) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 Camera cam = context.getViewPort().getCamera();
                 TextureDef<Texture2D> def = getDef();
                 float farY = (cam.getFrustumTop() / cam.getFrustumNear()) * cam.getFrustumFar();
@@ -129,7 +129,7 @@ public class SSAOPass extends JmeFilterPass {
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/SSAO/ssaoBlur.j3md");
         add(new Subpass("blur", material) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 material.setTexture("SSAOMap", ssaoPass.getRenderedTexture());
                 material.setBoolean("UseAo", useAo);
                 material.setBoolean("UseOnlyAo", useOnlyAo);
@@ -143,7 +143,7 @@ public class SSAOPass extends JmeFilterPass {
         
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         super.prepare(context);
         referenceOptional(normals);
     }

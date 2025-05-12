@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -28,11 +28,11 @@ public class LightGatherPass extends RenderPass {
         lights = addOutput("Lights");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declarePrimitive(lights);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         for (Spatial scene : context.getViewPort().getScenes()) {
             for (Spatial spatial : new SceneGraphIterator(scene)) {
                 for (Light l : spatial.getLocalLightList()) {
@@ -43,7 +43,7 @@ public class LightGatherPass extends RenderPass {
         resources.setPrimitive(lights, lightList);
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         lightList.clear();
     }
     @Override

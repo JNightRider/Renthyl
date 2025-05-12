@@ -5,12 +5,11 @@
 package codex.renthylplus;
 
 import codex.boost.material.ImmediateMatDef;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
@@ -59,12 +58,12 @@ public class OcclusionCullingPass extends RenderPass {
         material = matdef.createMaterial();
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declarePrimitive(visible, invisible);
         declareTemporary(depthDef, depth);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         float d = downsampling.getGraphValue(frameGraph, context.getViewPort());
         int w = (int)(context.getWidth() * d);
         int h = (int)(context.getHeight() * d);
@@ -84,7 +83,7 @@ public class OcclusionCullingPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     
@@ -97,7 +96,7 @@ public class OcclusionCullingPass extends RenderPass {
         }
         
         @Override
-        public void renderGeometry(FGRenderContext context, Geometry g) {
+        public void renderGeometry(FrameGraphContext context, Geometry g) {
             Boolean visible = g.getUserData(VISIBLE);
             if (renderVisible == (visible == null || visible)) {
                 context.getRenderManager().renderGeometry(g);

@@ -28,19 +28,17 @@
  */
 package codex.renthyl.tasks.geometry;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.BasicGeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.boost.render.DepthRange;
-import codex.renthyl.draw.RenderMode;
+import codex.renthyl.render.RenderEnvironment;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.SocketMap;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.renderer.ViewPort;
-import com.jme3.renderer.queue.GuiComparator;
-import com.jme3.renderer.queue.OpaqueComparator;
-import com.jme3.renderer.queue.RenderQueue;
-import com.jme3.renderer.queue.TransparentComparator;
+import com.jme3.renderer.queue.*;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
@@ -71,7 +69,7 @@ public class SceneEnqueuePass extends RenderTask {
     public static final String OPAQUE = "Opaque", SKY = "Sky",
             TRANSPARENT = "Transparent", GUI = "Gui", TRANSLUCENT = "Translucent";
 
-    private final SocketMap<Object, ValueSocket<GeometryQueue>, GeometryQueue> queueMap = new SocketMap<>(this);
+    private final SocketMap<String, ValueSocket<GeometryQueue>, GeometryQueue> queueMap = new SocketMap<>(this);
     private String defaultQueue;
 
     public SceneEnqueuePass() {
@@ -79,17 +77,22 @@ public class SceneEnqueuePass extends RenderTask {
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {
-        ViewPort vp = context.getViewPort();
-        List<Spatial> scenes = vp.getScenes();
+    protected void renderTask() {
+        List<Spatial> scenes = context.getViewPort().getScenes();
         for (int i = scenes.size() - 1; i >= 0; i--) {
-            vp.getCamera().setPlaneState(0);
-            queueSubScene(context, scenes.get(i), defaultQueue);
+            queueSubScene(scenes.get(i), defaultQueue);
         }
-        queueMap.values().forEach(Socket::release);
     }
 
-    private void queueSubScene(FGRenderContext context, Spatial spatial, String parentParam) {
+    @Override
+    public void reset() {
+        super.reset();
+        for (ValueSocket<GeometryQueue> q : queueMap.values()) {
+            q.getValue().clear();
+        }
+    }
+
+    private void queueSubScene(Spatial spatial, String parentParam) {
         String queueParam = spatial.getUserData(QUEUE_PARAM);
         if (queueParam == null) {
             queueParam = spatial.getQueueBucket().name();
@@ -99,7 +102,7 @@ public class SceneEnqueuePass extends RenderTask {
         }
         if (spatial instanceof Node) {
             for (Spatial s : ((Node)spatial).getChildren()) {
-                queueSubScene(context, s, queueParam);
+                queueSubScene(s, queueParam);
             }
         } else if (spatial instanceof Geometry) {
             Geometry g = (Geometry)spatial;
@@ -128,28 +131,43 @@ public class SceneEnqueuePass extends RenderTask {
         return defaultQueue;
     }
 
-    public Socket<Map<Object, GeometryQueue>> getQueues() {
+    public Socket<Map<String, GeometryQueue>> getQueues() {
         return queueMap;
     }
     
     public static SceneEnqueuePass withLegacyQueues() {
         SceneEnqueuePass p = new SceneEnqueuePass();
-        p.addQueue(OPAQUE, new GeometryQueue(new OpaqueComparator()));
-        p.addQueue(TRANSPARENT, new GeometryQueue(new TransparentComparator()));
-        p.addQueue(TRANSLUCENT, new GeometryQueue(new TransparentComparator()));
-        GeometryQueue sky = new GeometryQueue();
-        sky.addMode(RenderMode.depthRange(DepthRange.REAR));
-        p.addQueue(SKY, sky);
-        GeometryQueue gui = new GeometryQueue(new GuiComparator());
-        gui.addMode(RenderMode.depthRange(DepthRange.FRONT));
-        gui.addMode(RenderMode.parallelProjection(true));
-        p.addQueue(GUI, gui);
+        p.addQueue(OPAQUE, new BasicGeometryQueue(new OpaqueComparator()));
+        p.addQueue(TRANSPARENT, new BasicGeometryQueue(new TransparentComparator()));
+        p.addQueue(TRANSLUCENT, new BasicGeometryQueue(new TransparentComparator()));
+        p.addQueue(SKY, new BasicGeometryQueue(new NullComparator()) {
+            @Override
+            public void applySettings(FrameGraphContext context) {
+                context.getDepthRange().pushValue(DepthRange.REAR);
+            }
+            @Override
+            public void restoreSettings(FrameGraphContext context) {
+                context.getDepthRange().pop();
+            }
+        });
+        p.addQueue(GUI, new BasicGeometryQueue(new GuiComparator()) {
+            @Override
+            public void applySettings(FrameGraphContext context) {
+                context.getDepthRange().pushValue(DepthRange.FRONT);
+                context.getCamera().pushValue(true);
+            }
+            @Override
+            public void restoreSettings(FrameGraphContext context) {
+                context.getDepthRange().pop();
+                context.getCamera().pop();
+            }
+        });
         return p;
     }
 
     public static SceneEnqueuePass withSingleQueue() {
         SceneEnqueuePass p = new SceneEnqueuePass();
-        p.addQueue(SINGLE_QUEUE, new GeometryQueue(new OpaqueComparator()));
+        p.addQueue(SINGLE_QUEUE, new BasicGeometryQueue(new OpaqueComparator()));
         return p;
     }
     

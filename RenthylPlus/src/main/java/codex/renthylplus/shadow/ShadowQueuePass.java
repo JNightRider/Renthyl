@@ -4,9 +4,9 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.SpatialWorldParam;
@@ -31,13 +31,13 @@ public class ShadowQueuePass extends RenderPass {
         receivers = addOutput("Receivers");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(null, occluders);
         declare(null, receivers);
         reference(geometry);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         GeometryQueue source = resources.acquire(geometry);
         int numGeoms = source.getNumGeometries();
         if (occluderQueue == null) {
@@ -63,7 +63,7 @@ public class ShadowQueuePass extends RenderPass {
         resources.setPrimitive(receivers, receiverQueue);
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         if (occluderQueue != null) {
             occluderQueue.clear();
         }

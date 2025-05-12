@@ -6,10 +6,9 @@ package codex.renthylplus.vxgi;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.material.Material;
@@ -64,13 +63,13 @@ public class VoxelDebugSlicePass extends RenderPass {
         voxelDef.setCube(64);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(resultDef, result);
         reserve(result);
         reference(voxels);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         resultDef.setSize(context.getWidth(), context.getHeight());
         FrameBuffer fb = getFrameBuffer(context.getWidth(), context.getHeight(), 1);
         resources.acquireColorTarget(fb, result);
@@ -85,7 +84,7 @@ public class VoxelDebugSlicePass extends RenderPass {
         }
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

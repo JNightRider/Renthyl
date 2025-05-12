@@ -13,7 +13,11 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     private int activeRefs = 0;
 
     public SocketMap(Renderable task) {
+        this(task, null);
+    }
+    public SocketMap(Renderable task, Map<K, R> resourceMap) {
         this.task = task;
+        this.resourceMap = resourceMap;
     }
 
     @Override
@@ -31,18 +35,31 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     }
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return task.isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return task.isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return (upstream == null || upstream.isAvailableToDownstream()) && values().stream().allMatch(Socket::isUpstreamAvailable);
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return (upstream == null || upstream.isAvailableToDownstream(queuePosition)) && values().stream().allMatch(t -> t.isUpstreamAvailable(queuePosition));
     }
 
     @Override
     public Map<K, R> acquire() {
-        return acquireOrElse(null);
+        if (resourceMap == null) {
+            resourceMap = new HashMap<>();
+        } else {
+            resourceMap.clear();
+        }
+        Map<K, R> defaults = upstream != null ? upstream.acquire() : null;
+        for (Entry<K, T> e : entrySet()) {
+            R r = e.getValue().acquire();
+            if (r == null && defaults != null) {
+                r = defaults.get(e.getKey());
+            }
+            resourceMap.put(e.getKey(), r);
+        }
+        return resourceMap;
     }
 
     @Override
@@ -83,14 +100,14 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
         if (upstream != null) {
-            upstream.release();
+            upstream.release(queuePosition);
         }
-        values().forEach(Socket::release);
+        values().forEach(t -> t.release(queuePosition));
     }
 
     @Override
@@ -122,8 +139,10 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
         if (upstream != null) {
             resourceMap.putAll(upstream.acquire());
         }
+        Map<K, R> defaults = upstream != null ? upstream.acquire() : null;
         for (Entry<K, T> e : entrySet()) {
             T s = e.getValue();
+            R r = orElse == null ? s.acquire() : s.acquire(orElse);
             resourceMap.put(e.getKey(), (orElse == null ? s.acquire() : s.acquire(orElse)));
         }
         return resourceMap;

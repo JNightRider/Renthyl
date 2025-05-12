@@ -8,9 +8,8 @@ import codex.jmecompute.Stride;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.jmecompute.opengl.Glsl;
 import codex.jmecompute.opengl.uniforms.buffers.FloatArrayUniform;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
@@ -78,14 +77,14 @@ public class IndirectLightingPass extends RenderPass {
         shader.define("NUM_TRACES", tracePattern.length / 3);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(resultDef, result);
         reserve(result);
         reference(sceneColor, sceneDepth, voxels, voxelBounds, gridSize);
         reference(materials);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         Texture2D inColor = resources.acquire(sceneColor);
         int w = inColor.getImage().getWidth();
@@ -127,7 +126,7 @@ public class IndirectLightingPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

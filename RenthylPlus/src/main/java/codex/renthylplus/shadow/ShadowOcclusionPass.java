@@ -4,11 +4,10 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.client.GraphSource;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketArray;
@@ -66,7 +65,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass i
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         for (ResourceTicket<ShadowMap> t : shadowMaps) {
             declare(shadowMapDef, t);
             reserve(t);
@@ -74,7 +73,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass i
         reference(occluders);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         RenderManager rm = context.getRenderManager();
         Camera viewCam = rm.getCurrentCamera();
         T l = resources.acquireOrElse(light, (lightSource != null
@@ -122,16 +121,16 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass i
         context.setCamera(viewCam);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public void renderGeometry(FGRenderContext context, Geometry g) {
+    public void renderGeometry(FrameGraphContext context, Geometry g) {
         context.getRenderManager().renderGeometry(g);
     }
     
     protected abstract boolean lightSourceInsideFrustum(Camera cam, T light);
-    protected abstract Camera getShadowCamera(FGRenderContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, T light, int index);
+    protected abstract Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, T light, int index);
     
     protected boolean frustumIntersect(Camera cam1, Camera cam2) {
         return true;

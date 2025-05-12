@@ -3,9 +3,6 @@ package codex.renthyl.sockets;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.RenderingQueue;
 
-import java.util.Iterator;
-import java.util.function.Consumer;
-
 public abstract class TerminalSocket <T> implements Socket<T> {
 
     protected final Renderable task;
@@ -16,12 +13,12 @@ public abstract class TerminalSocket <T> implements Socket<T> {
     }
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return task.isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return task.isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
+    public boolean isUpstreamAvailable(int queuePosition) {
         return true;
     }
 
@@ -36,7 +33,7 @@ public abstract class TerminalSocket <T> implements Socket<T> {
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }

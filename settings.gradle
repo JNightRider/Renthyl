@@ -5,3 +5,5 @@ include "RenthylCore", "RenthylPlus"
 // debugging
 //include "JMECompute"
 //project(":JMECompute").projectDir = file("../JMECompute/JMECompute")
+include 'Benchmarks'
+

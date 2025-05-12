@@ -5,9 +5,9 @@
 package codex.renthylplus;
 
 import codex.boost.material.ImmediateMatDef;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.BufferDef;
 import codex.renthyl.modules.RenderPass;
@@ -77,14 +77,14 @@ public class OcclusionTestPass extends RenderPass {
         bbGeometry.setMaterial(mat);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declarePrimitive(visible);
         declareTemporary(occlusionStatesDef, occlusionStates);
         declareTemporary(meshDataDef, meshData);
         reference(depth, geometry);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         GeometryQueue queue = resources.acquire(geometry);
         int n = queue.getNumGeometries();
         occlusionStatesDef.setSize(n);
@@ -113,7 +113,7 @@ public class OcclusionTestPass extends RenderPass {
         }
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         visibleQueue.clear();
     }
     @Override

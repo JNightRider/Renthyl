@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -94,7 +94,7 @@ public class SSRPass extends JmeFilterPass {
         ssrMat.setVector2("FarReflectionsFade", farFade);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         if (updateFlag) {
             updateFilterChain();
         }
@@ -109,7 +109,7 @@ public class SSRPass extends JmeFilterPass {
         
         Subpass ssrPass = add(new Subpass(ssrMat, true, true) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 TextureDef<Texture2D> def = getDef();
                 size.x = (int)(def.getWidth() / downSampleFactor);
                 size.y = (int)(def.getHeight() / downSampleFactor);
@@ -117,7 +117,7 @@ public class SSRPass extends JmeFilterPass {
                 def.setFormat(ssrImageFormat);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 ssrMat.setTexture("Normals", resources.acquire(normals));
             }
         });
@@ -133,11 +133,11 @@ public class SSRPass extends JmeFilterPass {
             boolean horizontal = (i & 1) == 0;
             Subpass p = blurArray[i] = add(new Subpass(blurMat, true, false) {
                 @Override
-                public void beforeAcquire(FGRenderContext context) {
+                public void beforeAcquire(FrameGraphContext context) {
                     getDef().setSize(size.x, size.y);
                 }
                 @Override
-                public void beforeRender(FGRenderContext context) {
+                public void beforeRender(FrameGraphContext context) {
                     Material mat = getMaterial();
                     mat.setTexture("SSR", prev.getRenderedTexture());
                     mat.setBoolean("Horizontal", horizontal);

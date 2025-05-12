@@ -4,8 +4,8 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.GeometryQueue;
 import com.jme3.light.Light;
 import com.jme3.light.PointLight;
 import com.jme3.math.Vector3f;
@@ -44,7 +44,7 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
     }
     
     @Override
-    protected Camera getShadowCamera(FGRenderContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, PointLight light, int index) {
+    protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, PointLight light, int index) {
         Camera c = shadowCams[index];
         if (radii[index] != light.getRadius() || !c.getLocation().equals(light.getPosition())) {
             radii[index] = light.getRadius();

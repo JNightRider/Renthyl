@@ -31,11 +31,10 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
 import codex.renthylplus.effects.JmeFilterPass;
@@ -102,11 +101,11 @@ public class BloomPass extends JmeFilterPass {
         extractMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/BloomExtract.j3md");
         Subpass extractPass = add(new Subpass(extractMat, true, false) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 getDef().setSize(screenWidth, screenHeight);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 extractMat.setFloat("ExposurePow", exposurePower);
                 extractMat.setFloat("ExposureCutoff", exposureCutOff);
                 extractMat.setBoolean("Extract", glowMode != BloomFilter.GlowMode.Objects);
@@ -120,11 +119,11 @@ public class BloomPass extends JmeFilterPass {
         hBlurMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/HGaussianBlur.j3md");
         Subpass hBlurPass = add(new Subpass(hBlurMat, false, false) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 getDef().setSize(screenWidth, screenHeight);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 hBlurMat.setTexture("Texture", extractPass.getRenderedTexture());
                 hBlurMat.setFloat("Size", screenWidth);
                 hBlurMat.setFloat("Scale", blurScale);
@@ -135,11 +134,11 @@ public class BloomPass extends JmeFilterPass {
         vBlurMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/VGaussianBlur.j3md");
         Subpass vBlurPass = add(new Subpass(vBlurMat, false, false) {
             @Override
-            public void beforeAcquire(FGRenderContext context) {
+            public void beforeAcquire(FrameGraphContext context) {
                 getDef().setSize(screenWidth, screenHeight);
             }
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 vBlurMat.setTexture("Texture", hBlurPass.getRenderedTexture());
                 vBlurMat.setFloat("Size", screenHeight);
                 vBlurMat.setFloat("Scale", blurScale);
@@ -150,7 +149,7 @@ public class BloomPass extends JmeFilterPass {
         finalMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/BloomFinal.j3md");
         add(new Subpass(finalMat, true, false) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 finalMat.setTexture("BloomTex", vBlurPass.getRenderedTexture());
                 finalMat.setFloat("BloomIntensity", bloomIntensity);
             }
@@ -158,7 +157,7 @@ public class BloomPass extends JmeFilterPass {
         
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         super.prepare(context);
         boolean scene = glowMode == BloomFilter.GlowMode.Scene;
         if (!scene) {
@@ -171,7 +170,7 @@ public class BloomPass extends JmeFilterPass {
         
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         // multiple acquire calls with the same ticket is perfectly fine
         Texture2D inColor = resources.acquire(sceneColor);
         screenWidth = (int)Math.max(1, (inColor.getImage().getWidth() / downSamplingFactor));

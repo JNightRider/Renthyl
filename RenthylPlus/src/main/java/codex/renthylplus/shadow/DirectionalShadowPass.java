@@ -4,8 +4,8 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bounding.BoundingVolume;
@@ -42,7 +42,7 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
     }
     
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         Camera viewCam = context.getCurrentCamera();
         float near = Math.max(viewCam.getFrustumNear(), 0.001f);
         shadowCam.setFrustumFar(viewCam.getFrustumFar());
@@ -61,8 +61,8 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
         return true;
     }
     @Override
-    protected Camera getShadowCamera(FGRenderContext context, Camera viewCam,
-            GeometryQueue occluders, GeometryQueue receivers, DirectionalLight light, int index) {
+    protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam,
+                                     GeometryQueue occluders, GeometryQueue receivers, DirectionalLight light, int index) {
         shadowCam.getRotation().lookAt(light.getDirection(), shadowCam.getUp());
         shadowCam.update();
         shadowCam.updateViewProjection();

@@ -33,7 +33,6 @@ import codex.renthyl.tasks.Attribute;
 import codex.renthyl.tasks.OutputPass;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
-import codex.renthyl.tasks.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
 import codex.renthylplus.deferred.DeferredGBufferPass;
 import codex.renthylplus.deferred.DeferredPass;

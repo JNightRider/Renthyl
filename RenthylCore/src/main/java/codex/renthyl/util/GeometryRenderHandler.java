@@ -28,8 +28,8 @@
  */
 package codex.renthyl.util;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.Visibility;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.Visibility;
 import com.jme3.bounding.BoundingVolume;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
@@ -50,57 +50,6 @@ public interface GeometryRenderHandler {
      * @param context
      * @param geometry geometry to render
      */
-    public void renderGeometry(FGRenderContext context, Geometry geometry);
-    
-    /**
-     * Evaluates the visibility status of the spatial when viewed
-     * through the {@link com.jme3.renderer.RenderManager#getCurrentCamera() current camera}.
-     * <p>
-     * If the queue from which the spatial is being tested is a "GUI" queue, the
-     * visibility checks must explicitely be handled as though the camera were
-     * in parallel projection mode (even though it may not be). This is a limitation
-     * of JME's queueing system that unfortunately carried over.
-     * 
-     * @param context
-     * @param spatial spatial to test visibility of
-     * @param parent visibility status of the parent under the same conditions
-     * @param gui true if the viewing condition is a GUI
-     * @return visibility status of the spatial
-     */
-    public default Visibility evaluateSpatialVisibility(FGRenderContext context, Spatial spatial, Visibility parent, boolean gui) {
-        /*
-         * Copyright (c) 2009-2021 jMonkeyEngine
-         * All rights reserved.
-         */
-        Spatial.CullHint cm = spatial.getCullHint();
-        assert cm != Spatial.CullHint.Inherit : "CullHint should never be inherit. Problem spatial name: " + spatial.getName();
-        if (cm == Spatial.CullHint.Always) {
-            return Visibility.OutsidePartial;
-        } else if (cm == Spatial.CullHint.Never) {
-            return Visibility.InsidePartial;
-        } else if (parent.isPartial()) {
-            return evaluateVolumeVisibility(context, spatial.getWorldBound(), gui);
-        } else {
-            return parent;
-        }
-    }
-    
-    /**
-     * Returns the visibility status of the volume when viewed through
-     * the {@link com.jme3.renderer.RenderManager#getCurrentCamera() current camera}.
-     * 
-     * @param context
-     * @param volume
-     * @param gui
-     * @return 
-     * @see #evaluateSpatialVisibility(codex.renthyl.FGRenderContext, com.jme3.scene.Spatial, codex.renthyl.Visibility, boolean)
-     */
-    public default Visibility evaluateVolumeVisibility(FGRenderContext context, BoundingVolume volume, boolean gui) {
-        if (!gui) {
-            return Visibility.fromFrustumIntersect(context.getCurrentCamera().contains(volume));
-        } else {
-            return Visibility.get(context.getCurrentCamera().containsGui(volume), false);
-        }
-    }
+    void renderGeometry(FrameGraphContext context, Geometry geometry);
     
 }

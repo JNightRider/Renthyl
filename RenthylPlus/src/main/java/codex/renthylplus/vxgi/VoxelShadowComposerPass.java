@@ -7,7 +7,7 @@ package codex.renthylplus.vxgi;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
@@ -63,14 +63,14 @@ public class VoxelShadowComposerPass extends RenderPass {
         shader.uniformInt("LightIndex");*/
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(lightDef, voxelLight);
         declarePrimitive(lightShadowIndices);
         reference(gridSize, voxelBounds);
         reference(shadowMaps);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         int n = resources.acquire(gridSize);
         lightDef.setCube(n);
@@ -112,7 +112,7 @@ public class VoxelShadowComposerPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         shadowMapList.clear();
     }
     @Override

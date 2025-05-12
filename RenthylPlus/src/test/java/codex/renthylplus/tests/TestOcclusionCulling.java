@@ -4,13 +4,12 @@
  */
 package codex.renthylplus.tests;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
 import codex.renthyl.tasks.OutputPass;
 import codex.renthyl.modules.cache.CacheWrite;
 import codex.renthyl.tasks.geometry.GeometryPass;
-import codex.renthyl.tasks.geometry.QueueMergePass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.app.SimpleApplication;
@@ -64,7 +63,7 @@ public class TestOcclusionCulling extends SimpleApplication {
         }
         
         @Override
-        public void renderGeometry(FGRenderContext context, Geometry g) {
+        public void renderGeometry(FrameGraphContext context, Geometry g) {
             if (visible == isVisible(g)) {
                 context.getRenderManager().renderGeometry(g);
             }

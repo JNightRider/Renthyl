@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
@@ -79,7 +79,7 @@ public class LightScatteringPass extends JmeFilterPass {
     }
     
     @Override
-    public void execute(FGRenderContext context) {
+    public void execute(FrameGraphContext context) {
         Camera cam = context.getViewPort().getCamera();
         getClipCoordinates(lightPosition, screenLightPos, cam);
         cam.getViewMatrix().mult(lightPosition, viewLightPos);        

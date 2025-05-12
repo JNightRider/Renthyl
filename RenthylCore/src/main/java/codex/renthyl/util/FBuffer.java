@@ -18,8 +18,13 @@ public class FBuffer extends FrameBuffer {
     public void setColorTargets(Texture... targets) {
         for (int i = 0; i < targets.length; i++) {
             Texture t = Objects.requireNonNull(targets[i], "Target color texture cannot be null.");
-            if (i >= getNumColorTargets() && getColorTarget(i).getTexture() != t) {
-                replaceColorTarget(i, FrameBuffer.FrameBufferTarget.newTarget(t));
+            if (i < getNumColorTargets()) {
+                if (getColorTarget(i).getTexture() != t) {
+                    replaceColorTarget(i, FrameBuffer.FrameBufferTarget.newTarget(t));
+                    setUpdateNeeded();
+                }
+            } else {
+                addColorTarget(FrameBuffer.FrameBufferTarget.newTarget(t));
                 setUpdateNeeded();
             }
         }

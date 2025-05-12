@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
@@ -71,7 +71,7 @@ public class SoftBloomPass extends JmeFilterPass {
     @Override
     protected void init(FrameGraph frameGraph) {}
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         if (updateFlag | capPassesToSize(context.getWidth(), context.getHeight())) {
             updateFilterChain(context.getWidth(), context.getHeight());
         }
@@ -93,7 +93,7 @@ public class SoftBloomPass extends JmeFilterPass {
             Subpass prev = (i > 0 ? downsamplingPasses[i-1] : null);
             downsamplingPasses[i] = add(new SamplingPass(downsampleMat, i == 0, w, h) {
                 @Override
-                public void beforeAcquire(FGRenderContext context) {
+                public void beforeAcquire(FrameGraphContext context) {
                     getDef().setFormat(format);
                     getDef().setSize(width, height);
                     if (bilinearFiltering) {
@@ -103,7 +103,7 @@ public class SoftBloomPass extends JmeFilterPass {
                     }
                 }
                 @Override
-                public void beforeRender(FGRenderContext context) {
+                public void beforeRender(FrameGraphContext context) {
                     if (prev != null) {
                         downsampleMat.setTexture("Texture", prev.getRenderedTexture());
                     }
@@ -125,7 +125,7 @@ public class SoftBloomPass extends JmeFilterPass {
             }
             upsamplingPasses[i] = add(new SamplingPass(upsampleMat, false, w, h) {
                 @Override
-                public void beforeAcquire(FGRenderContext context) {
+                public void beforeAcquire(FrameGraphContext context) {
                     getDef().setFormat(format);
                     getDef().setSize(width, height);
                     if (bilinearFiltering) {
@@ -135,7 +135,7 @@ public class SoftBloomPass extends JmeFilterPass {
                     }
                 }
                 @Override
-                public void beforeRender(FGRenderContext context) {
+                public void beforeRender(FrameGraphContext context) {
                     upsampleMat.setTexture("Texture", prev.getRenderedTexture());
                     upsampleMat.setVector2("TexelSize", texelSize);
                 }
@@ -146,7 +146,7 @@ public class SoftBloomPass extends JmeFilterPass {
         Material finalMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/SoftBloomFinal.j3md");
         add(new Subpass(finalMat, true, false) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 finalMat.setTexture("GlowMap", upsamplingPasses[upsamplingPasses.length-1].getRenderedTexture());
                 finalMat.setFloat("GlowFactor", glowFactor);
             }

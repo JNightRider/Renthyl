@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -22,11 +22,11 @@ public class ShadowMapViewPass extends RenderPass {
         shadowMap = addInput("ShadowMap");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         referenceOptional(shadowMap);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         ShadowMap map = resources.acquireOrElse(shadowMap, null);
         if (map != null) {
             context.getScreen().setVisualizeAsDepth(true);
@@ -34,7 +34,7 @@ public class ShadowMapViewPass extends RenderPass {
         }
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override

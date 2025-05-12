@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
@@ -55,15 +55,15 @@ public class ScreenspaceShadowPass extends RenderPass {
         material = matdef.createMaterial();
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(resultDef, result);
         reference(color, depth);
         referenceOptional(shadowMaps);
     }
     @Override
-    protected void execute(FGRenderContext context) {}
+    protected void execute(FrameGraphContext context) {}
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     

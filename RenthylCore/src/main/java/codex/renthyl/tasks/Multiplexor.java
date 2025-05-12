@@ -1,12 +1,11 @@
 package codex.renthyl.tasks;
 
-import codex.renthyl.FGRenderContext;
 import codex.renthyl.sockets.DynamicSocketList;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.ValueSocket;
 
-public class Multiplexor <T> extends RenderTask {
+public class Multiplexor <T> extends AbstractTask {
 
     private final DynamicSocketList<TransitiveSocket<T>, T> inputs = new DynamicSocketList<>(this, () -> new TransitiveSocket<>(this));
     private final ValueSocket<T> output = new ValueSocket<>(this);
@@ -27,7 +26,7 @@ public class Multiplexor <T> extends RenderTask {
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {}
+    protected void renderTask() {}
 
     public void setIndex(int index) {
         this.index = index;

@@ -28,7 +28,7 @@
  */
 package codex.renthylplus.light;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -61,14 +61,14 @@ public class LightListExtractPass extends RenderPass {
         probes = addOutput("Probes");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         referenceOptional(inLights);
         declare(null, outLights);
         declare(null, ambient);
         declare(null, probes);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         LightList list = resources.acquireOrElse(inLights, null);
         if (list != null) {
             ambColor.set(0, 0, 0, 1);
@@ -92,7 +92,7 @@ public class LightListExtractPass extends RenderPass {
         }
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         outLightList.clear();
         probeList.clear();
     }

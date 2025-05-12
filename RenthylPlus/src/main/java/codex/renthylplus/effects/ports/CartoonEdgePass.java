@@ -31,7 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthylplus.effects.JmeFilterPass;
@@ -73,13 +73,13 @@ public class CartoonEdgePass extends JmeFilterPass {
         material.setColor("EdgeColor", edgeColor);
         add(new Subpass(material, true, true) {
             @Override
-            public void beforeRender(FGRenderContext context) {
+            public void beforeRender(FrameGraphContext context) {
                 material.setTexture("NormalsTexture", resources.acquire(normals));
             }
         });
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         super.prepare(context);
         reference(normals);
     }

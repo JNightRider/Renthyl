@@ -53,8 +53,8 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return super.isUpstreamAvailable() && Arrays.stream(snapshots).allMatch(Socket::isUpstreamAvailable);
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return super.isUpstreamAvailable(queuePosition) && Arrays.stream(snapshots).allMatch(s -> s.isUpstreamAvailable(queuePosition));
     }
 
     @Override

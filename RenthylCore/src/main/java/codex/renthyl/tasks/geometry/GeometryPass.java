@@ -28,20 +28,20 @@
  */
 package codex.renthyl.tasks.geometry;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.definitions.FrameBufferDef;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.AllocationSocket;
-import codex.renthyl.sockets.PointerSocket;
-import codex.renthyl.sockets.Socket;
-import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.RenderTask;
 import codex.renthyl.util.FBuffer;
+import codex.renthyl.util.FrameBufferManager;
 import codex.renthyl.util.GeometryRenderHandler;
+import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
+
+import java.util.List;
 
 /**
  * Renders a queue bucket to a add of color and depth textures.
@@ -62,35 +62,46 @@ import com.jme3.texture.Texture2D;
  */
 public class GeometryPass extends RenderTask {
 
-    private final PointerSocket<GeometryQueue> geometry = new TransitiveSocket<>(this);
+    private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
     private final Socket<Texture2D> outColor, outDepth;
+    private final Socket<FrameBuffer> frameBuffer;
     private final PointerSocket<Texture2D> inColor = new TransitiveSocket<>(this);
     private final PointerSocket<Texture2D> inDepth = new TransitiveSocket<>(this);
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
+    private final FrameBufferDef bufferDef = new FrameBufferDef();
     private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
 
     public GeometryPass(ResourceAllocator allocator) {
         addSockets(geometry, inColor, inDepth);
         outColor = addSocket(new AllocationSocket<>(this, allocator, colorDef));
         outDepth = addSocket(new AllocationSocket<>(this, allocator, depthDef));
+        frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         colorDef.setFormatFlexible(true);
         depthDef.setFormatFlexible(true);
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {
+    protected void renderTask() {
 
+        // configure definitions
         colorDef.setSize(context.getWidth(), context.getHeight());
-        depthDef.setSize(colorDef);
+        depthDef.setSize(context.getWidth(), context.getHeight());
+        bufferDef.setSize(context.getWidth(), context.getHeight(), 1);
+        bufferDef.setColorTargets(outColor.acquire());
+        bufferDef.setDepthTarget(outDepth.acquire());
 
-        FBuffer fb = buffers.getFrameBuffer(context.getWidth(), context.getHeight(), 1);
-        fb.setColorTargets(outColor.acquire());
-        fb.setDepthTarget(outDepth.acquire());
-        context.registerMode(RenderMode.frameBuffer(fb));
+        FrameBuffer fb = frameBuffer.acquire();
+        context.getFrameBuffer().pushValue(fb);
         context.clearBuffers();
         context.renderTextures(inColor.acquire(), inDepth.acquire());
-        geometry.acquire().render(context, geometryHandler);
+        List<GeometryQueue> queues = geometry.acquire();
+        for (GeometryQueue q : queues) {
+            q.applySettings(context);
+            q.render(context, geometryHandler);
+            q.restoreSettings(context);
+        }
+        context.getFrameBuffer().pop();
 
     }
 
@@ -110,7 +121,7 @@ public class GeometryPass extends RenderTask {
         return geometryHandler;
     }
 
-    public PointerSocket<GeometryQueue> getGeometry() {
+    public CollectorSocket<GeometryQueue> getGeometry() {
         return geometry;
     }
 

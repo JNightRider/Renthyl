@@ -4,8 +4,8 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.GeometryQueue;
 import com.jme3.light.Light;
 import com.jme3.light.SpotLight;
 import com.jme3.math.FastMath;
@@ -29,7 +29,7 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     }
 
     @Override
-    protected Camera getShadowCamera(FGRenderContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, SpotLight light, int index) {
+    protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, SpotLight light, int index) {
         
         if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
                 || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {

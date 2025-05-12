@@ -4,7 +4,7 @@ public interface Referenceable {
 
     void reference(int queuePosition);
 
-    void release();
+    void release(int queuePosition);
 
     int getActiveReferences();
 

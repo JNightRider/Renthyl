@@ -4,10 +4,9 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -53,7 +52,7 @@ public class ShadowComposerPass extends RenderPass {
         material = new Material(frameGraph.getAssetManager(), "RenthylPlus/MatDefs/Shadows/ShadowCompose.j3md");
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         declare(contributionDef, lightContribution);
         declarePrimitive(lightShadowIndices);
         reserve(lightContribution);
@@ -61,7 +60,7 @@ public class ShadowComposerPass extends RenderPass {
         referenceOptional(shadowMaps);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         int w = context.getWidth();
         int h = context.getHeight();
@@ -106,7 +105,7 @@ public class ShadowComposerPass extends RenderPass {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {
+    protected void reset(FrameGraphContext context) {
         indexMap = null;
     }
     @Override

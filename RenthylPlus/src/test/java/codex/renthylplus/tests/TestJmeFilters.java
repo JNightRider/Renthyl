@@ -6,14 +6,13 @@ package codex.renthylplus.tests;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GeometryQueue;
+import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.Renthyl;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
 import codex.renthyl.tasks.ControlRenderPass;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.tasks.OutputPass;
@@ -22,7 +21,6 @@ import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.modules.RenderModule;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.tasks.geometry.GeometryPass;
-import codex.renthyl.tasks.geometry.QueueMergePass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
 import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.ResourceTicket;
@@ -314,14 +312,14 @@ public class TestJmeFilters extends SimpleApplication {
             material = matdef.createMaterial();
         }
         @Override
-        protected void prepare(FGRenderContext context) {
+        protected void prepare(FrameGraphContext context) {
             declareTemporary(depthDef, depth);
             declare(resultDef, result);
             reserve(result);
             reference(geometry);
         }
         @Override
-        protected void execute(FGRenderContext context) {
+        protected void execute(FrameGraphContext context) {
             FrameBuffer fb = getFrameBuffer(context, 1);
             resultDef.setSize(fb.getWidth(), fb.getHeight());
             depthDef.setSize(fb.getWidth(), fb.getHeight());
@@ -334,7 +332,7 @@ public class TestJmeFilters extends SimpleApplication {
             resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
         }
         @Override
-        protected void reset(FGRenderContext context) {}
+        protected void reset(FrameGraphContext context) {}
         @Override
         protected void cleanup(FrameGraph frameGraph) {}
         
@@ -386,13 +384,13 @@ public class TestJmeFilters extends SimpleApplication {
             material = matdef.createMaterial();
         }
         @Override
-        protected void prepare(FGRenderContext context) {
+        protected void prepare(FrameGraphContext context) {
             declare(resultDef, result);
             reserve(result);
             reference(tex1, tex2);
         }
         @Override
-        protected void execute(FGRenderContext context) {
+        protected void execute(FrameGraphContext context) {
             Texture2D inTex1 = resources.acquire(tex1);
             Texture2D inTex2 = resources.acquire(tex2);
             int w = inTex1.getImage().getWidth();
@@ -412,7 +410,7 @@ public class TestJmeFilters extends SimpleApplication {
             context.renderFullscreen(material);
         }
         @Override
-        protected void reset(FGRenderContext context) {}
+        protected void reset(FrameGraphContext context) {}
         @Override
         protected void cleanup(FrameGraph frameGraph) {}
         

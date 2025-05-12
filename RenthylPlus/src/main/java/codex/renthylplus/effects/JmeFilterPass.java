@@ -4,16 +4,13 @@
  */
 package codex.renthylplus.effects;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.draw.RenderMode;
-import codex.renthyl.render.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.AllocationSocket;
-import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyl.tasks.AbstractTask;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.OutputCapsule;
 import com.jme3.material.Material;
@@ -27,7 +24,7 @@ import java.util.ArrayList;
  *
  * @author codex
  */
-public abstract class JmeFilterPass extends RenderTask {
+public abstract class JmeFilterPass extends AbstractTask {
 
     protected ResourceTicket<Texture2D> sceneColor, sceneDepth;
     protected ResourceTicket<Texture2D> result;
@@ -52,7 +49,7 @@ public abstract class JmeFilterPass extends RenderTask {
         init(frameGraph);
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         if (enabled && !subpasses.isEmpty()) {
             result.setSource(null);
             boolean requireColor = false;
@@ -84,7 +81,7 @@ public abstract class JmeFilterPass extends RenderTask {
         }
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         if (!enabled && !subpasses.isEmpty()) { // resources have not been declared/referenced, so no releasing is necessary in this case
             return;
@@ -167,7 +164,7 @@ public abstract class JmeFilterPass extends RenderTask {
         
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {
         subpasses.clear();
@@ -218,7 +215,7 @@ public abstract class JmeFilterPass extends RenderTask {
         return enabled;
     }
     
-    public class Subpass extends RenderTask {
+    public class Subpass extends AbstractTask {
         
         private final Material material;
         private final TextureDef<Texture2D> def = TextureDef.texture2D();
@@ -233,7 +230,7 @@ public abstract class JmeFilterPass extends RenderTask {
         }
 
         @Override
-        protected void renderTask(FGRenderContext context) {
+        protected void renderTask() {
 
         }
         
@@ -244,9 +241,9 @@ public abstract class JmeFilterPass extends RenderTask {
             }
         }
         
-        public void beforeAcquire(FGRenderContext context) {}
-        public void beforeRender(FGRenderContext context) {}
-        public void afterRender(FGRenderContext context) {}
+        public void beforeAcquire(FrameGraphContext context) {}
+        public void beforeRender(FrameGraphContext context) {}
+        public void afterRender(FrameGraphContext context) {}
         
         public Material getMaterial() {
             return material;

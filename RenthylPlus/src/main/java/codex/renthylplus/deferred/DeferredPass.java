@@ -28,7 +28,7 @@
  */
 package codex.renthylplus.deferred;
 
-import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
@@ -159,7 +159,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         }
     }
     @Override
-    protected void prepare(FGRenderContext context) {
+    protected void prepare(FrameGraphContext context) {
         colorDef.setSize(context.getWidth(), context.getHeight());
         declare(colorDef, outColor);
         reserve(outColor);
@@ -170,7 +170,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         referenceOptional(lightContribution);
     }
     @Override
-    protected void execute(FGRenderContext context) {
+    protected void execute(FrameGraphContext context) {
         
         // setup framebuffer
         FrameBuffer fb = getFrameBuffer(context, 1);
@@ -211,7 +211,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         active.setLogic(null);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FrameGraphContext context) {}
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
@@ -260,7 +260,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             injectLightTextures(shader);
         }
         renderer.setShader(shader);
-        FGRenderContext.renderMeshFromGeometry(renderer, geometry);
+        FrameGraphContext.renderMeshFromGeometry(renderer, geometry);
         probeList = null;
     }
     @Override

@@ -20,6 +20,7 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/Benchmarks" />
             <option value="$PROJECT_DIR$/RenthylCore" />
             <option value="$PROJECT_DIR$/RenthylPlus" />
             <option value="$PROJECT_DIR$/buildSrc" />

@@ -28,11 +28,7 @@
  */
 package codex.renthyl.tasks;
 
-import codex.renthyl.FGRenderContext;
-import codex.renthyl.client.GraphSource;
-import codex.renthyl.client.GraphTarget;
 import codex.renthyl.sockets.Socket;
-import codex.renthyl.sockets.ValueSocket;
 
 /**
  * Interface pass between the framegraph and game logic, allowing them to communicate.
@@ -55,7 +51,7 @@ import codex.renthyl.sockets.ValueSocket;
  * @author codex
  * @param <T>
  */
-public class Attribute <T> extends RenderTask implements Socket<T> {
+public class Attribute <T> extends AbstractTask implements Socket<T> {
 
     private T value;
     private int activeRefs = 0;
@@ -66,15 +62,15 @@ public class Attribute <T> extends RenderTask implements Socket<T> {
     }
 
     @Override
-    protected void renderTask(FGRenderContext context) {}
+    protected void renderTask() {}
 
     @Override
-    public boolean isAvailableToDownstream() {
-        return isRenderingComplete();
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
+    public boolean isUpstreamAvailable(int queuePosition) {
         return true;
     }
 
@@ -94,7 +90,7 @@ public class Attribute <T> extends RenderTask implements Socket<T> {
     }
 
     @Override
-    public void release() {
+    public void release(int queuePosition) {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }

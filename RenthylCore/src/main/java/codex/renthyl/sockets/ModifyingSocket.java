@@ -9,8 +9,8 @@ public class ModifyingSocket <T> extends TransitiveSocket<T> {
     }
 
     @Override
-    public boolean isUpstreamAvailable() {
-        return upstream == null || (upstream.isAvailableToDownstream()
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return upstream == null || (upstream.isAvailableToDownstream(queuePosition)
                 && upstream.getResourceUsage() == getActiveReferences());
     }
 

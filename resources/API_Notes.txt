@@ -77,4 +77,20 @@ ResourceDefs do two things: select a resource to use, and transform a resource i
 
 For handling selected resources, I think each AllocationSocket (or ResourceDef) should maintain a list of acceptable resources sorted by best match first. When looking for resources to allocated, the ResourceDef simply iterates through the list until a good resource is found. This cuts down on the number of resources that must be tried, and thus reduces resource evaluations.
 
+GeometryQueues: how should they work?
+I think I may have a good idea for them. GeometryPasses render everything from the input geometry queue indiscriminantly and without reording the geometries. Setup special passes that filter and sort contents of GeometryQueues into other GeometryQueues.
+What I really want are geometry streams. Passes can apply filters or sorts to the streams and then pass them along. This could possibly reduce over-allocating array memory with many GeometryQueues, but sorting would be a major issue as any pass that performs a short-circuit operation on the stream must also sort the stream independently of other streams.
 
+What do GeometryQueues need to do?
+* Hold a set of geometries in the optimal rendering order according to different views.
+A solution would be to first divide geometries into batches by some sort of property (for example, shaders). When a pass goes to render the queue, contents of each batch are sorted independently, then batches are sorted.
+
+How should geometry queues communicate the render settings necessary to render properly?
+* Have a GeometryPass per differently-rendered queue.
+    Pro: gives control to passes for how queues are to be rendered.
+    Pro: requires less hardcoded implementation.
+    Con: requires setting up and handling multiple GeometryPasses.
+* Have geometry queues use render environments internally.
+    Pro: Easier to set up.
+    Con: Not flexible. Cannot render the queue without the settings.
+I think a balance between the two would be best. GeometryQueues contain environments, but it is up to the passes to explicitely apply and restore them. This makes the graph easier to set up, but developer's can also be more explicit if need be.
