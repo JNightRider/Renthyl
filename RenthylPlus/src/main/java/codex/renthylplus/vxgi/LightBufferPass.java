@@ -4,11 +4,10 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.arrays.FloatArrayDef;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.*;
+import codex.renthyl.tasks.AbstractTask;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
 import com.jme3.light.LightProbe;
@@ -16,57 +15,48 @@ import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 
 /**
  *
  * @author codex
  */
-public class LightArrayPass extends RenderPass {
+public class LightBufferPass extends AbstractTask {
 
     public static final int FLOATS_PER_LIGHT = 12;
-    
-    private ResourceTicket<Collection<Light>> lights;
-    private ResourceTicket<Light[]> lightShadowMap;
-    private ResourceTicket<float[]> lightArray;
-    private ResourceTicket<ColorRGBA> ambient;
-    private ResourceTicket<Collection<LightProbe>> probes;
+
+    private final CollectorSocket<Light> lights = new CollectorSocket<>(this);
+    private final TransitiveSocket<Light[]> lightShadowMapping = new TransitiveSocket<>(this);
+    private final AllocationSocket<float[]> lightBuffer;
+    private final ValueSocket<ColorRGBA> ambient = new ValueSocket<>(this, new ColorRGBA());
+    private final ValueSocket<Collection<LightProbe>> probe = new ValueSocket<>(this, new ArrayList<>());
     private final FloatArrayDef arrayDef = new FloatArrayDef();
-    private final ColorRGBA ambientColor = new ColorRGBA(0, 0, 0, 0);
-    private final LinkedList<LightProbe> probeList = new LinkedList<>();
     private final ColorRGBA tempColor = new ColorRGBA(0, 0, 0, 0);
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        lights = addInput("Lights");
-        lightShadowMap = addInput("Shadows");
-        lightArray = addOutput("LightArray");
-        ambient = addOutput("Ambient");
-        probes = addOutput("Probes");
+
+    public LightBufferPass(ResourceAllocator allocator) {
+        addSockets(lights, lightShadowMapping, ambient, probe);
+        lightBuffer = addSocket(new AllocationSocket<>(this, allocator, arrayDef));
         arrayDef.setPadding(0);
     }
+
     @Override
-    protected void prepare(FrameGraphContext context) {
-        declare(arrayDef, lightArray);
-        declarePrimitive(ambient, probes);
-        reference(lights);
-        referenceOptional(lightShadowMap);
-    }
-    @Override
-    protected void execute(FrameGraphContext context) {
-        Collection<Light> list = resources.acquire(lights);
+    protected void renderTask() {
+        ambient.getValue().set(0, 0, 0, 0);
+        probe.getValue().clear();
+        Collection<Light> list = lights.acquire();
         arrayDef.setSize(list.size() * FLOATS_PER_LIGHT);
-        Light[] shadows = resources.acquireOrElse(lightShadowMap, null);
-        float[] array = resources.acquire(lightArray);
+        Light[] shadows = lightShadowMapping.acquire();
+        float[] array = lightBuffer.acquire();
         int i = 0;
         for (Light l : list) {
             if (l.getType() == Light.Type.Ambient) {
-                ambientColor.addLocal(l.getColor());
+                ambient.getValue().addLocal(l.getColor());
                 continue;
             }
             if (l.getType() == Light.Type.Probe) {
-                probeList.add((LightProbe)l);
+                probe.getValue().add((LightProbe)l);
                 continue;
             }
             int id = l.getType().getId();
@@ -100,18 +90,9 @@ public class LightArrayPass extends RenderPass {
                     array[i + 11] = sl.getPackedAngleCos();
                     break;
             }
-            i += 12;
+            i += FLOATS_PER_LIGHT;
         }
-        resources.setPrimitive(ambient, ambientColor);
-        resources.setPrimitive(probes, probeList);
     }
-    @Override
-    protected void reset(FrameGraphContext context) {
-        ambientColor.set(0, 0, 0, 0);
-        probeList.clear();
-    }
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
     
     private int packColor(float[] array, int i, ColorRGBA color) {
         array[i++] = color.r;
@@ -137,5 +118,25 @@ public class LightArrayPass extends RenderPass {
         }
         return -1;
     }
-    
+
+    public CollectorSocket<Light> getLights() {
+        return lights;
+    }
+
+    public PointerSocket<Light[]> getLightShadowMapping() {
+        return lightShadowMapping;
+    }
+
+    public Socket<float[]> getLightBuffer() {
+        return lightBuffer;
+    }
+
+    public Socket<ColorRGBA> getAmbient() {
+        return ambient;
+    }
+
+    public Socket<Collection<LightProbe>> getProbe() {
+        return probe;
+    }
+
 }

@@ -31,265 +31,200 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.definitions.FrameBufferDef;
+import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.render.CameraState;
+import codex.renthyl.render.queue.RenderingQueue;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.macros.ArgumentMacro;
+import codex.renthyl.tasks.PostProcessFilter;
+import codex.renthyl.tasks.RenderTask;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import com.jme3.math.FastMath;
 import com.jme3.math.Vector2f;
-import com.jme3.post.filters.SoftBloomFilter;
+import com.jme3.renderer.Camera;
+import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.jme3.texture.Texture2D;
 
-/**
- *
- * @author codex
- */
-public class SoftBloomPass extends JmeFilterPass {
-    
-    private static final Logger logger = Logger.getLogger(SoftBloomFilter.class.getName());
-    
-    private Subpass[] downsamplingPasses, upsamplingPasses;
-    private final Image.Format format = Image.Format.RGBA16F;
-    private int numSamplingPasses = 5;
-    private float glowFactor = 0.05f;
-    private boolean bilinearFiltering = true;
-    private boolean updateFlag = true;
-    
-    /**
-     * Creates filter with default settings.
-     */
-    public SoftBloomPass() {}
-    
-    @Override
-    protected void init(FrameGraph frameGraph) {}
-    @Override
-    protected void prepare(FrameGraphContext context) {
-        if (updateFlag | capPassesToSize(context.getWidth(), context.getHeight())) {
-            updateFilterChain(context.getWidth(), context.getHeight());
-        }
-        super.prepare(context);
-    }
-    
-    private void updateFilterChain(int w, int h) {
-        
-        clearSubpasses();
-        downsamplingPasses = new Subpass[numSamplingPasses];
-        upsamplingPasses = new Subpass[numSamplingPasses];
-        
-        // downsampling passes
-        Material downsampleMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/Downsample.j3md");
-        for (int i = 0; i < downsamplingPasses.length; i++) {
-            Vector2f texelSize = new Vector2f(1f/w, 1f/h);
-            w = w >> 1;
-            h = h >> 1;
-            Subpass prev = (i > 0 ? downsamplingPasses[i-1] : null);
-            downsamplingPasses[i] = add(new SamplingPass(downsampleMat, i == 0, w, h) {
-                @Override
-                public void beforeAcquire(FrameGraphContext context) {
-                    getDef().setFormat(format);
-                    getDef().setSize(width, height);
-                    if (bilinearFiltering) {
-                        getDef().setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
-                    } else {
-                        getDef().setMinFilter(Texture.MinFilter.NearestNoMipMaps);
-                    }
-                }
-                @Override
-                public void beforeRender(FrameGraphContext context) {
-                    if (prev != null) {
-                        downsampleMat.setTexture("Texture", prev.getRenderedTexture());
-                    }
-                    downsampleMat.setVector2("TexelSize", texelSize);
-                }
-            });
-        }
-        
-        // upsampling passes
-        Material upsampleMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/Upsample.j3md");
-        for (int i = 0; i < upsamplingPasses.length; i++) {
-            Vector2f texelSize = new Vector2f(1f/w, 1f/h);
-            w = w << 1; h = h << 1;
-            Subpass prev;
-            if (i == 0) {
-                prev = downsamplingPasses[downsamplingPasses.length-1];
-            } else {
-                prev = upsamplingPasses[i-1];
-            }
-            upsamplingPasses[i] = add(new SamplingPass(upsampleMat, false, w, h) {
-                @Override
-                public void beforeAcquire(FrameGraphContext context) {
-                    getDef().setFormat(format);
-                    getDef().setSize(width, height);
-                    if (bilinearFiltering) {
-                        getDef().setMagFilter(Texture.MagFilter.Bilinear);
-                    } else {
-                        getDef().setMagFilter(Texture.MagFilter.Nearest);
-                    }
-                }
-                @Override
-                public void beforeRender(FrameGraphContext context) {
-                    upsampleMat.setTexture("Texture", prev.getRenderedTexture());
-                    upsampleMat.setVector2("TexelSize", texelSize);
-                }
-            });
-        }
-        
-        // final pass
-        Material finalMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/SoftBloomFinal.j3md");
-        add(new Subpass(finalMat, true, false) {
-            @Override
-            public void beforeRender(FrameGraphContext context) {
-                finalMat.setTexture("GlowMap", upsamplingPasses[upsamplingPasses.length-1].getRenderedTexture());
-                finalMat.setFloat("GlowFactor", glowFactor);
-            }
-        });
-        
-        updateFlag = false;
-        
-    }
-    private boolean capPassesToSize(int w, int h) {
-        int limit = Math.min(w, h);
-        for (int i = 0; i < numSamplingPasses; i++) {
-            limit = limit >> 1;
-            if (limit <= 2) {
-                if (numSamplingPasses != i) {
-                    logger.log(Level.INFO, "Number of sampling passes capped at {0} due to texture size.", i);
-                    numSamplingPasses = i;
-                    return true;
-                } else break;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * Sets the number of sampling passes in each step.
-     * <p>
-     * Higher values produce more glow with higher resolution, at the cost
-     * of more passes. Lower values produce less glow with lower resolution.
-     * <p>
-     * The total number of passes is {@code 2n+1}: n passes for downsampling
-     * (13 texture reads per pass per fragment), n passes for upsampling and blur
-     * (9 texture reads per pass per fragment), and 1 pass for blending (2 texture reads
-     * per fragment). Though, it should be noted that for each downsampling pass the
-     * number of fragments decreases by 75%, and for each upsampling pass, the number
-     * of fragments quadruples (which restores the number of fragments to the original
-     * resolution).
-     * <p>
-     * Setting this forces subpasses to be reconfigured.
-     * <p>
-     * default=5
-     * 
-     * @param numSamplingPasses The number of passes per donwsampling/upsampling step. Must be greater than zero.
-     * @throws IllegalArgumentException if argument is less than or equal to zero
-     */
-    public void setNumSamplingPasses(int numSamplingPasses) {
-        if (numSamplingPasses <= 0) {
-            throw new IllegalArgumentException("Number of sampling passes must be greater "
-                    + "than zero (found: " + numSamplingPasses + ").");
-        }
-        if (this.numSamplingPasses != numSamplingPasses) {
-            this.numSamplingPasses = numSamplingPasses;
-            updateFlag = true;
-        }
-    }
-    
-    /**
-     * Sets the factor at which the glow result texture is merged with
-     * the scene texture.
-     * <p>
-     * Low values favor the scene texture more, while high values make
-     * glow more noticeable. This value is clamped between 0 and 1.
-     * <p>
-     * default=0.05f
-     * 
-     * @param factor 
-     */
-    public void setGlowFactor(float factor) {
-        this.glowFactor = FastMath.clamp(factor, 0, 1);
-    }
-    
-    /**
-     * Sets pass textures to use bilinear filtering.
-     * <p>
-     * If true, downsampling textures are add to {@code min=BilinearNoMipMaps} and
-     * upsampling textures are add to {@code mag=Bilinear}, which produces better
-     * quality glow. If false, textures use their default filters.
-     * <p>
-     * default=true
-     * 
-     * @param bilinearFiltering true to use bilinear filtering
-     */
-    public void setBilinearFiltering(boolean bilinearFiltering) {
-        this.bilinearFiltering = bilinearFiltering;
-    }
-    
-    /**
-     * Gets the number of downsampling/upsampling passes per step.
-     * 
-     * @return number of downsampling/upsampling passes
-     * @see #setNumSamplingPasses(int)
-     */
-    public int getNumSamplingPasses() {
-        return numSamplingPasses;
-    }
-    
-    /**
-     * Gets the glow factor.
-     * 
-     * @return glow factor
-     * @see #setGlowFactor(float)
-     */
-    public float getGlowFactor() {
-        return glowFactor;
-    }
-    
-    /**
-     * Returns true if pass textures use bilinear filtering.
-     * 
-     * @return 
-     * @see #setBilinearFiltering(boolean)
-     */
-    public boolean isBilinearFiltering() {
-        return bilinearFiltering;
-    }
-    
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(numSamplingPasses, "numSamplingPasses", 5);
-        oc.write(glowFactor, "glowFactor", 0.05f);
-        oc.write(bilinearFiltering, "bilinearFiltering", true);
+import java.util.ArrayList;
+
+public class SoftBloomPass extends RenderTask implements PostProcessFilter {
+
+    private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> depth = new OptionalSocket<>(this, false);
+    private final ArgumentMacro<Integer> numSamplingSteps = new ArgumentMacro<>(5);
+    private final ArgumentSocket<Boolean> bilinear = new ArgumentSocket<>(this, true);
+    private final GenerativeSocketList<AllocationSocket<Texture2D>, Texture2D> targets;
+    private final GenerativeSocketList<AllocationSocket<FrameBuffer>, FrameBuffer> frameBuffers;
+    private final TextureDef<Texture2D> targetDef = TextureDef.texture2D();
+    private final FrameBufferDef bufferDef = new FrameBufferDef();
+    private final Material downsampleMat, upsampleMat;
+    private final ArrayList<CameraState> cameras = new ArrayList<>();
+    private final Vector2f tempTexelSize = new Vector2f();
+    private final InjectionPass inject;
+
+    public SoftBloomPass(AssetManager assetManager, ResourceAllocator allocator) {
+        addSockets(color, depth, numSamplingSteps, bilinear);
+        targets = addSocket(new GenerativeSocketList<>(this, () -> new AllocationSocket<>(this, allocator, targetDef)));
+        frameBuffers = addSocket(new GenerativeSocketList<>(this, () -> new AllocationSocket<>(this, allocator, bufferDef)));
+        downsampleMat = new Material(assetManager, "Common/MatDefs/Post/Downsample.j3md");
+        upsampleMat = new Material(assetManager,"Common/MatDefs/Post/Upsample.j3md");
+        targets.fill(2);
+        frameBuffers.fill(2);
+        inject = new InjectionPass(assetManager, allocator);
+        inject.getSceneColor().setUpstream(color);
+        inject.glow.setUpstream(targets.getFirst());
     }
 
     @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        numSamplingPasses = ic.readInt("numSamplingPasses", 5);
-        glowFactor = ic.readFloat("glowFactor", 0.05f);
-        bilinearFiltering = ic.readBoolean("bilinearFiltering", true);
-    }
-    
-    private class SamplingPass extends JmeFilterPass.Subpass {
-        
-        public final int width, height;
-        
-        public SamplingPass(Material material, boolean useColor, int width, int height) {
-            super(material, useColor, false);
-            this.width = width;
-            this.height = height;
+    public void stage(RenderingQueue queue) {
+        int passes = numSamplingSteps.preview() + 1;
+        if (passes < 2) {
+            throw new IllegalArgumentException("Must have at least one sampling pass.");
         }
-        
+        targets.set(passes);
+        frameBuffers.set(passes);
+        while (cameras.size() > passes) {
+            cameras.removeLast();
+        }
+        super.stage(queue);
     }
-    
+
+    @Override
+    protected void renderTask() {
+
+        Texture2D source = color.acquireOrThrow("Scene color required.");
+        int originWidth = source.getImage().getWidth();
+        int originHeight = source.getImage().getHeight();
+        targetDef.setFormat(source.getImage().getFormat());
+        targetDef.setSamples(source.getImage().getMultiSamples());
+        targetDef.setSize(originWidth >> 1, originHeight >> 1);
+        targetDef.setMinFilter(bilinear.acquireOrThrow() ? Texture.MinFilter.BilinearNoMipMaps : Texture.MinFilter.NearestNoMipMaps);
+
+        if (targetDef.getSamples() > 1) {
+            downsampleMat.setInt("NumSamples", targetDef.getSamples());
+            upsampleMat.setInt("NumSamples", targetDef.getSamples());
+        } else {
+            downsampleMat.clearParam("NumSamples");
+            upsampleMat.clearParam("NumSamples");
+        }
+
+        context.getFrameBuffer().push();
+        context.getCamera().push();
+        configureCamera(0, originWidth, originHeight);
+
+        // downsampling
+        int i = 1;
+        for (; i < targets.size(); i++) {
+            context.getCamera().setValue(configureCamera(i, targetDef.getWidth(), targetDef.getHeight()));
+            targetDef.setSize(source.getImage().getWidth() >> 1, source.getImage().getHeight() >> 1);
+            Texture2D target = targets.get(i).acquire();
+            // framebuffer
+            bufferDef.setColorTarget(target);
+            FrameBuffer fbo = frameBuffers.get(i).acquire();
+            context.getFrameBuffer().setValue(fbo);
+            context.clearBuffers();
+            // material
+            downsampleMat.setTexture("Texture", source);
+            downsampleMat.setVector2("TexelSize", calcTexelSize(source.getImage(), tempTexelSize));
+            // render
+            context.renderFullscreen(downsampleMat);
+            source = target;
+            if (targetDef.getWidth() <= 2 || targetDef.getHeight() <= 2) {
+                break;
+            }
+        }
+
+        // upsampling
+        for (i--; i >= 0; i--) {
+            context.getCamera().setValue(cameras.get(i));
+            targetDef.setSize(source.getImage().getWidth() << 1, source.getImage().getHeight() << 1);
+            Texture2D target = targets.get(i).acquire();
+            // framebuffer
+            bufferDef.setColorTarget(target);
+            FrameBuffer fbo = frameBuffers.get(i).acquire();
+            context.getFrameBuffer().setValue(fbo);
+            context.clearBuffers(true, false, false);
+            // material
+            upsampleMat.setTexture("Texture", source);
+            upsampleMat.setVector2("TexelSize", calcTexelSize(source.getImage(), tempTexelSize));
+            // render
+            context.renderFullscreen(upsampleMat);
+            source = target;
+        }
+
+        // reset settings
+        context.getCamera().pop();
+        context.getFrameBuffer().pop();
+
+    }
+
+    @Override
+    public PointerSocket<Texture2D> getSceneColor() {
+        return color;
+    }
+
+    @Override
+    public PointerSocket<Texture2D> getSceneDepth() {
+        return depth;
+    }
+
+    @Override
+    public Socket<Texture2D> getFilterResult() {
+        return targets.getFirst();
+    }
+
+    private CameraState configureCamera(int i, int width, int height) {
+        CameraState cam;
+        if (i >= cameras.size()) {
+            cam = new CameraState(new Camera(width, height), true);
+            cameras.add(cam);
+        } else {
+            cam = cameras.get(i);
+            cam.resize(width, height, false);
+        }
+        return cam;
+    }
+
+    private Vector2f calcTexelSize(Image sourceImage, Vector2f store) {
+        if (store == null) {
+            store = new Vector2f();
+        }
+        return store.set(1f / sourceImage.getWidth(), 1f / sourceImage.getHeight());
+    }
+
+    public ArgumentMacro<Integer> getNumSamplingSteps() {
+        return numSamplingSteps;
+    }
+
+    public ArgumentSocket<Boolean> getBilinear() {
+        return bilinear;
+    }
+
+    public ArgumentSocket<Float> getFactor() {
+        return inject.factor;
+    }
+
+    private static class InjectionPass extends AbstractFilterTask {
+
+        private final TransitiveSocket<Texture2D> glow = new TransitiveSocket<>(this);
+        private final ArgumentSocket<Float> factor = new ArgumentSocket<>(this, 0.05f);
+
+        public InjectionPass(AssetManager assetManager, ResourceAllocator allocator) {
+            super(allocator, new Material(assetManager, "Common/MatDefs/Post/SoftBloomFinal.j3md"), false);
+            addSockets(glow, factor);
+        }
+
+        @Override
+        protected void configureMaterial(Material material) {
+            glow.acquireToMaterial(material, "GlowMap");
+            factor.acquireToMaterial(material, "GlowFactor");
+        }
+
+    }
+
 }

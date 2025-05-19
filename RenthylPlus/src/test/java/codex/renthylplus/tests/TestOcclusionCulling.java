@@ -11,7 +11,7 @@ import codex.renthyl.tasks.OutputPass;
 import codex.renthyl.modules.cache.CacheWrite;
 import codex.renthyl.tasks.geometry.GeometryPass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
-import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthyl.geometry.GeometryRenderHandler;
 import com.jme3.app.SimpleApplication;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;

@@ -6,7 +6,9 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.Socket;
+import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bounding.BoundingVolume;
 import com.jme3.light.DirectionalLight;
@@ -31,8 +33,8 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
     private final Vector3f[] points = new Vector3f[8];
     private float lambda = 0.65f;
     
-    public DirectionalShadowPass(int shadowMapSize, int numSplits) {
-        super(Light.Type.Directional, numSplits, shadowMapSize);
+    public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int numSplits) {
+        super(assetManager, allocator, Light.Type.Directional, numSplits, shadowMapSize);
         shadowCam = new Camera(shadowMapSize, shadowMapSize);
         shadowCam.setParallelProjection(true);
         splits = new float[numShadowMaps + 1];
@@ -42,8 +44,8 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
     }
     
     @Override
-    protected void execute(FrameGraphContext context) {
-        Camera viewCam = context.getCurrentCamera();
+    protected void renderTask() {
+        Camera viewCam = context.getCamera().getValue().getCamera();
         float near = Math.max(viewCam.getFrustumNear(), 0.001f);
         shadowCam.setFrustumFar(viewCam.getFrustumFar());
         ShadowUtil.updateFrustumPoints(viewCam, near, viewCam.getFrustumFar(), 1.0f, points);
@@ -54,7 +56,7 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
                 splits[i] *= factor;
             }
         }
-        super.execute(context);
+        super.renderTask();
     }
     @Override
     protected boolean lightSourceInsideFrustum(Camera cam, DirectionalLight light) {
@@ -70,8 +72,8 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
         return shadowCam;
     }
     @Override
-    protected ShadowMap acquireShadowMap(Camera cam, DirectionalLight light, ResourceTicket<ShadowMap> ticket, int i) {
-        ShadowMap map = super.acquireShadowMap(cam, light, ticket, i);
+    protected ShadowMap acquireShadowMap(Camera cam, DirectionalLight light, Socket<ShadowMap> socket, int i) {
+        ShadowMap map = super.acquireShadowMap(cam, light, socket, i);
         map.setSplit(splits[i]);
         return map;
     }
@@ -83,7 +85,7 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
          * All rights reserved.
          */
         
-        int numOccluders = occluders.getNumGeometries();
+        int numOccluders = occluders.size();
         if (numOccluders == 0) {
             return;
         }
@@ -95,7 +97,10 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
         Matrix4f viewProjMatrix = shadowCam.getViewProjectionMatrix();
         BoundingBox splitBB = ShadowUtil.computeBoundForPoints(points, viewProjMatrix);
         TempVars vars = TempVars.get();
-        BoundingBox casterBB = occluders.getWorldBound(null);
+        BoundingBox casterBB = new BoundingBox();
+        for (Geometry g : occluders) {
+            casterBB.mergeLocal(g.getWorldBound());
+        }
         BoundingBox receiverBB = new BoundingBox();
 
         shadowCam.setProjectionMatrix(null);

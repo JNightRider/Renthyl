@@ -5,125 +5,114 @@
 package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
+import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.client.GraphSource;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketArray;
-import codex.renthyl.resources.tickets.TicketGroup;
-import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.geometry.GeometryRenderHandler;
+import codex.renthyl.sockets.*;
+import codex.renthyl.tasks.RenderTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.light.Light;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.Plane;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import com.jme3.renderer.RenderManager;
-import com.jme3.renderer.Renderer;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
 import com.jme3.util.TempVars;
+
+import java.util.List;
 
 /**
  *
  * @author gary
  * @param <T>
  */
-public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass implements GeometryRenderHandler {
+public abstract class ShadowOcclusionPass <T extends Light> extends RenderTask implements GeometryRenderHandler {
     
     protected final Light.Type lightType;
     protected final int numShadowMaps;
     protected final ShadowMapDef shadowMapDef = new ShadowMapDef();
+    private final ArgumentSocket<T> light = new ArgumentSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> occluders = new TransitiveSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> receivers = new TransitiveSocket<>(this);
+    private final SocketList<AllocationSocket<ShadowMap>, ShadowMap> shadowMaps = new SocketList<>(this);
+    private final SocketList<AllocationSocket<FrameBuffer>, FrameBuffer> frameBuffers = new SocketList<>(this);
+    private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final RenderState renderState = new RenderState();
-    private ResourceTicket<T> light;
-    private ResourceTicket<GeometryQueue> occluders, receivers;
-    private TicketArray<ShadowMap> shadowMaps;
-    private GraphSource<T> lightSource;
-    private Material material;
+    private final Material material;
     
     private float renderDistance = -1;
 
-    public ShadowOcclusionPass(Light.Type lightType, int numShadowMaps, int shadowMapSize) {
+    public ShadowOcclusionPass(AssetManager assetManager, ResourceAllocator allocator, Light.Type lightType, int numShadowMaps, int shadowMapSize) {
         this.lightType = lightType;
         this.numShadowMaps = numShadowMaps;
-        this.shadowMapDef.getMapDef().setSquare(shadowMapSize);
-        this.shadowMapDef.getMapDef().setWrap(Texture.WrapMode.EdgeClamp);
+        addSockets(light, occluders, receivers, shadowMaps, frameBuffers);
+        for (int i = 0; i < numShadowMaps; i++) {
+            shadowMaps.add(new AllocationSocket<>(this, allocator, shadowMapDef));
+            frameBuffers.add(new AllocationSocket<>(this, allocator, bufferDef));
+        }
+        shadowMapDef.getMapDef().setSquare(shadowMapSize);
+        shadowMapDef.getMapDef().setWrap(Texture.WrapMode.EdgeClamp);
         //renderState.setFaceCullMode(RenderState.FaceCullMode.Front);
         renderState.setColorWrite(false);
         renderState.setDepthWrite(true);
         renderState.setDepthTest(true);
         //renderState.setFaceCullMode(RenderState.FaceCullMode.Front);
+        material = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
     }
-    
+
     @Override
-    protected void initialize(FrameGraph frameGraph) {
-        occluders = addInput("Occluders");
-        receivers = addInput("Receivers");
-        shadowMaps = addOutputGroup(new TicketArray<>("ShadowMaps", numShadowMaps));
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-    }
-    @Override
-    protected void prepare(FrameGraphContext context) {
-        for (ResourceTicket<ShadowMap> t : shadowMaps) {
-            declare(shadowMapDef, t);
-            reserve(t);
-        }
-        reference(occluders);
-    }
-    @Override
-    protected void execute(FrameGraphContext context) {
-        RenderManager rm = context.getRenderManager();
-        Camera viewCam = rm.getCurrentCamera();
-        T l = resources.acquireOrElse(light, (lightSource != null
-                ? lightSource.getGraphValue(context) : null));
-        GeometryQueue occluderQueue = resources.acquire(occluders);
-        GeometryQueue receiverQueue = resources.acquire(receivers);
-        //ResourceTicket<ShadowMap>[] mapTickets = getGroupArray("ShadowMaps");
+    protected void renderTask() {
+
+        Camera viewCam = context.getCamera().getValue().getCamera();
+        T lightSource = light.acquireOrThrow();
+
+        // check if light influence intersects viewing camera
         TempVars vars = TempVars.get();
-        if (l == null || !l.intersectsFrustum(viewCam, vars)) {
-            vars.release();
-            // acquire maps even though they aren't being rendered to
-            for (int i = 0; i < numShadowMaps; i++) {
-                Camera shadowCam = getShadowCamera(context, viewCam, occluderQueue, receiverQueue, l, i);
-                acquireShadowMap(shadowCam, l, shadowMaps.get(i), i);
-            }
+        boolean intersects = lightSource != null && lightSource.intersectsFrustum(viewCam, vars);
+        vars.release();
+        if (!intersects) {
             return;
         }
-        vars.release();
-        boolean containsAll = lightSourceInsideFrustum(viewCam, l);
-        Renderer renderer = context.getRenderer();
-        FrameBuffer originalFb = renderer.getCurrentFrameBuffer();
-        context.registerMode(RenderMode.forcedRenderState(renderState));
-        context.registerMode(RenderMode.forcedTechnique("PreShadow"));
-        context.registerMode(RenderMode.forcedMaterial(material));
-        int w = shadowMapDef.getMapDef().getWidth();
-        int h = shadowMapDef.getMapDef().getHeight();
+
+        boolean containsAll = lightSourceInsideFrustum(viewCam, lightSource);
+        GeometryQueue occluderQueue = occluders.acquireOrThrow();
+        GeometryQueue receiverQueue = receivers.acquireOrThrow();
+
+        // apply settings
+        context.getForcedState().pushValue(renderState);
+        context.getForcedTechnique().pushValue("PreShadow");
+        context.getForcedMaterial().pushValue(material);
+        context.getFrameBuffer().push();
+        context.getCamera().push();
+
+        // render each shadow map
         for (int i = 0; i < numShadowMaps; i++) {
-            FrameBuffer fb = getFrameBuffer(i, w, h, 1);
-            Camera shadowCam = getShadowCamera(context, viewCam, occluderQueue, receiverQueue, l, i);
-            // always acquire shadow maps so that errors don't occur down the pipeline
-            ShadowMap map = acquireShadowMap(shadowCam, l, shadowMaps.get(i), i);
+            Camera shadowCam = getShadowCamera(context, viewCam, occluderQueue, receiverQueue, lightSource, i);
+            ShadowMap map = acquireShadowMap(shadowCam, lightSource, shadowMaps.get(i), i);
+            bufferDef.setDepthTarget(map.getMap());
+            FrameBuffer fbo = frameBuffers.get(i).acquire();
+            context.getFrameBuffer().setValue(fbo);
             if (containsAll || frustumIntersect(viewCam, shadowCam)) {
-                rm.setCamera(shadowCam, false);
-                FrameBuffer.RenderBuffer current = fb.getDepthTarget();
-                if (current == null || current.getTexture() != map.getMap()) {
-                    fb.setDepthTarget(FrameBuffer.FrameBufferTarget.newTarget(map.getMap()));
-                    fb.setUpdateNeeded();
-                }
-                renderer.setFrameBuffer(fb);
+                context.getCamera().setValue(shadowCam, false);
+                context.getFrameBuffer().setValue(fbo);
                 context.clearBuffers(false, true, false);
                 occluderQueue.render(context, this);
             }
         }
-        renderer.setFrameBuffer(originalFb);
-        context.setCamera(viewCam);
+
+        // restore settings
+        context.getFrameBuffer().pop();
+        context.getForcedMaterial().pop();
+        context.getForcedTechnique().pop();
+        context.getForcedState().pop();
+        context.getCamera().pop();
+
     }
-    @Override
-    protected void reset(FrameGraphContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
+
     @Override
     public void renderGeometry(FrameGraphContext context, Geometry g) {
         context.getRenderManager().renderGeometry(g);
@@ -135,28 +124,38 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass i
     protected boolean frustumIntersect(Camera cam1, Camera cam2) {
         return true;
     }
-    protected ShadowMap acquireShadowMap(Camera cam, T light, ResourceTicket<ShadowMap> ticket, int i) {
-        ShadowMap map = resources.acquire(ticket);
+    protected ShadowMap acquireShadowMap(Camera cam, T light, Socket<ShadowMap> socket, int i) {
+        ShadowMap map = socket.acquire();
         map.setLight(light);
         map.setProjection(cam.getViewProjectionMatrix());
         map.setRange(cam.getFrustumNear(), cam.getFrustumFar());
         return map;
     }
-    
-    public void setLightSource(GraphSource<T> lightSource) {
-        this.lightSource = lightSource;
-    }
+
     public void setRenderDistance(float renderDistance) {
         this.renderDistance = renderDistance;
     }
-    
-    public GraphSource<T> getLightSource() {
-        return lightSource;
-    }
+
     public float getRenderDistance() {
         return renderDistance;
     }
-    
+
+    public ArgumentSocket<T> getLight() {
+        return light;
+    }
+
+    public PointerSocket<GeometryQueue> getOccluders() {
+        return occluders;
+    }
+
+    public PointerSocket<GeometryQueue> getReceivers() {
+        return receivers;
+    }
+
+    public Socket<List<ShadowMap>> getShadowMaps() {
+        return shadowMaps;
+    }
+
     public static boolean pointInsideFrustum(Camera cam, Vector3f point) {
         for (int i = 0; i < 6; i++) {
             if (cam.getWorldPlane(i).whichSide(point) == Plane.Side.Negative) {

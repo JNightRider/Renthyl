@@ -48,7 +48,7 @@ public class SynchronizedAttribute <T> extends Attribute<T> {
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         if (nextPosition <= lastPosition) {
             throw new IllegalStateException("Not all scheduled references were released.");
         }

@@ -31,279 +31,179 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.*;
+import codex.renthyl.tasks.PostProcessFilter;
+import codex.renthyl.tasks.RenderFrame;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import com.jme3.shader.VarType;
-import com.jme3.texture.Texture;
+import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class SSAOPass extends JmeFilterPass {
-    
-    private Material material;
-    private ResourceTicket<Texture2D> normals;
-    private final Vector3f frustumCorner = new Vector3f();
-    private final Vector2f frustumNearFar = new Vector2f();
-    private Vector2f[] samples = {new Vector2f(1.0f, 0.0f), new Vector2f(-1.0f, 0.0f), new Vector2f(0.0f, 1.0f), new Vector2f(0.0f, -1.0f)};
-    private float sampleRadius = 5.1f;
-    private float intensity = 1.5f;
-    private float scale = 0.2f;
-    private float bias = 0.1f;
-    private boolean useOnlyAo = false;
-    private boolean useAo = true;
-    private Material ssaoMat;
-    private float downSampleFactor = 1f;
-    private boolean approximateNormals = false;
+public class SSAOPass extends RenderFrame implements PostProcessFilter {
+
+    private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> depth = new TransitiveSocket<>(this);
+    private final AOPass ssao;
+    private final BlurPass blur;
 
     /**
      * Create a Screen Space Ambient Occlusion Filter
      */
-    public SSAOPass() {}
+    public SSAOPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, 5.1f, 1.5f, 0.2f, 0.1f);
+    }
 
     /**
      * Create a Screen Space Ambient Occlusion Filter
-     * @param sampleRadius The radius of the area where random samples will be picked. default 5.1f
+     * @param radius The radius of the area where random samples will be picked. default 5.1f
      * @param intensity intensity of the resulting AO. default 1.2f
      * @param scale distance between occluders and occludee. default 0.2f
      * @param bias the width of the occlusion cone considered by the occludee. default 0.1f
      */
-    public SSAOPass(float sampleRadius, float intensity, float scale, float bias) {
-        this.sampleRadius = sampleRadius;
-        this.intensity = intensity;
-        this.scale = scale;
-        this.bias = bias;
-    }
-    
-    @Override
-    protected void init(FrameGraph frameGraph) {
-        
-        normals = addInput("Normals");
-        
-        ssaoMat = new Material(frameGraph.getAssetManager(), "Common/MatDefs/SSAO/ssao.j3md");
-        Texture random = frameGraph.getAssetManager().loadTexture("Common/MatDefs/SSAO/Textures/random.png");
-        random.setWrap(Texture.WrapMode.Repeat);
-        ssaoMat.setTexture("RandomMap", random);
-        Subpass ssaoPass = add(new Subpass("ssao", ssaoMat, true, true) {
-            @Override
-            public void beforeAcquire(FrameGraphContext context) {
-                Camera cam = context.getViewPort().getCamera();
-                TextureDef<Texture2D> def = getDef();
-                float farY = (cam.getFrustumTop() / cam.getFrustumNear()) * cam.getFrustumFar();
-                float farX = farY * (def.getWidth() / def.getHeight());
-                frustumCorner.set(farX, farY, cam.getFrustumFar());
-                frustumNearFar.set(cam.getFrustumNear(), cam.getFrustumFar());
-                def.setWidth((int)(def.getWidth() / downSampleFactor));
-                def.setHeight((int)(def.getHeight() / downSampleFactor));
-                Texture2D norms = resources.acquireOrElse(normals, null);
-                if (norms != null) {
-                    ssaoMat.setTexture("Normals", norms);
-                } else {
-                    ssaoMat.clearParam("Normals");
-                }
-                ssaoMat.setVector3("FrustumCorner", frustumCorner);
-                ssaoMat.setFloat("SampleRadius", sampleRadius);
-                ssaoMat.setFloat("Intensity", intensity);
-                ssaoMat.setFloat("Scale", scale);
-                ssaoMat.setFloat("Bias", bias);
-                ssaoMat.setVector2("FrustumNearFar", frustumNearFar);
-                ssaoMat.setParam("Samples", VarType.Vector2Array, samples);
-                ssaoMat.setBoolean("ApproximateNormals", norms == null);
-            }
-        });
-        
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/SSAO/ssaoBlur.j3md");
-        add(new Subpass("blur", material) {
-            @Override
-            public void beforeRender(FrameGraphContext context) {
-                material.setTexture("SSAOMap", ssaoPass.getRenderedTexture());
-                material.setBoolean("UseAo", useAo);
-                material.setBoolean("UseOnlyAo", useOnlyAo);
-                material.setVector2("FrustumNearFar", frustumNearFar);
-                float xScale = 1.0f / getDef().getWidth();
-                float yScale = 1.0f / getDef().getHeight();
-                material.setFloat("XScale", 2f * xScale);
-                material.setFloat("YScale", 2f * yScale);
-            }
-        });
-        
-    }
-    @Override
-    protected void prepare(FrameGraphContext context) {
-        super.prepare(context);
-        referenceOptional(normals);
-    }
-    
-    /**
-     * Return the bias<br>
-     * see {@link  #setBias(float bias)}
-     * @return  bias
-     */
-    public float getBias() {
-        return bias;
-    }
-
-    /**
-     * Sets the width of the occlusion cone considered by the occludee default is 0.1f
-     *
-     * @param bias the desired width (default=0.1)
-     */
-    public void setBias(float bias) {
-        this.bias = bias;
-        if (ssaoMat != null) {
-            ssaoMat.setFloat("Bias", bias);
-        }
-    }
-
-    /**
-     * returns the ambient occlusion intensity
-     * @return intensity
-     */
-    public float getIntensity() {
-        return intensity;
-    }
-
-    /**
-     * Sets the Ambient occlusion intensity default is 1.5
-     *
-     * @param intensity the desired intensity (default=1.5)
-     */
-    public void setIntensity(float intensity) {
-        this.intensity = intensity;
-        if (ssaoMat != null) {
-            ssaoMat.setFloat("Intensity", intensity);
-        }
-
-    }
-
-    /**
-     * returns the sample radius<br>
-     * see {link setSampleRadius(float sampleRadius)}
-     * @return the sample radius
-     */
-    public float getSampleRadius() {
-        return sampleRadius;
-    }
-
-    /**
-     * Sets the radius of the area where random samples will be picked default 5.1f 
-     *
-     * @param sampleRadius the desired radius (default=5.1)
-     */
-    public void setSampleRadius(float sampleRadius) {
-        this.sampleRadius = sampleRadius;
-        if (ssaoMat != null) {
-            ssaoMat.setFloat("SampleRadius", sampleRadius);
-        }
-
-    }
-
-    /**
-     * returns the scale<br>
-     * see {@link #setScale(float scale)}
-     * @return scale
-     */
-    public float getScale() {
-        return scale;
-    }
-
-    /**
-     * 
-     * Returns the distance between occluders and occludee. default 0.2f
-     *
-     * @param scale the desired distance (default=0.2)
-     */
-    public void setScale(float scale) {
-        this.scale = scale;
-        if (ssaoMat != null) {
-            ssaoMat.setFloat("Scale", scale);
-        }
-    }
-
-    /**
-     * debugging only , will be removed
-     * @return true if using ambient occlusion
-     */
-    public boolean isUseAo() {
-        return useAo;
-    }
-
-    /**
-     * debugging only , will be removed
-     *
-     * @param useAo true to enable, false to disable (default=true)
-     */
-    public void setUseAo(boolean useAo) {
-        this.useAo = useAo;
-        if (material != null) {
-            material.setBoolean("UseAo", useAo);
-        }
-
-    }
-
-    public void setApproximateNormals(boolean approximateNormals) {
-        this.approximateNormals = approximateNormals;
-        if (ssaoMat != null) {
-            ssaoMat.setBoolean("ApproximateNormals", approximateNormals);
-        }
-    }
-
-    public boolean isApproximateNormals() {
-        return approximateNormals;
-    }
-
-    /**
-     * debugging only , will be removed
-     * @return useOnlyAo
-     */
-    public boolean isUseOnlyAo() {
-        return useOnlyAo;
-    }
-
-    /**
-     * debugging only , will be removed
-     *
-     * @param useOnlyAo true to enable, false to disable (default=false)
-     */
-    public void setUseOnlyAo(boolean useOnlyAo) {
-        this.useOnlyAo = useOnlyAo;
-        if (material != null) {
-            material.setBoolean("UseOnlyAo", useOnlyAo);
-        }
+    public SSAOPass(AssetManager assetManager, ResourceAllocator allocator, float radius, float intensity, float scale, float bias) {
+        addSockets(color, depth);
+        ssao = new AOPass(assetManager, allocator);
+        blur = new BlurPass(assetManager, allocator);
+        ssao.radius.setValue(radius);
+        ssao.intensity.setValue(intensity);
+        ssao.scale.setValue(scale);
+        ssao.bias.setValue(bias);
+        ssao.setContext(getContext());
+        blur.setContext(getContext());
+        blur.ssao.setUpstream(ssao.getFilterResult());
+        blur.frustumNearFar.setUpstream(ssao.frustumNearFar);
     }
 
     @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(sampleRadius, "sampleRadius", 5.1f);
-        oc.write(intensity, "intensity", 1.5f);
-        oc.write(scale, "scale", 0.2f);
-        oc.write(bias, "bias", 0.1f);
+    public PointerSocket<Texture2D> getSceneColor() {
+        return color;
     }
 
     @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        sampleRadius = ic.readFloat("sampleRadius", 5.1f);
-        intensity = ic.readFloat("intensity", 1.5f);
-        scale = ic.readFloat("scale", 0.2f);
-        bias = ic.readFloat("bias", 0.1f);
+    public PointerSocket<Texture2D> getSceneDepth() {
+        return depth;
+    }
+
+    @Override
+    public Socket<Texture2D> getFilterResult() {
+        return blur.getFilterResult();
+    }
+
+    public PointerSocket<Texture2D> getNormals() {
+        return ssao.normals;
+    }
+
+    public ArgumentSocket<Float> getRadius() {
+        return ssao.radius;
+    }
+
+    public ArgumentSocket<Float> getIntensity() {
+        return ssao.intensity;
+    }
+
+    public ArgumentSocket<Float> getScale() {
+        return ssao.scale;
+    }
+
+    public ArgumentSocket<Float> getBias() {
+        return ssao.bias;
+    }
+
+    public ArgumentSocket<Float> getDownSamplingFactor() {
+        return ssao.downSamplingFactor;
+    }
+
+    public ArgumentSocket<Vector2f[]> getSamples() {
+        return ssao.samples;
+    }
+
+    public ArgumentSocket<Boolean> getUseAO() {
+        return blur.useAo;
+    }
+
+    public ArgumentSocket<Boolean> getUseOnlyAO() {
+        return blur.onlyAo;
+    }
+
+    private static class AOPass extends AbstractFilterTask {
+
+        private final TransitiveSocket<Texture2D> normals = new TransitiveSocket<>(this);
+        private final ArgumentSocket<Float> radius = new ArgumentSocket<>(this);
+        private final ArgumentSocket<Float> intensity = new ArgumentSocket<>(this);
+        private final ArgumentSocket<Float> scale = new ArgumentSocket<>(this);
+        private final ArgumentSocket<Float> bias = new ArgumentSocket<>(this);
+        private final ArgumentSocket<Float> downSamplingFactor = new ArgumentSocket<>(this, 1f);
+        private final ArgumentSocket<Vector2f[]> samples = new ArgumentSocket<>(this,
+                new Vector2f[] {new Vector2f(1.0f, 0.0f), new Vector2f(-1.0f, 0.0f), new Vector2f(0.0f, 1.0f), new Vector2f(0.0f, -1.0f)});
+        private final ValueSocket<Vector2f> frustumNearFar = new ValueSocket<>(this, new Vector2f());
+        private final Vector3f frustumCorner = new Vector3f();
+
+        public AOPass(AssetManager assetManager, ResourceAllocator allocator) {
+            super(allocator, new Material(assetManager, "Common/MatDefs/SSAO/ssao.j3md"));
+            addSockets(normals, radius, intensity, scale, bias, samples, frustumNearFar);
+        }
+
+        @Override
+        protected void configureResult(TextureDef<Texture2D> def, Texture2D color) {
+            Image img = color.getImage();
+            float downsample = downSamplingFactor.acquireOrThrow();
+            def.setWidth((int)(img.getWidth() / downsample));
+            def.setHeight((int)(img.getHeight() / downsample));
+            def.setSamples(img.getMultiSamples());
+            def.setFormat(img.getFormat());
+            Camera cam = context.getCamera().getValue().getCamera();
+            float farY = (cam.getFrustumTop() / cam.getFrustumNear()) * cam.getFrustumFar();
+            float farX = farY * ((float)def.getWidth() / def.getHeight());
+            frustumCorner.set(farX, farY, cam.getFrustumFar());
+            frustumNearFar.getValue().set(cam.getFrustumNear(), cam.getFrustumFar());
+        }
+
+        @Override
+        protected void configureMaterial(Material material) {
+            material.setBoolean("ApproximateNormals", normals.acquireToMaterial(material, "Normals") == null);
+            radius.acquireToMaterial(material, "SampleRadius");
+            intensity.acquireToMaterial(material, "Intensity");
+            scale.acquireToMaterial(material, "Scale");
+            bias.acquireToMaterial(material, "Bias");
+            samples.acquireToMaterial(material, "Samples");
+            material.setVector3("FrustumCorner", frustumCorner);
+            material.setVector2("FrustumNearFar", frustumNearFar.getValue());
+        }
+
+    }
+
+    private static class BlurPass extends AbstractFilterTask {
+
+        private final TransitiveSocket<Texture2D> ssao = new TransitiveSocket<>(this);
+        private final TransitiveSocket<Vector2f> frustumNearFar = new TransitiveSocket<>(this);
+        private final ArgumentSocket<Boolean> useAo = new ArgumentSocket<>(this, true);
+        private final ArgumentSocket<Boolean> onlyAo = new ArgumentSocket<>(this, false);
+
+        public BlurPass(AssetManager assetManager, ResourceAllocator allocator) {
+            super(allocator, new Material(assetManager, "Common/MatDefs/SSAO/ssaoBlur.j3md"), false);
+            addSockets(ssao, frustumNearFar, useAo, onlyAo);
+        }
+
+        @Override
+        protected void configureMaterial(Material material) {
+            ssao.acquireToMaterial(material, "SSAOMap");
+            useAo.acquireToMaterial(material, "UseAo");
+            onlyAo.acquireToMaterial(material, "UseOnlyAo");
+            frustumNearFar.acquireToMaterial(material, "FrustumNearFar");
+            material.setFloat("XScale", 2f / getResultDef().getWidth());
+            material.setFloat("YScale", 2f / getResultDef().getHeight());
+        }
+
     }
     
 }

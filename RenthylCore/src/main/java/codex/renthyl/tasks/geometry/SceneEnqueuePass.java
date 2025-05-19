@@ -32,12 +32,10 @@ import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.BasicGeometryQueue;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.boost.render.DepthRange;
-import codex.renthyl.render.RenderEnvironment;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.SocketMap;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.RenderTask;
-import com.jme3.renderer.ViewPort;
 import com.jme3.renderer.queue.*;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;
@@ -86,7 +84,7 @@ public class SceneEnqueuePass extends RenderTask {
 
     @Override
     public void reset() {
-        super.reset();
+        super.resetSocket();
         for (ValueSocket<GeometryQueue> q : queueMap.values()) {
             q.getValue().clear();
         }

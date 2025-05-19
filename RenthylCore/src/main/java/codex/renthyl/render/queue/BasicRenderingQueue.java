@@ -1,4 +1,7 @@
-package codex.renthyl.render;
+package codex.renthyl.render.queue;
+
+import codex.renthyl.render.RenderWorker;
+import codex.renthyl.render.Renderable;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -24,7 +27,7 @@ public class BasicRenderingQueue implements RenderingQueue {
     }
 
     @Override
-    public int add(Renderable r) {
+    public int stage(Renderable r) {
         staged.add(r);
         return staged.size() - 1;
     }
@@ -44,7 +47,7 @@ public class BasicRenderingQueue implements RenderingQueue {
     @Override
     public void render(int workers) {
         if (workers > 1 && service == null) {
-            throw new NullPointerException("No executor available for multithreading.");
+            throw new NullPointerException("No executor provided for multithreading.");
         }
         if (workers <= 0) {
             throw new IllegalArgumentException("Cannot have fewer than one worker.");
@@ -55,7 +58,13 @@ public class BasicRenderingQueue implements RenderingQueue {
         while (activeWorkers.size() > workers) {
             activeWorkers.removeLast();
         }
-        queue.addAll(staged);
+        // load from staged to queue
+        for (Renderable r : staged) {
+            if (r.queueForRender()) {
+                queue.add(r);
+            }
+        }
+        // execute renders
         Worker main = activeWorkers.getFirst();
         if (service != null) for (Worker w : activeWorkers) {
             if (w != main) {

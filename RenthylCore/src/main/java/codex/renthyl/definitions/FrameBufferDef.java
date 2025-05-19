@@ -1,9 +1,9 @@
 package codex.renthyl.definitions;
 
-import codex.renthyl.resources.ResourceException;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
+import com.jme3.texture.Texture2D;
 
 public class FrameBufferDef implements ResourceDef<FrameBuffer> {
 
@@ -55,7 +55,7 @@ public class FrameBufferDef implements ResourceDef<FrameBuffer> {
     }
 
     @Override
-    public FrameBuffer conformResource(Object resource) throws ResourceException {
+    public FrameBuffer conformResource(Object resource) {
         return (FrameBuffer)resource;
     }
 
@@ -69,6 +69,15 @@ public class FrameBufferDef implements ResourceDef<FrameBuffer> {
         if (this.colorTargets != null && this.colorTargets.length > 0) {
             updateProperties(this.colorTargets[0].getImage());
         }
+    }
+
+    public void setColorTarget(Texture colorTarget) {
+        assert colorTarget != null;
+        if (colorTargets == null || colorTargets.length != 1) {
+            colorTargets = new Texture[1];
+        }
+        colorTargets[0] = colorTarget;
+        updateProperties(colorTarget.getImage());
     }
 
     public void setDepthTarget(Texture depthTarget) {

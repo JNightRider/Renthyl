@@ -25,7 +25,7 @@ import codex.renthyl.tasks.geometry.SceneEnqueuePass;
 import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketSelector;
-import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthyl.geometry.GeometryRenderHandler;
 import codex.renthylplus.effects.FilterChain;
 import codex.renthylplus.effects.ports.*;
 import com.jme3.app.SimpleApplication;

@@ -1,8 +1,10 @@
-package codex.renthyl.render;
+package codex.renthyl.render.queue;
+
+import codex.renthyl.render.Renderable;
 
 public interface RenderingQueue extends Iterable<Renderable> {
 
-    int add(Renderable ex);
+    int stage(Renderable ex);
 
     void update(float tpf);
 

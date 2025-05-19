@@ -4,49 +4,43 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.sockets.ValueSocket;
+import codex.renthyl.tasks.RenderTask;
 import com.jme3.light.Light;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
+
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 
 /**
  *
  * @author codex
  */
-public class LightGatherPass extends RenderPass {
+public class LightGatherPass extends RenderTask {
 
-    private ResourceTicket<Collection<Light>> lights;
-    private final LinkedList<Light> lightList = new LinkedList<>();
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        lights = addOutput("Lights");
+    private final ValueSocket<Collection<Light>> lights = new ValueSocket<>(this, new ArrayList<>());
+
+    public LightGatherPass() {
+        addSockets(lights);
     }
+
     @Override
-    protected void prepare(FrameGraphContext context) {
-        declarePrimitive(lights);
-    }
-    @Override
-    protected void execute(FrameGraphContext context) {
+    protected void renderTask() {
+        lights.getValue().clear();
         for (Spatial scene : context.getViewPort().getScenes()) {
             for (Spatial spatial : new SceneGraphIterator(scene)) {
                 for (Light l : spatial.getLocalLightList()) {
-                    lightList.add(l);
+                    lights.getValue().add(l);
                 }
             }
         }
-        resources.setPrimitive(lights, lightList);
     }
-    @Override
-    protected void reset(FrameGraphContext context) {
-        lightList.clear();
+
+    public ValueSocket<Collection<Light>> getLights() {
+        return lights;
     }
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
-    
+
 }

@@ -31,202 +31,87 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class LightScatteringPass extends JmeFilterPass {
-    
-    private Material material;
-    private Vector3f lightPosition;
+public class LightScatteringPass extends AbstractFilterTask {
+
     private final Vector3f screenLightPos = new Vector3f();
-    private int nbSamples = 50;
-    private float blurStart = 0.02f;
-    private float blurWidth = 0.9f;
-    private float lightDensity = 1.4f;
-    private boolean adaptive = true;
     private final Vector3f viewLightPos = new Vector3f();
-    private boolean display = true;
-    private float innerLightDensity;
-    
-    /**
-     * Creates a lightScatteringPass.
-     *
-     * @param lightPosition the desired location (in world coordinates, alias
-     * created)
-     */
-    public LightScatteringPass(Vector3f lightPosition) {
-        this.lightPosition = new Vector3f(lightPosition);
+
+    private final ArgumentSocket<Vector3f> lightPosition = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Integer> samples = new ArgumentSocket<>(this, 50);
+    private final ArgumentSocket<Float> blurStart = new ArgumentSocket<>(this, 0.02f);
+    private final ArgumentSocket<Float> blurWidth = new ArgumentSocket<>(this, 0.9f);
+    private final ArgumentSocket<Float> lightDensity = new ArgumentSocket<>(this, 1.4f);
+    private final ArgumentSocket<Boolean> adaptive = new ArgumentSocket<>(this, true);
+
+    public LightScatteringPass(AssetManager assetManager, ResourceAllocator allocator, Vector3f lightPosition) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/LightScattering.j3md"));
+        addSockets(samples, blurStart, blurWidth, lightDensity, adaptive);
+        addSocket(this.lightPosition).setValue(lightPosition);
     }
-    
+
     @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/LightScattering.j3md");
-        add(new Subpass(material));
-    }
-    
-    @Override
-    public void execute(FrameGraphContext context) {
-        Camera cam = context.getViewPort().getCamera();
-        getClipCoordinates(lightPosition, screenLightPos, cam);
-        cam.getViewMatrix().mult(lightPosition, viewLightPos);        
-        if (adaptive) {
+    protected void configureMaterial(Material material) {
+        Camera cam = context.getCamera().getValue().getCamera();
+        Vector3f lightPos = lightPosition.acquireOrThrow();
+        getClipCoordinates(lightPos, screenLightPos, cam);
+        cam.getViewMatrix().mult(lightPos, viewLightPos);
+        float innerDensity = lightDensity.acquireOrThrow();
+        if (adaptive.acquireOrThrow()) {
             float densityX = 1f - FastMath.clamp(FastMath.abs(screenLightPos.x - 0.5f), 0, 1);
             float densityY = 1f - FastMath.clamp(FastMath.abs(screenLightPos.y - 0.5f), 0, 1);
-            innerLightDensity = lightDensity * densityX * densityY;
-        } else {
-            innerLightDensity = lightDensity;
+            innerDensity *= densityX * densityY;
         }
-        display = innerLightDensity != 0.0 && viewLightPos.z < 0;
+        samples.acquireToMaterial(material, "NbSamples");
+        blurStart.acquireToMaterial(material, "BlurStart");
+        blurWidth.acquireToMaterial(material, "BlurWidth");
         material.setVector3("LightPosition", screenLightPos);
-        material.setInt("NbSamples", nbSamples);
-        material.setFloat("BlurStart", blurStart);
-        material.setFloat("BlurWidth", blurWidth);
-        material.setFloat("LightDensity", innerLightDensity);
-        material.setBoolean("Display", display);
-        super.execute(context);
+        material.setFloat("LightDensity", innerDensity);
+        material.setBoolean("Display", innerDensity != 0.0 && viewLightPos.z < 0);
     }
 
-    private Vector3f getClipCoordinates(Vector3f worldPosition, Vector3f store, Camera cam) {
-
+    private void getClipCoordinates(Vector3f worldPosition, Vector3f store, Camera cam) {
         float w = cam.getViewProjectionMatrix().multProj(worldPosition, store);
         store.divideLocal(w);
-
         store.x = ((store.x + 1f) * (cam.getViewPortRight() - cam.getViewPortLeft()) / 2f + cam.getViewPortLeft());
         store.y = ((store.y + 1f) * (cam.getViewPortTop() - cam.getViewPortBottom()) / 2f + cam.getViewPortBottom());
         store.z = (store.z + 1f) / 2f;
-
-        return store;
     }
 
-    /**
-     * returns the blur start of the scattering 
-     * see {@link #setBlurStart(float blurStart)}
-     * @return the start distance
-     */
-    public float getBlurStart() {
-        return blurStart;
-    }
-
-    /**
-     * sets the blur start<br>
-     * at which distance from the light source the effect starts default is 0.02
-     *
-     * @param blurStart the desired start distance (in world units,
-     * default=0.02)
-     */
-    public void setBlurStart(float blurStart) {
-        this.blurStart = blurStart;
-    }
-
-    /**
-     * returns the blur width<br>
-     * see {@link #setBlurWidth(float blurWidth)}
-     * @return the width
-     */
-    public float getBlurWidth() {
-        return blurWidth;
-    }
-
-    /**
-     * sets the blur width default is 0.9
-     *
-     * @param blurWidth the desired width (default=0.9)
-     */
-    public void setBlurWidth(float blurWidth) {
-        this.blurWidth = blurWidth;
-    }
-
-    /**
-     * returns the light density
-     * see {@link #setLightDensity(float lightDensity)}
-     * 
-     * @return the density
-     */
-    public float getLightDensity() {
-        return lightDensity;
-    }
-
-    /**
-     * sets how much the effect is visible over the rendered scene default is 1.4
-     *
-     * @param lightDensity the desired density (default=1.4)
-     */
-    public void setLightDensity(float lightDensity) {
-        this.lightDensity = lightDensity;
-    }
-
-    /**
-     * returns the light position
-     * @return the pre-existing vector
-     */
-    public Vector3f getLightPosition() {
+    public ArgumentSocket<Vector3f> getLightPosition() {
         return lightPosition;
     }
 
-    /**
-     * sets the light position
-     *
-     * @param lightPosition the desired location (in world coordinates, alias
-     * created)
-     */
-    public void setLightPosition(Vector3f lightPosition) {
-        this.lightPosition = lightPosition;
+    public ArgumentSocket<Integer> getSamples() {
+        return samples;
     }
 
-    /**
-     * returns the number of samples for the radial blur
-     * @return count (&ge;0)
-     */
-    public int getNbSamples() {
-        return nbSamples;
+    public ArgumentSocket<Float> getBlurStart() {
+        return blurStart;
     }
 
-    /**
-     * sets the number of samples for the radial blur default is 50
-     * the higher the value the higher the quality, but the slower the performance.
-     *
-     * @param nbSamples the desired number of samples (default=50)
-     */
-    public void setNbSamples(int nbSamples) {
-        this.nbSamples = nbSamples;
+    public ArgumentSocket<Float> getBlurWidth() {
+        return blurWidth;
     }
 
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(lightPosition, "lightPosition", Vector3f.ZERO);
-        oc.write(nbSamples, "nbSamples", 50);
-        oc.write(blurStart, "blurStart", 0.02f);
-        oc.write(blurWidth, "blurWidth", 0.9f);
-        oc.write(lightDensity, "lightDensity", 1.4f);
-        oc.write(adaptive, "adaptative", true);
+    public ArgumentSocket<Float> getLightDensity() {
+        return lightDensity;
     }
 
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        lightPosition = (Vector3f) ic.readSavable("lightPosition", Vector3f.ZERO);
-        nbSamples = ic.readInt("nbSamples", 50);
-        blurStart = ic.readFloat("blurStart", 0.02f);
-        blurWidth = ic.readFloat("blurWidth", 0.9f);
-        lightDensity = ic.readFloat("lightDensity", 1.4f);
-        adaptive = ic.readBoolean("adaptative", true);
+    public ArgumentSocket<Boolean> getAdaptive() {
+        return adaptive;
     }
-    
+
 }

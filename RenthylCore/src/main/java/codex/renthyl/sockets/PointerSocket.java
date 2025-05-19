@@ -2,8 +2,8 @@ package codex.renthyl.sockets;
 
 public interface PointerSocket <T> extends Socket<T> {
 
-    void setUpstream(Socket<T> upstream);
+    void setUpstream(Socket<? extends T> upstream);
 
-    Socket<T> getUpstream();
+    Socket<? extends T> getUpstream();
 
 }

@@ -6,6 +6,8 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.resources.ResourceAllocator;
+import com.jme3.asset.AssetManager;
 import com.jme3.light.Light;
 import com.jme3.light.PointLight;
 import com.jme3.math.Vector3f;
@@ -22,8 +24,8 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
     private final Camera[] shadowCams = new Camera[NUM_CAMS];
     private final float[] radii = new float[NUM_CAMS];
     
-    public PointShadowPass(int size) {
-        super(Light.Type.Point, NUM_CAMS, size);
+    public PointShadowPass(AssetManager assetManager, ResourceAllocator allocator, int size) {
+        super(assetManager, allocator, Light.Type.Point, NUM_CAMS, size);
         for (int i = 0; i < shadowCams.length; i++) {
             shadowCams[i] = new Camera(shadowMapDef.getMapDef().getWidth(), shadowMapDef.getMapDef().getHeight());
             //c.setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y.mult(-1f));
@@ -55,6 +57,7 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
         }
         return c;
     }
+
     @Override
     protected boolean lightSourceInsideFrustum(Camera cam, PointLight light) {
         return ShadowOcclusionPass.pointInsideFrustum(cam, light.getPosition());

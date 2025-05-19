@@ -29,29 +29,15 @@
 package codex.renthyl.tasks;
 
 import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.macros.Macro;
 
 /**
  * Interface pass between the framegraph and game logic, allowing them to communicate.
- * <p>
- * Game logic can listen to framegraph parameters via {@link GraphTarget}s, and/or game logic
- * can communicate parameters to the framegraph via a {@link GraphSource}.
- * <p>
- * Objects handled by this pass are automatically marked as constant, so that future changes
- * do not taint the game logic's resource view.
- * <p>
- * Inputs:
- * <ul>
- *   <li>{@link #INPUT} ({@link Object}): the value to share with game logic via registered GraphTargets (optional).</li>
- * </ul>
- * Outputs:
- * <ul>
- *   <li>{@link #OUTPUT} ({@link Object}): the value to share with the FrameGraph from game logic using the registered GraphSource</li>
- * </ul>
  * 
  * @author codex
  * @param <T>
  */
-public class Attribute <T> extends AbstractTask implements Socket<T> {
+public class Attribute <T> extends AbstractTask implements Socket<T>, Macro<T> {
 
     private T value;
     private int activeRefs = 0;
@@ -66,7 +52,7 @@ public class Attribute <T> extends AbstractTask implements Socket<T> {
 
     @Override
     public boolean isAvailableToDownstream(int queuePosition) {
-        return isRenderingComplete() && isUpstreamAvailable(queuePosition);
+        return true;
     }
 
     @Override
@@ -77,6 +63,13 @@ public class Attribute <T> extends AbstractTask implements Socket<T> {
     @Override
     public T acquire() {
         return value;
+    }
+
+    @Override
+    public void resetSocket() {
+        if (activeRefs > 0) {
+            throw new IllegalStateException("More references than releases.");
+        }
     }
 
     @Override
@@ -99,6 +92,11 @@ public class Attribute <T> extends AbstractTask implements Socket<T> {
     @Override
     public int getActiveReferences() {
         return activeRefs;
+    }
+
+    @Override
+    public T preview() {
+        return value;
     }
 
     public void setValue(T value) {

@@ -1,12 +1,12 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 public class TransitiveSocket<T> implements PointerSocket<T> {
 
     protected final Renderable task;
-    protected Socket<T> upstream;
+    protected Socket<? extends T> upstream;
     protected int activeRefs = 0;
 
     public TransitiveSocket(Renderable task) {
@@ -17,13 +17,13 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     public void update(float tpf) {}
 
     @Override
-    public void setUpstream(Socket<T> upstream) {
+    public void setUpstream(Socket<? extends T> upstream) {
         assertNoActiveReferences();
         this.upstream = upstream;
     }
 
     @Override
-    public Socket<T> getUpstream() {
+    public Socket<? extends T> getUpstream() {
         return upstream;
     }
 
@@ -61,19 +61,19 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         if (activeRefs != 0) {
             throw new IllegalStateException("Socket not fully released.");
         }
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         // queue upstream before queueing owning task
         if (upstream != null) {
-            upstream.queue(queue);
+            upstream.stage(queue);
         }
-        task.queue(queue);
+        task.stage(queue);
     }
 
     @Override

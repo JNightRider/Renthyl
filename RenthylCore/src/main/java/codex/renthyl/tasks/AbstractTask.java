@@ -2,7 +2,7 @@ package codex.renthyl.tasks;
 
 import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class AbstractTask implements Renderable {
 
-    private static final int UNQUEUED = -2, QUEUING = -1, QUEUED = 0;
+    protected static final int UNQUEUED = -2, QUEUING = -1, QUEUED = 0;
 
     protected final Collection<Socket> sockets = new ArrayList<>();
     private final AtomicBoolean claimed = new AtomicBoolean(false);
@@ -20,13 +20,13 @@ public abstract class AbstractTask implements Renderable {
     private int position = UNQUEUED;
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         if (position < QUEUING) {
             // set flag immediately in anticipation of callbacks from sockets
             position = QUEUING;
             // queue upstream before queueing this
             queueSockets(queue);
-            position = queue.add(this);
+            position = queue.stage(this);
         }
     }
 
@@ -51,7 +51,7 @@ public abstract class AbstractTask implements Renderable {
     @Override
     public void render() {
         // get resource from socket
-        //Texture2D myTexture = mySocket.acquire();
+        //Texture2D myTexture = mySocket.acquireType();
         // do rendering stuff...
         renderTask();
         // release sockets
@@ -72,7 +72,7 @@ public abstract class AbstractTask implements Renderable {
         complete = false;
         position = UNQUEUED;
         // reset sockets
-        sockets.forEach(Socket::reset);
+        sockets.forEach(Socket::resetSocket);
     }
 
     protected <T extends Socket> T addSocket(T socket) {
@@ -82,7 +82,13 @@ public abstract class AbstractTask implements Renderable {
 
     protected void queueSockets(RenderingQueue queue) {
         for (Socket s : sockets) {
-            s.queue(queue);
+            s.stage(queue);
+        }
+    }
+
+    protected void assertUnqueued() {
+        if (position > UNQUEUED) {
+            throw new IllegalStateException("Must be unqueued for this operation.");
         }
     }
 

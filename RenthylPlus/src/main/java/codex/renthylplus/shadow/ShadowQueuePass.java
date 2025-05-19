@@ -4,74 +4,66 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
+import codex.renthyl.geometry.BasicGeometryQueue;
 import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.sockets.CollectorSocket;
+import codex.renthyl.sockets.ValueSocket;
+import codex.renthyl.tasks.AbstractTask;
 import codex.renthyl.util.SpatialWorldParam;
 import com.jme3.renderer.queue.OpaqueComparator;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Spatial;
 
 /**
  *
  * @author codex
  */
-public class ShadowQueuePass extends RenderPass {
+public class ShadowQueuePass extends AbstractTask {
 
-    private ResourceTicket<GeometryQueue> geometry, occluders, receivers;
-    private GeometryQueue occluderQueue, receiverQueue;
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        geometry = addInput("Geometry");
-        occluders = addOutput("Occluders");
-        receivers = addOutput("Receivers");
+    private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
+    private final ValueSocket<GeometryQueue> occluders = new ValueSocket<>(this, new BasicGeometryQueue(new OpaqueComparator()));
+    private final ValueSocket<GeometryQueue> receivers = new ValueSocket<>(this, new BasicGeometryQueue(new OpaqueComparator()));
+
+    public ShadowQueuePass() {
+        addSockets(geometry, occluders, receivers);
     }
+
     @Override
-    protected void prepare(FrameGraphContext context) {
-        declare(null, occluders);
-        declare(null, receivers);
-        reference(geometry);
-    }
-    @Override
-    protected void execute(FrameGraphContext context) {
-        GeometryQueue source = resources.acquire(geometry);
-        int numGeoms = source.getNumGeometries();
-        if (occluderQueue == null) {
-            occluderQueue = new GeometryQueue(new OpaqueComparator(), false, numGeoms);
-        }
-        if (receiverQueue == null) {
-            receiverQueue = new GeometryQueue(new OpaqueComparator(), false, numGeoms);
-        }
-        for (Geometry g : source) {
-            ShadowMode mode = SpatialWorldParam.getWorldParameter(
-                    g, ShadowMode.Inherit, ShadowMode.Off, s -> s.getLocalShadowMode());
-            if (mode != null && mode != ShadowMode.Off) {
-                boolean all = mode == RenderQueue.ShadowMode.CastAndReceive;
-                if (all || mode == RenderQueue.ShadowMode.Cast) {
-                    occluderQueue.add(g);
-                }
-                if (all || mode == RenderQueue.ShadowMode.Receive) {
-                    receiverQueue.add(g);
+    protected void renderTask() {
+        for (GeometryQueue q : geometry.acquire()) {
+            for (Geometry g : q) {
+                ShadowMode mode = SpatialWorldParam.getWorldParameter(g, ShadowMode.Inherit, ShadowMode.Off, Spatial::getLocalShadowMode);
+                if (mode != null && mode != ShadowMode.Off) {
+                    boolean all = mode == RenderQueue.ShadowMode.CastAndReceive;
+                    if (all || mode == RenderQueue.ShadowMode.Cast) {
+                        occluders.getValue().add(g);
+                    }
+                    if (all || mode == RenderQueue.ShadowMode.Receive) {
+                        receivers.getValue().add(g);
+                    }
                 }
             }
         }
-        resources.setPrimitive(occluders, occluderQueue);
-        resources.setPrimitive(receivers, receiverQueue);
     }
+
     @Override
-    protected void reset(FrameGraphContext context) {
-        if (occluderQueue != null) {
-            occluderQueue.clear();
-        }
-        if (receiverQueue != null) {
-            receiverQueue.clear();
-        }
+    public void reset() {
+        occluders.getValue().clear();
+        receivers.getValue().clear();
     }
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
-    
+
+    public CollectorSocket<GeometryQueue> getGeometry() {
+        return geometry;
+    }
+
+    public ValueSocket<GeometryQueue> getOccluders() {
+        return occluders;
+    }
+
+    public ValueSocket<GeometryQueue> getReceivers() {
+        return receivers;
+    }
+
 }

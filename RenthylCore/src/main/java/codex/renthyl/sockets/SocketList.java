@@ -1,15 +1,15 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements PointerSocket<List<R>> {
 
-    private final Renderable task;
-    private Socket<List<R>> upstream;
+    protected final Renderable task;
+    private Socket<? extends List<R>> upstream;
     private List<R> resourceList;
     private int activeRefs = 0;
 
@@ -23,12 +23,12 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     }
 
     @Override
-    public void setUpstream(Socket<List<R>> upstream) {
+    public void setUpstream(Socket<? extends List<R>> upstream) {
         this.upstream = upstream;
     }
 
     @Override
-    public Socket<List<R>> getUpstream() {
+    public Socket<? extends List<R>> getUpstream() {
         return upstream;
     }
 
@@ -48,23 +48,23 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         if (resourceList != null) {
             resourceList.clear();
         }
-        forEach(Socket::reset);
+        forEach(Socket::resetSocket);
         if (activeRefs != 0) {
             throw new IllegalStateException("Some references were not released.");
         }
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         if (upstream != null) {
-            upstream.queue(queue);
+            upstream.stage(queue);
         }
-        forEach(s -> s.queue(queue));
-        task.queue(queue);
+        forEach(s -> s.stage(queue));
+        task.stage(queue);
     }
 
     @Override

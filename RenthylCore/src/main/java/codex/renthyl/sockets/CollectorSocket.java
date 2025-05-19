@@ -1,7 +1,7 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -66,22 +66,22 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         target.clear();
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         for (Socket<? extends Collection<T>> s : collectionSources) {
-            s.queue(queue);
+            s.stage(queue);
         }
         for (Socket<? extends Map<?, T>> s : mapSources) {
-            s.queue(queue);
+            s.stage(queue);
         }
         for (Socket<T> s : sources) {
-            s.queue(queue);
+            s.stage(queue);
         }
-        task.queue(queue);
+        task.stage(queue);
     }
 
     @Override

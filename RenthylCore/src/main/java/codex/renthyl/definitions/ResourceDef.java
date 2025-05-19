@@ -29,7 +29,6 @@
 package codex.renthyl.definitions;
 
 import codex.renthyl.resources.Disposer;
-import codex.renthyl.resources.ResourceException;
 
 /**
  * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
@@ -60,7 +59,7 @@ public interface ResourceDef <T> extends Disposer<T> {
      *
      * @param resource
      */
-    T conformResource(Object resource) throws ResourceException;
+    T conformResource(Object resource);
 
     /**
      * Tests if the evaluation score is final; that is, the corresponding

@@ -1,7 +1,7 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,7 +14,7 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     private final Renderable task;
     private final Supplier<T> factory;
     private final List<T> sockets = new ArrayList<>();
-    private Socket<List<R>> upstream;
+    private Socket<? extends List<R>> upstream;
     private List<R> resourceList;
     private int activeRefs = 0;
 
@@ -29,13 +29,13 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     }
 
     @Override
-    public void setUpstream(Socket<List<R>> upstream) {
+    public void setUpstream(Socket<? extends List<R>> upstream) {
         assertNoActiveReferences();
         this.upstream = upstream;
     }
 
     @Override
-    public Socket<List<R>> getUpstream() {
+    public Socket<? extends List<R>> getUpstream() {
         return upstream;
     }
 
@@ -63,23 +63,23 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         if (resourceList != null) {
             resourceList.clear();
         }
-        sockets.forEach(Socket::reset);
+        sockets.forEach(Socket::resetSocket);
         if (activeRefs != 0) {
             throw new IllegalStateException("Some references were not released.");
         }
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         if (upstream != null) {
-            upstream.queue(queue);
+            upstream.stage(queue);
         }
-        sockets.forEach(s -> s.queue(queue));
-        task.queue(queue);
+        sockets.forEach(s -> s.stage(queue));
+        task.stage(queue);
     }
 
     @Override
@@ -158,7 +158,7 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
         return resourceList;
     }
 
-    public void add(Socket<R> upstream) {
+    public void add(Socket<? extends R> upstream) {
         T s = factory.get();
         s.setUpstream(upstream);
         sockets.add(s);

@@ -12,7 +12,7 @@ import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthyl.geometry.GeometryRenderHandler;
 import com.jme3.material.Material;
 import com.jme3.renderer.queue.NullComparator;
 import com.jme3.scene.Geometry;

@@ -4,8 +4,6 @@
  */
 package codex.renthyl.definitions.arrays;
 
-import codex.renthyl.resources.ResourceException;
-
 /**
  *
  * @author codex
@@ -32,7 +30,7 @@ public class FloatArrayDef extends AbstractArrayDef<float[]> {
         return null;
     }
     @Override
-    public float[] conformResource(Object resource) throws ResourceException {
+    public float[] conformResource(Object resource) {
         return (float[])resource;
     }
     

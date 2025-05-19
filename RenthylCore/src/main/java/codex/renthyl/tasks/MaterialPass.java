@@ -2,7 +2,6 @@ package codex.renthyl.tasks;
 
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.ResourceDef;
-import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import com.jme3.material.Material;
@@ -19,17 +18,19 @@ import java.util.Objects;
 public class MaterialPass extends RenderTask {
 
     protected final Material material;
-    protected final SocketMap<String, ValueSocket<Object>, Object> parameters = new SocketMap<>(this, new HashMap<>());
+    protected final SocketMap<String, ArgumentSocket<Object>, Object> parameters = new SocketMap<>(this, new HashMap<>());
     private final AllocationSocket<Texture2D> result;
     private final AllocationSocket<FrameBuffer> frameBuffer;
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final Camera camera = new Camera(1024, 1024);
 
-    public MaterialPass(ResourceAllocator allocator, Material material, ResourceDef<Texture2D> def) {
+    public MaterialPass(ResourceAllocator allocator, Material material, ResourceDef<Texture2D> resultDef) {
         this.material = material;
-        result = addSocket(new AllocationSocket<>(this, allocator, def));
+        result = addSocket(new AllocationSocket<>(this, allocator, resultDef));
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         addSockets(parameters);
+        ArgumentSocket<Texture2D> tex = new ArgumentSocket<>(this);
+        parameters.put("myParam", tex);
     }
 
     @Override
@@ -46,9 +47,9 @@ public class MaterialPass extends RenderTask {
         context.clearBuffers();
 
         // material
-        Map<String, Object> map = parameters.acquire();
+        Map<String, ?> map = parameters.acquire();
         MaterialDef matdef = material.getMaterialDef();
-        for (Map.Entry<String, Object> e : map.entrySet()) {
+        for (Map.Entry<String, ?> e : map.entrySet()) {
             if (matdef.getMaterialParam(e.getKey()) != null) {
                 // HashMap permits null values
                 if (e.getValue() != null) {
@@ -72,15 +73,15 @@ public class MaterialPass extends RenderTask {
         Objects.requireNonNull(parameters.get(name), "Parameter \"" + name + "\" does not exist.").setValue(value);
     }
 
-    public PointerSocket<Map<String, Object>> getParameters() {
+    public PointerSocket<? extends Map<String, ?>> getParameters() {
         return parameters;
     }
 
-    public ValueSocket<Object> getParameter(String name) {
+    public ArgumentSocket getParameter(String name) {
         return parameters.get(name);
     }
 
-    public PointerSocket<Texture2D> getResult() {
+    public AllocationSocket<Texture2D> getResult() {
         return result;
     }
 

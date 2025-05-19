@@ -30,7 +30,6 @@ package codex.renthyl.geometry;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.render.RenderEnvironment;
-import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.scene.Geometry;
 
 public interface GeometryQueue extends RenderEnvironment, Iterable<Geometry> {
@@ -38,6 +37,8 @@ public interface GeometryQueue extends RenderEnvironment, Iterable<Geometry> {
     void add(Geometry g);
 
     int render(FrameGraphContext context, GeometryRenderHandler handler);
+
+    int size();
 
     void clear();
 

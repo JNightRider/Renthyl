@@ -1,55 +1,124 @@
 package codex.renthyl.tasks;
 
-import codex.renthyl.sockets.DynamicSocketList;
+import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
-import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyl.sockets.ValueSocket;
+import codex.renthyl.sockets.macros.ArgumentMacro;
 
-public class Multiplexor <T> extends AbstractTask {
+import java.util.ArrayList;
+import java.util.List;
 
-    private final DynamicSocketList<TransitiveSocket<T>, T> inputs = new DynamicSocketList<>(this, () -> new TransitiveSocket<>(this));
-    private final ValueSocket<T> output = new ValueSocket<>(this);
+public class Multiplexor <T> extends AbstractTask implements Socket<T> {
+
+    private final List<Socket<? extends T>> upstream = new ArrayList<>();
+    private final ArgumentMacro<Integer> indexMacro = new ArgumentMacro<>();
+    private int activeRefs = 0;
     private int index = -1;
 
     public Multiplexor() {
-        this(null);
+        this(-1);
     }
-    public Multiplexor(T defaultValue) {
-        addSockets(inputs, output);
-        output.setValue(defaultValue);
+    public Multiplexor(int index) {
+        indexMacro.setValue(index);
+        addSocket(indexMacro);
     }
 
     @Override
-    public void update(float tpf) {
-        super.update(tpf);
-        setIndex(index);
+    public void stage(RenderingQueue queue) {
+        index = getNextIndex(index);
+        if (getPosition() < QUEUING && !isNullIndex()) {
+            upstream.get(index).stage(queue);
+        }
+        super.stage(queue);
+    }
+
+    @Override
+    public boolean isAvailableToDownstream(int queuePosition) {
+        return isRenderingComplete() && isUpstreamAvailable(queuePosition);
+    }
+
+    @Override
+    public boolean isUpstreamAvailable(int queuePosition) {
+        return isNullIndex() || upstream.get(index).isAvailableToDownstream(queuePosition);
+    }
+
+    @Override
+    public T acquire() {
+        return !isNullIndex() ? upstream.get(index).acquire() : null;
+    }
+
+    @Override
+    public void resetSocket() {
+        if (activeRefs > 0) {
+            throw new IllegalStateException("More references than releases.");
+        }
+    }
+
+    @Override
+    public int getResourceUsage() {
+        return isNullIndex() ? activeRefs : Math.max(activeRefs, upstream.get(index).getResourceUsage());
+    }
+
+    @Override
+    public void reference(int queuePosition) {
+        activeRefs++;
+        if (!isNullIndex()) {
+            upstream.get(index).reference(queuePosition);
+        }
+    }
+
+    @Override
+    public void release(int queuePosition) {
+        if (--activeRefs < 0) {
+            throw new IllegalStateException("More releases than references.");
+        }
+        if (!isNullIndex()) {
+            upstream.get(index).release(queuePosition);
+        }
+    }
+
+    @Override
+    public int getActiveReferences() {
+        return activeRefs;
     }
 
     @Override
     protected void renderTask() {}
 
-    public void setIndex(int index) {
-        this.index = index;
-        if (this.index >= 0) {
-            TransitiveSocket<T> in = inputs.get(this.index);
-            if (in.getUpstream() != null) {
-                output.setUpstream(in);
-                return;
-            }
-        }
-        output.setUpstream(null);
+    protected int getNextIndex(int index) {
+        return indexMacro.preview();
     }
 
-    public void setDefaultValue(T value) {
-        output.setValue(value);
+    public int addUpstream(Socket<? extends T> upstream) {
+        assertUnqueued();
+        this.upstream.add(upstream);
+        return this.upstream.size() - 1;
     }
 
-    public DynamicSocketList<?, T> getInputs() {
-        return inputs;
+    public void addUpstream(int i, Socket<? extends T> upstream) {
+        assertUnqueued();
+        this.upstream.add(i, upstream);
     }
 
-    public Socket<T> getOutput() {
-        return output;
+    public void setUpstream(int i, Socket<? extends T> upstream) {
+        assertUnqueued();
+        this.upstream.set(i, upstream);
+    }
+
+    public void removeUpstream(Socket upstream) {
+        assertUnqueued();
+        this.upstream.remove(upstream);
+    }
+
+    public ArgumentMacro<Integer> getIndex() {
+        return indexMacro;
+    }
+
+    public int size() {
+        return upstream.size();
+    }
+
+    public boolean isNullIndex() {
+        return index < 0 || index >= upstream.size();
     }
 
 }

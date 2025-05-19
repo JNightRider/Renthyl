@@ -2,8 +2,6 @@ package codex.renthyl.geometry;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.render.CameraState;
-import codex.renthyl.render.RenderEnvironment;
-import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.bounding.BoundingVolume;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -81,6 +79,11 @@ public class BasicGeometryQueue implements GeometryQueue {
     }
 
     @Override
+    public int size() {
+        return geometries.size();
+    }
+
+    @Override
     public void clear() {
         geometries.clear();
         views.removeIf(v -> !v.cycle());
@@ -146,7 +149,7 @@ public class BasicGeometryQueue implements GeometryQueue {
                     break;
                 }
                 Geometry g = geometries.get(j);
-                if (CullTag.evaluate(g).isInside()) {
+                if (CullTag.evaluate(g, handler).isInside()) {
                     handler.renderGeometry(context, g);
                     rendered++;
                 }
@@ -229,17 +232,16 @@ public class BasicGeometryQueue implements GeometryQueue {
             this.spatial.setUserData(TAG_USERDATA, this);
         }
 
-        private Visibility evaluate(CameraState camera) {
+        private Visibility evaluate(CameraState camera, GeometryRenderHandler handler) {
             if (state != null && version >= cullVersion) {
                 return state;
             }
-            Visibility parent = evaluate(spatial.getParent());
-            BoundingVolume worldBound = spatial.getWorldBound();
+            Visibility parent = evaluate(spatial.getParent(), handler);
             Spatial.CullHint hint = spatial.getLocalCullHint();
             switch (hint) {
                 case Never: state = Visibility.get(true, parent != Visibility.Inside); break;
                 case Always: state = Visibility.get(false, parent != Visibility.Outside); break;
-                case Dynamic: state = (parent.isPartial() ? camera.visible(worldBound) : parent); break;
+                case Dynamic: state = (parent.isPartial() ? handler.evaluateSpatialCulling(camera, spatial) : parent); break;
                 case Inherit: {
                     if (parent != Visibility.InsidePartial) {
                         // if the parent visibility is outside partial, the parent's
@@ -253,7 +255,7 @@ public class BasicGeometryQueue implements GeometryQueue {
                         switch (worldHint) {
                             case Never: state = parent; break;
                             case Always: state = Visibility.OutsidePartial; break; // this should technically never occur
-                            case Dynamic: state = camera.visible(worldBound); break;
+                            case Dynamic: state = handler.evaluateSpatialCulling(camera, spatial); break;
                             default: throw new IllegalStateException("Inherited spatial cull hint cannot be " + worldHint + " in this context.");
                         }
                     }
@@ -271,7 +273,7 @@ public class BasicGeometryQueue implements GeometryQueue {
             return spatial != null;
         }
 
-        public static Visibility evaluate(Spatial spatial) {
+        public static Visibility evaluate(Spatial spatial, GeometryRenderHandler handler) {
             if (spatial == null) {
                 return Visibility.InsidePartial;
             }
@@ -279,7 +281,7 @@ public class BasicGeometryQueue implements GeometryQueue {
             if (tag == null || !tag.isValid()) {
                 tag = new CullTag(spatial);
             }
-            return tag.evaluate(lastEvaluatedCamera);
+            return tag.evaluate(lastEvaluatedCamera, handler);
         }
 
         public static void begin(CameraState camera) {

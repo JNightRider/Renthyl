@@ -5,7 +5,6 @@
 package codex.renthyl.definitions;
 
 import codex.boost.export.SavableObject;
-import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -73,7 +72,7 @@ public class BufferDef <T extends Buffer> implements ResourceDef<T> {
     }
 
     @Override
-    public T conformResource(Object resource) throws ResourceException {
+    public T conformResource(Object resource) {
         return prepareBuffer((T)resource);
     }
 

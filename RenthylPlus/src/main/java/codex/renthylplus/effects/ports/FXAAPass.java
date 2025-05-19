@@ -31,125 +31,50 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class FXAAPass extends JmeFilterPass {
-    
-    private Material material;
-    private float subPixelShift = 1.0f / 4.0f;
-    private float vxOffset = 0.0f;
-    private float spanMax = 8.0f;
-    private float reduceMul = 1.0f / 8.0f;
-    
+public class FXAAPass extends AbstractFilterTask {
+
+    private final ArgumentSocket<Float> subPixelShift = new ArgumentSocket<>(this, 1.0f / 4.0f);
+    private final ArgumentSocket<Float> vxOffset = new ArgumentSocket<>(this, 0.0f);
+    private final ArgumentSocket<Float> spanMax = new ArgumentSocket<>(this, 8.0f);
+    private final ArgumentSocket<Float> reduceMul = new ArgumentSocket<>(this, 1.0f / 8.0f);
+
+    public FXAAPass(AssetManager assetManager, ResourceAllocator allocator) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/FXAA.j3md"), false);
+        addSockets(subPixelShift, vxOffset, spanMax, reduceMul);
+    }
+
     @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/FXAA.j3md");   
-        material.setFloat("SubPixelShift", subPixelShift);
-        material.setFloat("VxOffset", vxOffset);
-        material.setFloat("SpanMax", spanMax);
-        material.setFloat("ReduceMul", reduceMul);
-        add(new Subpass(material));
+    protected void configureMaterial(Material material) {
+        subPixelShift.acquireToMaterial(material, "SubPixelShift");
+        vxOffset.acquireToMaterial(material, "VxOffset");
+        spanMax.acquireToMaterial(material, "SpanMax");
+        reduceMul.acquireToMaterial(material, "ReduceMul");
     }
 
-    public void setSpanMax(float spanMax) {
-        this.spanMax = spanMax;
-        if (material != null) {
-            material.setFloat("SpanMax", this.spanMax);
-        }
-    }
-
-    /**
-     * add to 0.0f for higher quality
-     *
-     * @param subPixelShift the desired shift (default=0.25)
-     */
-    public void setSubPixelShift(float subPixelShift) {
-        this.subPixelShift = subPixelShift;
-        if (material != null) {
-            material.setFloat("SubPixelShift", this.subPixelShift);
-        }
-    }
-
-    /**
-     * add to 0.0f for higher quality
-     *
-     * @param reduceMul the desired value (default=0.125)
-     */
-    public void setReduceMul(float reduceMul) {
-        this.reduceMul = reduceMul;
-        if (material != null) {
-            material.setFloat("ReduceMul", this.reduceMul);
-        }
-    }
-
-    public void setVxOffset(float vxOffset) {
-        this.vxOffset = vxOffset;
-        if (material != null) {
-            material.setFloat("VxOffset", this.vxOffset);
-        }
-    }
-
-    public float getReduceMul() {
-        return reduceMul;
-    }
-
-    public float getSpanMax() {
-        return spanMax;
-    }
-
-    public float getSubPixelShift() {
+    public ArgumentSocket<Float> getSubPixelShift() {
         return subPixelShift;
     }
 
-    public float getVxOffset() {
+    public ArgumentSocket<Float> getVxOffset() {
         return vxOffset;
     }
 
-    /**
-     * Load properties when the filter is de-serialized, for example when
-     * loading from a J3O file.
-     *
-     * @param importer the importer to use (not null)
-     * @throws IOException from the importer
-     */
-    @Override
-    public void read(JmeImporter importer) throws IOException {
-        super.read(importer);
-        InputCapsule capsule = importer.getCapsule(this);
-
-        this.reduceMul = capsule.readFloat("reduceMul", 0.125f);
-        this.spanMax = capsule.readFloat("spanMax", 8f);
-        this.subPixelShift = capsule.readFloat("subPixelShift", 0.25f);
-        this.vxOffset = capsule.readFloat("vxOffset", 0f);
+    public ArgumentSocket<Float> getSpanMax() {
+        return spanMax;
     }
 
-    /**
-     * Save properties when the filter is serialized, for example when saving to
-     * a J3O file.
-     *
-     * @param exporter the exporter to use (not null)
-     * @throws IOException from the exporter
-     */
-    @Override
-    public void write(JmeExporter exporter) throws IOException {
-        super.write(exporter);
-        OutputCapsule capsule = exporter.getCapsule(this);
-
-        capsule.write(reduceMul, "reduceMul", 0.125f);
-        capsule.write(spanMax, "spanMax", 8f);
-        capsule.write(subPixelShift, "subPixelShift", 0.25f);
-        capsule.write(vxOffset, "vxOffset", 0f);
+    public ArgumentSocket<Float> getReduceMul() {
+        return reduceMul;
     }
-    
+
 }

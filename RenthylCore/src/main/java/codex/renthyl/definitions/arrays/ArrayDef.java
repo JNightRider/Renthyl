@@ -5,7 +5,6 @@
 package codex.renthyl.definitions.arrays;
 
 import codex.boost.export.SavableObject;
-import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -47,7 +46,7 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
         return null;
     }
     @Override
-    public T[] conformResource(Object resource) throws ResourceException {
+    public T[] conformResource(Object resource) {
         return (T[])resource;
     }
     @Override

@@ -29,7 +29,6 @@
 package codex.renthyl.definitions;
 
 import codex.boost.export.SavableObject;
-import codex.renthyl.resources.ResourceException;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -44,7 +43,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -132,7 +130,7 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
         return null;
     }
     @Override
-    public T conformResource(Object resource) throws ResourceException {
+    public T conformResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
             T tex = (T)resource;
             setupTexture(tex);
@@ -286,6 +284,17 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
         setWidth(def.width);
         setHeight(def.height);
         setDepth(def.depth);
+    }
+
+    /**
+     * Sets the width, height, and depth of the texture according to the image.
+     *
+     * @param img
+     */
+    public void setSize(Image img) {
+        setWidth(img.getWidth());
+        setHeight(img.getHeight());
+        setDepth(img.getDepth());
     }
     /**
      * Sets the given texture demensions to contain at least the specified number of pixels.

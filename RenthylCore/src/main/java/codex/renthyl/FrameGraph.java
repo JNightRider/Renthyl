@@ -28,9 +28,9 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.render.BasicRenderingQueue;
+import codex.renthyl.render.queue.BasicRenderingQueue;
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.tasks.SynchronizedAttribute;
 import com.jme3.asset.AssetManager;
@@ -79,7 +79,7 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
 
         // prepare
         for (Renderable t : this) {
-            t.queue(queue);
+            t.stage(queue);
         }
         queue.update(tpf);
         queue.prepare();

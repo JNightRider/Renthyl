@@ -7,27 +7,19 @@ package codex.renthylplus.tests;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.Renthyl;
-import codex.renthyl.client.GraphSource;
+import codex.renthyl.resources.ResourceAllocationState;
 import codex.renthyl.tasks.ControlRenderPass;
 import codex.renthyl.tasks.OutputPass;
-import codex.renthyl.modules.geometry.GeometryDepthPass;
+import codex.renthyl.tasks.geometry.GeometryDepthPass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
-import codex.renthyl.modules.protocol.FilterProtocol;
-import codex.renthyl.resources.tickets.DynamicTicketList;
-import codex.renthyl.resources.tickets.TicketSelector;
-import codex.renthylplus.effects.FilterChain;
-import codex.renthylplus.effects.ports.FXAAPass;
-import codex.renthylplus.effects.ports.SoftBloomPass;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
-import codex.renthylplus.vxgi.LightArrayPass;
+import codex.renthylplus.vxgi.LightBufferPass;
 import codex.renthylplus.vxgi.LightGatherPass;
 import codex.renthylplus.vxgi.VoxelConeTracer;
 import com.github.stephengold.wrench.LwjglAssetLoader;
 import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.SimpleApplication;
-import com.jme3.bounding.BoundingBox;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.AnalogListener;
 import com.jme3.input.controls.KeyTrigger;
@@ -38,7 +30,6 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
-import java.util.logging.Level;
 
 /**
  *
@@ -64,8 +55,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
     
     @Override
     public void simpleInitApp() {
-        
-        Renthyl.initialize(this);
+
         GLRenderUtils.initialize(this);
         UniversalShaderLoader.register(assetManager);
         
@@ -74,7 +64,6 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
                 "lwo", "meshxml", "mesh.xml", "obj", "ply", "stl");
         
         Spatial scene = assetManager.loadModel("Models/gi-test.gltf");
-        //scene.setLocalTranslation(0, 0, -6);
         rootNode.attachChild(scene);
         SceneGraphIterator it = new SceneGraphIterator(scene);
         for (Spatial s : it) {
@@ -107,64 +96,38 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         flyCam.setMoveSpeed(30);
         flyCam.setDragToRotate(true);
 
-        //viewPort.setPipeline(Renthyl.forward(assetManager));
+        ResourceAllocationState allocator = new ResourceAllocationState();
+        stateManager.attach(allocator);
 
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
-        
-        fg.add(new ControlRenderPass());
-        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withSingleQueue());
-        GeometryDepthPass depth = fg.add(new GeometryDepthPass());
-        ShadowManager shadowMaps = fg.add(new ShadowManager());
-        ShadowComposerPass shadows = fg.add(new ShadowComposerPass());
-        LightGatherPass lightGather = fg.add(new LightGatherPass());
-        LightArrayPass lightArray = fg.add(new LightArrayPass());
-        VoxelConeTracer vct = fg.add(new VoxelConeTracer()).create();
-        FilterChain<FilterProtocol> fpp = fg.add(new FilterChain<>());
-        OutputPass out = fg.add(new OutputPass());
 
-        // warn of missed connections
-        Renthyl.getInstance().setMissedConnectionLogLevel(Level.WARNING);
-        depth.getMainInputGroup().makeInput(lightGather.getMainInputGroup(),
-                TicketSelector.name("hello"), TicketSelector.name("world"));
-        
-        // depth pre-pass
-        depth.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Geometry");
-        
-        // calculate screen shadows
-        shadowMaps.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Occluders");
-        shadowMaps.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Receivers");
-        shadows.makeInput(depth, "Depth", "ReceiverDepth");
-        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps").registerTargetList(
-                shadows.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
-        
-        // lights
-        lightArray.makeInput(lightGather, "Lights", "Lights");
-        lightArray.makeInput(shadows, "LightShadowIndices", "Shadows");
-        
-        // voxel cone tracing
-        vct.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Geometry");
-        vct.makeInput(depth, "Depth", "Depth");
-        vct.makeInput(lightArray, "LightArray", "Lights");
-        vct.makeInput(shadows, "LightContribution", "LightContribution");
-        vct.getInputGroup("ShadowMaps").makeInput(shadowMaps.getOutputGroup("ShadowMaps"),
-                TicketSelector.All, TicketSelector.All);
-        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps")
-                .registerTargetList(vct.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
+        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
+        SceneEnqueuePass enqueuePass = SceneEnqueuePass.withLegacyQueues();
+        GeometryDepthPass geometryDepth = new GeometryDepthPass(allocator);
+        ShadowManager shadows = new ShadowManager(assetManager, allocator);
+        ShadowComposerPass composer = new ShadowComposerPass(assetManager, allocator);
+        LightGatherPass lightGatherPass = new LightGatherPass();
+        LightBufferPass lightBufferPass = new LightBufferPass(allocator);
+        VoxelConeTracer vct = new VoxelConeTracer(assetManager, allocator, fg.getContext());
+        OutputPass out = fg.addTask(new OutputPass());
 
-        // post-processing effects
-        fpp.add(new FXAAPass());
-        fpp.add(new SoftBloomPass());
-        fpp.getMainInputGroup().makeInput(vct.getMainOutputGroup(), "Result", "Color");
+        geometryDepth.setContext(fg.getContext());
+        shadows.setContext(fg.getContext());
+        composer.setContext(fg.getContext());
+        lightGatherPass.setContext(fg.getContext());
+        out.setContext(fg.getContext());
 
-        out.getMainInputGroup().makeInput(fpp.getMainOutputGroup(), "Result", "Color");
-        //out.makeInput(vct, "Result", "Color");
-        //out.makeInput(shadows, "LightContribution", "Color");
-        //out.makeInput(depth, "Depth", "Color");
-        
-        shadowMaps.addSpotLight(GraphSource.value(spot), 4096);
-        vct.setVoxelBounds(GraphSource.value(new BoundingBox(new Vector3f(0, 10.1f, 0), 20, 20, 20)));
-        vct.setVoxelGridSize(GraphSource.value(128));
+        geometryDepth.getGeometry().addMapSource(enqueuePass.getQueues());
+        shadows.getGeometry().addMapSource(enqueuePass.getQueues());
+        composer.getReceiverDepth().setUpstream(geometryDepth.getDepth());
+        composer.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
+        lightBufferPass.getLights().addCollectionSource(lightGatherPass.getLights());
+        vct.getGeometry().addMapSource(enqueuePass.getQueues());
+        vct.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
+        vct.getLightBuffer().setUpstream(lightBufferPass.getLightBuffer());
+        vct.getLightContribution().setUpstream(composer.getLightContribution());
+        out.getColor().setUpstream(vct.getResult());
         
         inputManager.addMapping("x+", new KeyTrigger(KeyInput.KEY_LEFT));
         inputManager.addMapping("x-", new KeyTrigger(KeyInput.KEY_RIGHT));

@@ -4,13 +4,14 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
+import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.AllocationSocket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.tasks.RenderTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -24,60 +25,52 @@ import com.jme3.texture.Texture3D;
  *
  * @author codex
  */
-public class VoxelVisualizerPass extends RenderPass {
+public class VoxelVisualizerPass extends RenderTask {
 
-    private ResourceTicket<Texture3D> voxels;
-    private ResourceTicket<GeometryQueue> geometry;
-    private ResourceTicket<BoundingBox> bounds;
-    private ResourceTicket<Texture2D> color;
-    private ResourceTicket<Texture2D> depth;
+    private final TransitiveSocket<Texture3D> voxels = new TransitiveSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> geometry = new TransitiveSocket<>(this);
+    private final TransitiveSocket<BoundingBox> voxelBounds = new TransitiveSocket<>(this);
+    private final AllocationSocket<Texture2D> color, depth;
+    private final AllocationSocket<FrameBuffer> frameBuffer;
+    private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
-    private Material material;
-    
-    @Override
-    protected void initialize(FrameGraph frameGraph) {
-        voxels = addInput("Voxels");
-        geometry = addInput("Geometry");
-        bounds = addInput("Bounds");
-        color = addOutput("Color");
-        depth = addOutput("Depth");
-        material = new Material(frameGraph.getAssetManager(), "RenthylPlus/MatDefs/VXGI/voxelDebug.j3md");
+    private final Material material;
+
+    public VoxelVisualizerPass(AssetManager assetManager, ResourceAllocator allocator) {
+        addSockets(voxels, geometry, voxelBounds);
+        color = addSocket(new AllocationSocket<>(this, allocator, colorDef));
+        depth = addSocket(new AllocationSocket<>(this, allocator, depthDef));
+        frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
+        material = new Material(assetManager, "RenthylPlus/MatDefs/VXGI/voxelDebug.j3md");
         material.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
     }
+
     @Override
-    protected void prepare(FrameGraphContext context) {
-        declare(colorDef, color);
-        declare(depthDef, depth);
-        reserve(color, depth);
-        reference(voxels, geometry, bounds);
-    }
-    @Override
-    protected void execute(FrameGraphContext context) {
+    protected void renderTask() {
         
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(colorDef);
-        FrameBuffer fb = getFrameBuffer(context, 1);
-        resources.acquireColorTarget(fb, color);
-        resources.acquireDepthTarget(fb, depth);
-        context.registerMode(RenderMode.frameBuffer(fb));
+
+        bufferDef.setColorTargets(color.acquireOrThrow());
+        bufferDef.setDepthTarget(depth.acquireOrThrow());
+        FrameBuffer fbo = frameBuffer.acquire();
+        context.getFrameBuffer().pushValue(fbo);
         context.clearBuffers();
         
-        BoundingBox box = resources.acquire(bounds);
+        BoundingBox box = voxelBounds.acquireOrThrow();
         Vector3f min = box.getMin(new Vector3f());
         Vector3f max = box.getMax(new Vector3f());
-        material.setTexture("VoxelMap", resources.acquire(voxels));
+        material.setTexture("VoxelMap", voxels.acquireOrThrow());
         material.setVector3("GridMin", min);
         material.setVector3("GridMax", max);
-        context.registerMode(RenderMode.forcedMaterial(material));
-        
-        GeometryQueue queue = resources.acquire(geometry);
-        queue.render(context, GeometryRenderHandler.DEFAULT);
+        context.getForcedMaterial().pushValue(material);
+
+        geometry.acquireOrThrow().render(context);
+
+        context.getForcedMaterial().pop();
+        context.getFrameBuffer().pop();
         
     }
-    @Override
-    protected void reset(FrameGraphContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {}
     
 }

@@ -357,10 +357,25 @@ public class FrameGraphContext implements PipelineContext {
                 } else {
                     store.copyFrom(active.getCamera());
                 }
+                store.resize(width, height, fixAspect);
                 pushValue(store, active.isOrthogonal());
                 return store;
             }
             pushValue(active);
+            return null;
+        }
+
+        public Camera setResize(Camera store, int width, int height, boolean fixAspect) {
+            if (width != active.getCamera().getWidth() || height != active.getCamera().getHeight()) {
+                if (store == null) {
+                    store = active.getCamera().clone();
+                } else {
+                    store.copyFrom(active.getCamera());
+                }
+                store.resize(width, height, fixAspect);
+                setValue(store, active.isOrthogonal());
+                return store;
+            }
             return null;
         }
 

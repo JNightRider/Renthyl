@@ -31,129 +31,60 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class FogPass extends JmeFilterPass {
-    
-    private Material material;
-    private ColorRGBA fogColor = ColorRGBA.White.clone();
-    private float fogDensity = 0.7f;
-    private float fogDistance = 1000;
+public class FogPass extends AbstractFilterTask {
+
+    private final ArgumentSocket<ColorRGBA> color = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> density = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> distance = new ArgumentSocket<>(this);
 
     /**
      * Creates a FogFilter
      */
-    public FogPass() {}
+    public FogPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
+    }
 
     /**
      * Create a fog filter 
-     * @param fogColor the color of the fog (default is white)
-     * @param fogDensity the density of the fog (default is 0.7)
-     * @param fogDistance the distance of the fog (default is 1000)
+     * @param color the color of the fog (default is white)
+     * @param density the density of the fog (default is 0.7)
+     * @param distance the distance of the fog (default is 1000)
      */
-    public FogPass(ColorRGBA fogColor, float fogDensity, float fogDistance) {
-        this.fogColor = fogColor;
-        this.fogDensity = fogDensity;
-        this.fogDistance = fogDistance;
-    }
-    
-    @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/Fog.j3md");
-        material.setColor("FogColor", fogColor);
-        material.setFloat("FogDensity", fogDensity);
-        material.setFloat("FogDistance", fogDistance);
-        add(new Subpass(material, true, true));
-    }
-
-    /**
-     * returns the fog color
-     * @return the pre-existing instance
-     */
-    public ColorRGBA getFogColor() {
-        return fogColor;
-    }
-
-    /**
-     * Sets the color of the fog
-     *
-     * @param fogColor the desired color (alias created, default=(1,1,1,1))
-     */
-    public void setFogColor(ColorRGBA fogColor) {
-        if (material != null) {
-            material.setColor("FogColor", fogColor);
-        }
-        this.fogColor = fogColor;
-    }
-
-    /**
-     * returns the fog density
-     * @return the density value
-     */
-    public float getFogDensity() {
-        return fogDensity;
-    }
-
-    /**
-     * Sets the density of the fog, a high value gives a thick fog
-     *
-     * @param fogDensity the desired density (default=0.7)
-     */
-    public void setFogDensity(float fogDensity) {
-        if (material != null) {
-            material.setFloat("FogDensity", fogDensity);
-        }
-        this.fogDensity = fogDensity;
-    }
-
-    /**
-     * returns the fog distance
-     * @return the distance
-     */
-    public float getFogDistance() {
-        return fogDistance;
-    }
-
-    /**
-     * the distance of the fog. the higher the value the distant the fog looks
-     *
-     * @param fogDistance the desired distance (in world units, default=1000)
-     */
-    public void setFogDistance(float fogDistance) {
-        if (material != null) {
-            material.setFloat("FogDistance", fogDistance);
-        }
-        this.fogDistance = fogDistance;
+    public FogPass(AssetManager assetManager, ResourceAllocator allocator, ColorRGBA color, float density, float distance) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Fog.j3md"));
+        addSocket(this.color).setValue(color);
+        addSocket(this.density).setValue(density);
+        addSocket(this.distance).setValue(distance);
     }
 
     @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(fogColor, "fogColor", ColorRGBA.White.clone());
-        oc.write(fogDensity, "fogDensity", 0.7f);
-        oc.write(fogDistance, "fogDistance", 1000);
+    protected void configureMaterial(Material material) {
+        color.acquireToMaterial(material, "FogColor");
+        density.acquireToMaterial(material, "FogDensity");
+        distance.acquireToMaterial(material, "FogDistance");
     }
 
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        fogColor = (ColorRGBA) ic.readSavable("fogColor", ColorRGBA.White.clone());
-        fogDensity = ic.readFloat("fogDensity", 0.7f);
-        fogDistance = ic.readFloat("fogDistance", 1000);
+    public ArgumentSocket<ColorRGBA> getColor() {
+        return color;
     }
-    
+
+    public ArgumentSocket<Float> getDensity() {
+        return density;
+    }
+
+    public ArgumentSocket<Float> getDistance() {
+        return distance;
+    }
+
 }

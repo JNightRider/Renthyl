@@ -22,7 +22,9 @@ public class CameraState {
     }
 
     public void resize(int width, int height, boolean fixAspect) {
-        camera.resize(width, height, fixAspect);
+        if (fixAspect || width != camera.getWidth() || height != camera.getHeight()) {
+            camera.resize(width, height, fixAspect);
+        }
     }
 
     public void copyFrom(CameraState camera) {

@@ -1,7 +1,7 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 public abstract class TerminalSocket <T> implements Socket<T> {
 
@@ -23,8 +23,8 @@ public abstract class TerminalSocket <T> implements Socket<T> {
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
-        task.queue(queue);
+    public void stage(RenderingQueue queue) {
+        task.stage(queue);
     }
 
     @Override

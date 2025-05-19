@@ -1,262 +1,73 @@
-/*
- * Copyright (c) 2024 jMonkeyEngine
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- * * Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- * * Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in the
- *   documentation and/or other materials provided with the distribution.
- *
- * * Neither the name of 'jMonkeyEngine' nor the names of its contributors
- *   may be used to endorse or promote products derived from this software
- *   without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import com.jme3.texture.Texture2D;
-import java.io.IOException;
+import com.jme3.texture.Texture;
 
-/**
- *
- * @author codex
- */
-public class CartoonEdgePass extends JmeFilterPass {
-    
-    private ResourceTicket<Texture2D> normals;
-    private Material material;
-    private float edgeWidth = 1.0f;
-    private float edgeIntensity = 1.0f;
-    private float normalThreshold = 0.5f;
-    private float depthThreshold = 0.1f;
-    private float normalSensitivity = 1.0f;
-    private float depthSensitivity = 10.0f;
-    private ColorRGBA edgeColor = new ColorRGBA(0, 0, 0, 1);
-    
+public class CartoonEdgePass extends AbstractFilterTask {
+
+    private final TransitiveSocket<Texture> normals = new TransitiveSocket<>(this);
+    private final ArgumentSocket<Float> edgeWidth = new ArgumentSocket<>(this, 1.0f);
+    private final ArgumentSocket<Float> edgeIntensity = new ArgumentSocket<>(this, 1.0f);
+    private final ArgumentSocket<Float> normalThreshold = new ArgumentSocket<>(this, 0.5f);
+    private final ArgumentSocket<Float> depthThreshold = new ArgumentSocket<>(this, 0.1f);
+    private final ArgumentSocket<Float> normalSensitivity = new ArgumentSocket<>(this, 1.0f);
+    private final ArgumentSocket<Float> depthSensitivity = new ArgumentSocket<>(this, 10.0f);
+    private final ArgumentSocket<ColorRGBA> edgeColor = new ArgumentSocket<>(this, ColorRGBA.Black.clone());
+
+    public CartoonEdgePass(AssetManager assetManager, ResourceAllocator allocator) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/CartoonEdge.j3md"));
+        addSockets(normals, edgeWidth, edgeIntensity, normalThreshold, depthThreshold, normalSensitivity, depthSensitivity, edgeColor);
+    }
+
     @Override
-    protected void init(FrameGraph frameGraph) {
-        normals = addInput("Normals");
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/CartoonEdge.j3md");
-        material.setFloat("EdgeWidth", edgeWidth);
-        material.setFloat("EdgeIntensity", edgeIntensity);
-        material.setFloat("NormalThreshold", normalThreshold);
-        material.setFloat("DepthThreshold", depthThreshold);
-        material.setFloat("NormalSensitivity", normalSensitivity);
-        material.setFloat("DepthSensitivity", depthSensitivity);
-        material.setColor("EdgeColor", edgeColor);
-        add(new Subpass(material, true, true) {
-            @Override
-            public void beforeRender(FrameGraphContext context) {
-                material.setTexture("NormalsTexture", resources.acquire(normals));
-            }
-        });
-    }
-    @Override
-    protected void prepare(FrameGraphContext context) {
-        super.prepare(context);
-        reference(normals);
-    }
-    
-    /**
-     * Return the depth sensitivity<br>
-     * for more details see {@link #setDepthSensitivity(float depthSensitivity)}
-     * @return the depth sensitivity
-     */
-    public float getDepthSensitivity() {
-        return depthSensitivity;
+    protected void configureMaterial(Material material) {
+        normals.acquireToMaterial(material, "NormalsTexture");
+        edgeWidth.acquireToMaterial(material, "EdgeWidth");
+        edgeIntensity.acquireToMaterial(material, "EdgeIntensity");
+        normalThreshold.acquireToMaterial(material, "NormalThreshold");
+        depthThreshold.acquireToMaterial(material, "DepthThreshold");
+        normalSensitivity.acquireToMaterial(material, "NormalSensitivity");
+        depthSensitivity.acquireToMaterial(material, "DepthSensitivity");
+        edgeColor.acquireToMaterial(material, "EdgeColor");
     }
 
-    /**
-     * sets the depth sensitivity<br>
-     * defines how much depth will influence edges, default is 10
-     *
-     * @param depthSensitivity the desired sensitivity (default=10)
-     */
-    public void setDepthSensitivity(float depthSensitivity) {
-        this.depthSensitivity = depthSensitivity;
-        if (material != null) {
-            material.setFloat("DepthSensitivity", depthSensitivity);
-        }
+    public PointerSocket<Texture> getNormals() {
+        return normals;
     }
 
-    /**
-     * returns the depth threshold<br>
-     * for more details see {@link #setDepthThreshold(float depthThreshold)}
-     * @return the threshold
-     */
-    public float getDepthThreshold() {
-        return depthThreshold;
-    }
-
-    /**
-     * sets the depth threshold<br>
-     * Defines at what threshold of difference of depth an edge is outlined default is 0.1f
-     *
-     * @param depthThreshold the desired threshold (default=0.1)
-     */
-    public void setDepthThreshold(float depthThreshold) {
-        this.depthThreshold = depthThreshold;
-        if (material != null) {
-            material.setFloat("DepthThreshold", depthThreshold);
-        }
-    }
-
-    /**
-     * returns the edge intensity<br>
-     * for more details see {@link #setEdgeIntensity(float edgeIntensity) }
-     * @return the intensity
-     */
-    public float getEdgeIntensity() {
-        return edgeIntensity;
-    }
-
-    /**
-     * sets the edge intensity<br>
-     * Defines how visible the outlined edges will be
-     *
-     * @param edgeIntensity the desired intensity (default=1)
-     */
-    public void setEdgeIntensity(float edgeIntensity) {
-        this.edgeIntensity = edgeIntensity;
-        if (material != null) {
-            material.setFloat("EdgeIntensity", edgeIntensity);
-        }
-    }
-
-    /**
-     * returns the width of the edges
-     * @return the width
-     */
-    public float getEdgeWidth() {
+    public ArgumentSocket<Float> getEdgeWidth() {
         return edgeWidth;
     }
 
-    /**
-     * sets the width of the edge in pixels default is 1
-     *
-     * @param edgeWidth the desired width (in pixels, default=1)
-     */
-    public void setEdgeWidth(float edgeWidth) {
-        this.edgeWidth = edgeWidth;
-        if (material != null) {
-            material.setFloat("EdgeWidth", edgeWidth);
-        }
+    public ArgumentSocket<Float> getEdgeIntensity() {
+        return edgeIntensity;
     }
 
-    /**
-     * returns the normals sensitivity<br>
-     * form more details see {@link #setNormalSensitivity(float normalSensitivity)}
-     * @return the sensitivity
-     */
-    public float getNormalSensitivity() {
-        return normalSensitivity;
-    }
-
-    /**
-     * Sets the normals sensitivity. Default is 1.
-     *
-     * @param normalSensitivity the desired sensitivity (default=1)
-     */
-    public void setNormalSensitivity(float normalSensitivity) {
-        this.normalSensitivity = normalSensitivity;
-        if (material != null) {
-            material.setFloat("NormalSensitivity", normalSensitivity);
-        }
-    }
-
-    /**
-     * returns the normal threshold<br>
-     * for more details see {@link #setNormalThreshold(float normalThreshold)}
-     * 
-     * @return the threshold
-     */
-    public float getNormalThreshold() {
+    public ArgumentSocket<Float> getNormalThreshold() {
         return normalThreshold;
     }
 
-    /**
-     * sets the normal threshold default is 0.5
-     *
-     * @param normalThreshold the desired threshold (default=0.5)
-     */
-    public void setNormalThreshold(float normalThreshold) {
-        this.normalThreshold = normalThreshold;
-        if (material != null) {
-            material.setFloat("NormalThreshold", normalThreshold);
-        }
+    public ArgumentSocket<Float> getDepthThreshold() {
+        return depthThreshold;
     }
 
-    /**
-     * returns the edge color
-     * @return the pre-existing instance
-     */
-    public ColorRGBA getEdgeColor() {
+    public ArgumentSocket<Float> getNormalSensitivity() {
+        return normalSensitivity;
+    }
+
+    public ArgumentSocket<Float> getDepthSensitivity() {
+        return depthSensitivity;
+    }
+
+    public ArgumentSocket<ColorRGBA> getEdgeColor() {
         return edgeColor;
     }
 
-    /**
-     * Sets the edge color, default is black
-     *
-     * @param edgeColor the desired color (alias created, default=(0,0,0,1))
-     */
-    public void setEdgeColor(ColorRGBA edgeColor) {
-        this.edgeColor = edgeColor;
-        if (material != null) {
-            material.setColor("EdgeColor", edgeColor);
-        }
-    }
-    
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(edgeWidth, "edgeWidth", 1.0f);
-        oc.write(edgeIntensity, "edgeIntensity", 1.0f);
-        oc.write(normalThreshold, "normalThreshold", 0.5f);
-        oc.write(depthThreshold, "depthThreshold", 0.1f);
-        oc.write(normalSensitivity, "normalSensitivity", 1.0f);
-        oc.write(depthSensitivity, "depthSensitivity", 10.0f);
-        oc.write(edgeColor, "edgeColor", ColorRGBA.Black);
-    }
-
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        edgeWidth = ic.readFloat("edgeWidth", 1.0f);
-        edgeIntensity = ic.readFloat("edgeIntensity", 1.0f);
-        normalThreshold = ic.readFloat("normalThreshold", 0.5f);
-        depthThreshold = ic.readFloat("depthThreshold", 0.1f);
-        normalSensitivity = ic.readFloat("normalSensitivity", 1.0f);
-        depthSensitivity = ic.readFloat("depthSensitivity", 10.0f);
-        edgeColor = (ColorRGBA) ic.readSavable("edgeColor", ColorRGBA.Black.clone());
-    }
-    
 }

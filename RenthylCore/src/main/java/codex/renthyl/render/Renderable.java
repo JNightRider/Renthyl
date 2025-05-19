@@ -1,5 +1,7 @@
 package codex.renthyl.render;
 
+import codex.renthyl.render.queue.Queueable;
+
 public interface Renderable extends Queueable {
 
     void update(float tpf);
@@ -13,5 +15,9 @@ public interface Renderable extends Queueable {
     boolean isRenderingComplete();
 
     void reset();
+
+    default boolean queueForRender() {
+        return true;
+    }
 
 }

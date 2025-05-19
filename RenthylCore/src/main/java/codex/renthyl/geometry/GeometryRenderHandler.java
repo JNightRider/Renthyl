@@ -26,11 +26,10 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.util;
+package codex.renthyl.geometry;
 
 import codex.renthyl.FrameGraphContext;
-import codex.renthyl.geometry.Visibility;
-import com.jme3.bounding.BoundingVolume;
+import codex.renthyl.render.CameraState;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 
@@ -51,5 +50,9 @@ public interface GeometryRenderHandler {
      * @param geometry geometry to render
      */
     void renderGeometry(FrameGraphContext context, Geometry geometry);
+
+    default Visibility evaluateSpatialCulling(CameraState camera, Spatial spatial) {
+        return camera.visible(spatial.getWorldBound());
+    }
     
 }

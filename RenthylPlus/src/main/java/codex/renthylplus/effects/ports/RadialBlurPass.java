@@ -31,104 +31,50 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import com.jme3.shader.VarType;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class RadialBlurPass extends JmeFilterPass {
-    
-    private Material material;
-    private float sampleDist = 1.0f;
-    private float sampleStrength = 2.2f;
-    private float[] samples = {-0.08f, -0.05f, -0.03f, -0.02f, -0.01f, 0.01f, 0.02f, 0.03f, 0.05f, 0.08f};
+public class RadialBlurPass extends AbstractFilterTask {
 
-    /**
-     * Creates a RadialBlurFilter.
-     */
-    public RadialBlurPass() {}
+    private final ArgumentSocket<Float> distance = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> strength = new ArgumentSocket<>(this);
+    private final ArgumentSocket<float[]> samples = new ArgumentSocket<>(this,
+            new float[] {-0.08f, -0.05f, -0.03f, -0.02f, -0.01f, 0.01f, 0.02f, 0.03f, 0.05f, 0.08f});
 
-    /**
-     * Creates a RadialBlurFilter.
-     * @param sampleDist the distance between samples
-     * @param sampleStrength the strength of each sample
-     */
-    public RadialBlurPass(float sampleDist, float sampleStrength) {
-        this.sampleDist = sampleDist;
-        this.sampleStrength = sampleStrength;
+    public RadialBlurPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, 1.0f, 2.2f);
     }
-    
-    @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Blur/RadialBlur.j3md");
-        add(new Subpass(material, true, false) {
-            @Override
-            public void beforeRender(FrameGraphContext context) {
-                material.setFloat("SampleDist", sampleDist);
-                material.setFloat("SampleStrength", sampleStrength);
-                material.setParam("Samples", VarType.FloatArray, samples);
-            }
-        });
-    }
-
-    /**
-     * return the sample distance
-     * @return the distance
-     */
-    public float getSampleDistance() {
-        return sampleDist;
-    }
-
-    /**
-     * sets the samples distances default is 1
-     *
-     * @param sampleDist the desired distance (default=1)
-     */
-    public void setSampleDistance(float sampleDist) {
-        this.sampleDist = sampleDist;
-    }
-
-    /**
-     * Returns the sample Strength
-     * @return the strength value
-     */
-    public float getSampleStrength() {
-        return sampleStrength;
-    }
-
-    /**
-     * sets the sample strength default is 2.2
-     *
-     * @param sampleStrength the desired strength (default=2.2)
-     */
-    public void setSampleStrength(float sampleStrength) {
-        this.sampleStrength = sampleStrength;
+    public RadialBlurPass(AssetManager assetManager, ResourceAllocator allocator, float sampleDist, float sampleStrength) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Blur/RadialBlur.j3md"), false);
+        addSocket(distance).setValue(sampleDist);
+        addSocket(strength).setValue(sampleStrength);
+        addSocket(samples);
     }
 
     @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(sampleDist, "sampleDist", 1.0f);
-        oc.write(sampleStrength, "sampleStrength", 2.2f);
+    protected void configureMaterial(Material material) {
+        distance.acquireToMaterial(material, "SampleDist");
+        strength.acquireToMaterial(material, "SampleStrength");
+        samples.acquireToMaterial(material, "Samples");
     }
 
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        sampleDist = ic.readFloat("sampleDist", 1.0f);
-        sampleStrength = ic.readFloat("sampleStrength", 2.2f);
+    public ArgumentSocket<Float> getDistance() {
+        return distance;
     }
-    
+
+    public ArgumentSocket<Float> getStrength() {
+        return strength;
+    }
+
+    public ArgumentSocket<float[]> getSamples() {
+        return samples;
+    }
+
 }

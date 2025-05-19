@@ -31,200 +31,58 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class DepthOfFieldPass extends JmeFilterPass {
-    
-    private Material material;
-    private float focusDistance = 50f;
-    private float focusRange = 10f;
-    private float blurScale = 1f;
-    private float blurThreshold = 0.2f;
-    private float xScale;
-    private float yScale;
-    private boolean debugUnfocus;
+public class DepthOfFieldPass extends AbstractFilterTask {
 
-    /**
-     * Creates a DepthOfField filter
-     */
-    public DepthOfFieldPass() {}
-    
+    private final ArgumentSocket<Float> focusDistance = new ArgumentSocket<>(this, 50f);
+    private final ArgumentSocket<Float> focusRange = new ArgumentSocket<>(this, 10f);
+    private final ArgumentSocket<Float> blurScale = new ArgumentSocket<>(this, 1f);
+    private final ArgumentSocket<Float> blurThreshold = new ArgumentSocket<>(this, 0.2f);
+    private final ArgumentSocket<Boolean> debugUnfocus = new ArgumentSocket<>(this, false);
+
+    public DepthOfFieldPass(AssetManager assetManager, ResourceAllocator allocator) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/DepthOfField.j3md"));
+        addSockets(focusDistance, focusRange, blurScale, blurThreshold, debugUnfocus);
+    }
+
     @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/DepthOfField.j3md");
-        material.setFloat("FocusDistance", focusDistance);
-        material.setFloat("FocusRange", focusRange);
-        material.setFloat("BlurThreshold", blurThreshold);
-        material.setBoolean("DebugUnfocus", debugUnfocus);
-        add(new Subpass(material, true, true) {
-            @Override
-            public void beforeRender(FrameGraphContext context) {
-                xScale = 1.0f / getDef().getWidth();
-                yScale = 1.0f / getDef().getHeight();
-                material.setFloat("XScale", blurScale * xScale);
-                material.setFloat("YScale", blurScale * yScale);
-            }
-        });
+    protected void configureMaterial(Material material) {
+        focusDistance.acquireToMaterial(material, "FocusDistance");
+        focusRange.acquireToMaterial(material, "FocusRange");
+        blurThreshold.acquireToMaterial(material, "BlurThreshold");
+        debugUnfocus.acquireToMaterial(material, "DebugUnfocus");
+        float scale = blurScale.acquireOrThrow();
+        material.setFloat("XScale", scale / getResultDef().getWidth());
+        material.setFloat("YScale", scale / getResultDef().getHeight());
     }
 
-    /**
-     *  Sets the distance at which objects are purely in focus.
-     *
-     * @param f the desired distance (in world units, default=50)
-     */
-    public void setFocusDistance(float f) {
-
-        this.focusDistance = f;
-        if (material != null) {
-            material.setFloat("FocusDistance", focusDistance);
-        }
-
-    }
-
-    /**
-     * returns the focus distance
-     * @return the distance
-     */
-    public float getFocusDistance() {
+    public ArgumentSocket<Float> getFocusDistance() {
         return focusDistance;
     }
 
-    /**
-     *  Sets the range to either side of focusDistance where the
-     *  objects go gradually out of focus.  Less than focusDistance - focusRange
-     *  and greater than focusDistance + focusRange, objects are maximally "blurred".
-     *
-     * @param f the desired half extent (in world units, default=10)
-     */
-    public void setFocusRange(float f) {
-        this.focusRange = f;
-        if (material != null) {
-            material.setFloat("FocusRange", focusRange);
-        }
-
-    }
-
-    /**
-     * returns the focus range
-     * @return the distance
-     */
-    public float getFocusRange() {
+    public ArgumentSocket<Float> getFocusRange() {
         return focusRange;
     }
 
-    /**
-     *  Sets the blur amount by scaling the convolution filter up or
-     *  down.  A value of 1 (the default) performs a sparse 5x5 evenly
-     *  distributed convolution at pixel level accuracy.  Higher values skip
-     *  more pixels, and so on until you are no longer blurring the image
-     *  but simply hashing it.
-     *
-     *  The sparse convolution is as follows:
-     *%MINIFYHTMLc3d0cd9fab65de6875a381fd3f83e1b338%*
-     *  Where 'x' is the texel being modified.  Setting blur scale higher
-     *  than 1 spaces the samples out.
-     *
-     * @param f the desired filter scale (default=1)
-     */
-    public void setBlurScale(float f) {
-        this.blurScale = f;
-        if (material != null) {
-            material.setFloat("XScale", blurScale * xScale);
-            material.setFloat("YScale", blurScale * yScale);
-        }
-    }
-
-    /**
-     * returns the blur scale
-     * @return the scale
-     */
-    public float getBlurScale() {
+    public ArgumentSocket<Float> getBlurScale() {
         return blurScale;
     }
 
-    /**
-     *  Sets the minimum blur factor before the convolution filter is
-     *  calculated.  The default is 0.2 which means if the "unfocus"
-     *  amount is less than 0.2 (where 0 is no blur and 1.0 is full blurScale) 
-     *  then no blur will be applied at all.  Depending on the GPU implementation,
-     *  this may be an optimization since it uses branching to skip the expensive
-     *  convolution filter.
-     *
-     *  <p>In scenes where the focus distance is close (like 0) and the focus range
-     *  is relatively large, this threshold will remove some subtlety in
-     *  the near-camera blurring and should be add smaller than the default
-     *  or to 0 to disable completely.  Sometimes that cut-off is desired if
-     *  mid-to-far field unfocusing is all that is desired.</p>
-     *
-     * @param f the desired blur factor (default=0.2)
-     */
-    public void setBlurThreshold( float f ) {
-        this.blurThreshold = f;
-        if (material != null) {
-            material.setFloat("BlurThreshold", blurThreshold);
-        }
-    }
-
-    /**
-     * returns the blur threshold.
-     * @return the threshold
-     */
-    public float getBlurThreshold() {
+    public ArgumentSocket<Float> getBlurThreshold() {
         return blurThreshold;
     }
- 
-    /**
-     *  Turns on/off debugging of the 'unfocus' value that is used to
-     *  mix the convolution filter.  When this is on, the 'unfocus' value
-     *  is rendered as gray scale.  This can be used to more easily visualize
-     *  where in your view the focus is centered and how steep the gradient/cutoff
-     *  is, etcetera.
-     *
-     * @param b true to enable debugging, false to disable it (default=false)
-     */
-    public void setDebugUnfocus( boolean b ) {
-        this.debugUnfocus = b;
-        if( material != null ) {
-            material.setBoolean("DebugUnfocus", debugUnfocus);
-        }
-    } 
- 
-    public boolean getDebugUnfocus() {
+
+    public ArgumentSocket<Boolean> getDebugUnfocus() {
         return debugUnfocus;
-    }    
-    
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(blurScale, "blurScale", 1f);
-        oc.write(blurThreshold, "blurThreshold", 0.2f);
-        oc.write(focusDistance, "focusDistance", 50f);
-        oc.write(focusRange, "focusRange", 10f);
-        oc.write(debugUnfocus, "debugUnfocus", false); // strange to write this I guess
     }
 
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        blurScale = ic.readFloat("blurScale", 1f);
-        blurThreshold = ic.readFloat("blurThreshold", 0.2f);
-        focusDistance = ic.readFloat("focusDistance", 50f);
-        focusRange = ic.readFloat("focusRange", 10f);
-        debugUnfocus = ic.readBoolean("debugUnfocus", false);
-    }
-    
 }

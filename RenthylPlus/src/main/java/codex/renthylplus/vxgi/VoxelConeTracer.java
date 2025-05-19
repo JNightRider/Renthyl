@@ -4,111 +4,93 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.FrameGraph;
-import codex.renthyl.client.GraphSource;
-import codex.renthyl.modules.ModuleLocator;
-import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.RenderModule;
-import codex.renthyl.modules.cache.CacheRead;
-import codex.renthyl.modules.cache.CacheWrite;
-import codex.renthyl.resources.tickets.DynamicTicketList;
-import codex.renthyl.resources.tickets.TicketSelector;
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.CollectorSocket;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.tasks.AbstractTask;
+import codex.renthyl.tasks.Attribute;
 import codex.renthylplus.shadow.ShadowMap;
+import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
-import com.jme3.texture.Texture3D;
+import com.jme3.math.Vector3f;
+import com.jme3.texture.Texture2D;
 
 /**
  *
  * @author codex
  */
-public class VoxelConeTracer extends RenderContainer<RenderModule> {
+@SuppressWarnings("FieldCanBeLocal")
+public class VoxelConeTracer extends AbstractTask {
+
+    private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
+    private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
+    private final TransitiveSocket<float[]> lightBuffer = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> lightContribution = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> result = new TransitiveSocket<>(this);
     
-    private static final GraphSource<String> voxelCacheKey =
-            GraphSource.value(VoxelConeTracer.class.getName() + ":TemporalVoxels");
-    
-    private DynamicTicketList<ShadowMap> shadowMaps;
-    
-    public VoxelConeTracer() {
-        
+    public VoxelConeTracer(AssetManager assetManager, ResourceAllocator allocator, Socket<FrameGraphContext> context) {
+
+        addSockets(shadowMaps, geometry, lightBuffer, lightContribution, result);
+
+        Attribute<Integer> gridSize = new Attribute<>(64);
+        Attribute<BoundingBox> voxelBounds = new Attribute<>(new BoundingBox(new Vector3f(0, 10.1f, 0), 20, 20, 20));
+        VoxelShadowComposerPass voxShadows = new VoxelShadowComposerPass(assetManager, allocator);
+        DirectLightingPass direct = new DirectLightingPass(allocator);
+        VoxelizationPass voxels = new VoxelizationPass(assetManager, allocator);
+        IndirectLightingPass indirect = new IndirectLightingPass(assetManager, allocator);
+
+        direct.setContext(context);
+        voxels.setContext(context);
+        indirect.setContext(context);
+
+        voxShadows.getGridSize().setUpstream(gridSize);
+        voxShadows.getVoxelBounds().setUpstream(voxelBounds);
+        voxShadows.getShadowMaps().addCollectionSource(shadowMaps);
+
+        direct.getGeometry().addCollectionSource(geometry);
+        direct.getLights().setUpstream(lightBuffer);
+        direct.getLightContribution().setUpstream(lightContribution);
+
+        voxels.getGeometry().addCollectionSource(geometry);
+        voxels.getGridSize().setUpstream(gridSize);
+        voxels.getVoxelBounds().setUpstream(voxelBounds);
+        voxels.getLights().setUpstream(lightBuffer);
+        voxels.getLightContribution().setUpstream(voxShadows.getVoxelLight());
+
+        indirect.getGBufferMap().setUpstream(direct.getGBufferMap());
+        indirect.getGridSize().setUpstream(gridSize);
+        indirect.getVoxelBounds().setUpstream(voxelBounds);
+        indirect.getVoxels().setUpstream(voxels.getVoxels());
+
+        result.setUpstream(indirect.getResult());
+
     }
-    
+
     @Override
-    public void initializeModule(FrameGraph frameGraph) {
-        super.initializeModule(frameGraph);
-        addInput("Geometry");
-        addInput("Depth");
-        addInput("Lights");
-        addInput("LightContribution");
-        shadowMaps = addInputGroup(new DynamicTicketList<>("ShadowMaps"));
-        addOutput("Result");
+    protected void renderTask() {}
+
+    public CollectorSocket<ShadowMap> getShadowMaps() {
+        return shadowMaps;
     }
-    
-    /**
-     * Setups this container will all necessary modules and connections.
-     * 
-     * @return 
-     */
-    public VoxelConeTracer create() {
-        
-        if (!isAssigned()) {
-            throw new IllegalStateException();
-        }
-        
-        CacheRead<Texture3D> voxelRead = add(new CacheRead<>(Texture3D.class, voxelCacheKey));
-        VoxelEnvSetupPass voxelEnv = add(new VoxelEnvSetupPass());
-        VoxelShadowComposerPass voxShadows = add(new VoxelShadowComposerPass());
-        DirectLightingPass direct = add(new DirectLightingPass());
-        VoxelizationPass voxels = add(new VoxelizationPass());
-        IndirectLightingPass indirect = add(new IndirectLightingPass());
-        VoxelVisualizerPass vis = add(new VoxelVisualizerPass());
-        CacheWrite voxelWrite = add(new CacheWrite(voxelCacheKey));
-        
-        voxelEnv.setName("VoxelEnvironment");
-        voxShadows.setName("VoxelShadowComposer");
-        
-        voxShadows.makeInput(voxelEnv, "GridSize", "GridSize");
-        voxShadows.makeInput(voxelEnv, "Bounds", "Bounds");
-        
-        makeInternalInput("Geometry", "Geometry", direct);
-        makeInternalInput("Lights", "Lights", direct);
-        makeInternalInput("LightContribution", "LightContribution", direct);
-        
-        makeInternalInput("Geometry", "Geometry", voxels);
-        makeInternalInput("Lights", "Lights", voxels);
-        voxels.makeInput(voxShadows, "LightContribution", "LightContribution");
-        voxels.makeInput(voxelEnv, "GridSize", "GridSize");
-        voxels.makeInput(voxelEnv, "Bounds", "Bounds");
-        voxels.makeInput(voxelRead, CacheRead.OUTPUT, "TemporalVoxels");
-        
-        indirect.makeInput(direct, "Color", "SceneColor");
-        indirect.makeInput(direct, "Depth", "SceneDepth");
-        indirect.getInputGroup("Material").makeInput(direct.getOutputGroup("Material"),
-                TicketSelector.NamesMatch, TicketSelector.All);
-        indirect.makeInput(voxels, "Voxels", "Voxels");
-        indirect.makeInput(voxelEnv, "Bounds", "Bounds");
-        indirect.makeInput(voxelEnv, "GridSize", "GridSize");
-        
-        //vis.makeInput(voxels, "Voxels", "Voxels");
-        vis.makeInput(voxShadows, "LightContribution", "Voxels");
-        vis.makeInput(getMainInputGroup(), TicketSelector.name("Geometry"), TicketSelector.NamesMatch);
-        vis.makeInput(voxelEnv, "Bounds", "Bounds");
-        
-        voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
-        shadowMaps.registerTargetList(voxShadows.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
-        
-        getMainOutputGroup().makeInput(indirect.getMainOutputGroup(), "Result", "Result");
-        //getMainOutputGroup().makeInput(vis.getMainOutputGroup(), "Color", "Result");
-        //getMainOutputGroup().makeInput(direct.getMainOutputGroup(), "Color", "Result");
-        
-        return this;
-        
+
+    public CollectorSocket<GeometryQueue> getGeometry() {
+        return geometry;
     }
-    
-    public void setVoxelGridSize(GraphSource<Integer> gridSize) {
-        get(ModuleLocator.by(VoxelEnvSetupPass.class, "VoxelEnvironment")).setGridSize(gridSize);
+
+    public PointerSocket<float[]> getLightBuffer() {
+        return lightBuffer;
     }
-    public void setVoxelBounds(GraphSource<BoundingBox> bounds) {
-        get(ModuleLocator.by(VoxelEnvSetupPass.class, "VoxelEnvironment")).setBounds(bounds);
+
+    public PointerSocket<Texture2D> getLightContribution() {
+        return lightContribution;
     }
-    
+
+    public Socket<Texture2D> getResult() {
+        return result;
+    }
+
 }

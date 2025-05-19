@@ -3,7 +3,6 @@ package codex.renthyl.sockets;
 import codex.renthyl.definitions.ResourceDef;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.resources.ResourceException;
 import codex.renthyl.resources.ResourceWrapper;
 
 import java.util.ArrayList;
@@ -70,15 +69,19 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         startingPosition = Integer.MAX_VALUE;
         for (Socket<T> s : snapshots) {
-            s.reset();
+            s.resetSocket();
         }
     }
 
     public Socket<T> getSnapshot(int i) {
         return snapshots[i];
+    }
+
+    public Socket<T> getCurrent() {
+        return snapshots[0];
     }
 
     public ResourceDef<T> getDef() {
@@ -107,7 +110,7 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
         }
 
         @Override
-        public void reset() {}
+        public void resetSocket() {}
 
         public void switchWrappers(SnapshotSocket<T> socket) {
             ResourceWrapper w = socket.wrapper;
@@ -141,12 +144,8 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
         @Override
         public T acquire() {
             if (value == null) {
-                try {
-                    wrapper = allocator.allocate(def, startingPosition, Integer.MAX_VALUE);
-                    value = def.conformResource(wrapper.get());
-                } catch (ResourceException e) {
-                    throw new RuntimeException("Failed to conform resource.", e);
-                }
+                wrapper = allocator.allocate(def, startingPosition, Integer.MAX_VALUE);
+                value = def.conformResource(wrapper.get());
             }
             return super.acquire();
         }

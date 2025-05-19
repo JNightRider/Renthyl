@@ -31,155 +31,52 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraph;
-import codex.renthylplus.effects.JmeFilterPass;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthylplus.effects.AbstractFilterTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import java.io.IOException;
 
 /**
  *
  * @author codex
  */
-public class PosterizationPass extends JmeFilterPass {
-    
-    private Material material;
-    private int numColors = 8;
-    private float gamma = 0.6f;
-    private float strength = 1.0f;
+public class PosterizationPass extends AbstractFilterTask {
 
-    /**
-     * Creates a posterization Filter
-     */
-    public PosterizationPass() {}
+    private final ArgumentSocket<Integer> colors = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> gamma = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> strength = new ArgumentSocket<>(this, 1.0f);
 
-    /**
-     * Creates a posterization Filter with the given number of colors
-     *
-     * @param numColors the desired number of colors (&gt;0, default=8)
-     */
-    public PosterizationPass(int numColors) {
-        this.numColors = numColors;
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, 8);
+    }
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors) {
+        this(assetManager, allocator, colors, 0.6f);
+    }
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors, float gamma) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Posterization.j3md"), false);
+        addSocket(this.colors).setValue(colors);
+        addSocket(this.gamma).setValue(gamma);
+        addSocket(strength);
     }
 
-    /**
-     * Creates a posterization Filter with the given number of colors and gamma
-     *
-     * @param numColors the desired number of colors (&gt;0, default=8)
-     * @param gamma the desired exponent (default=0.6)
-     */
-    public PosterizationPass(int numColors, float gamma) {
-        this(numColors);
-        this.gamma = gamma;
-    }
-    
     @Override
-    protected void init(FrameGraph frameGraph) {
-        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/Posterization.j3md");
-        material.setInt("NumColors", numColors);
-        material.setFloat("Gamma", gamma);
-        material.setFloat("Strength", strength);
-        add(new Subpass(material));
+    protected void configureMaterial(Material material) {
+        colors.acquireToMaterial(material, "NumColors");
+        gamma.acquireToMaterial(material, "Gamma");
+        strength.acquireToMaterial(material, "Strength");
     }
 
-    /**
-     * Sets number of color levels used to draw the screen
-     * 
-     * @param numColors the desired number of colors (&gt;0, default=8)
-     */
-    public void setNumColors(int numColors) {
-        this.numColors = numColors;
-        if (material != null) {
-            material.setInt("NumColors", numColors);
-        }
+    public ArgumentSocket<Integer> getColors() {
+        return colors;
     }
 
-    /**
-     * Sets gamma level used to enhance visual quality
-     * 
-     * @param gamma the desired exponent (default=0.6)
-     */
-    public void setGamma(float gamma) {
-        this.gamma = gamma;
-        if (material != null) {
-            material.setFloat("Gamma", gamma);
-        }
-    }
-
-    /**
-     * Sets current strength value, i.e. influence on final image
-     *
-     * @param strength the desired influence factor (default=1)
-     */
-    public void setStrength(float strength) {
-        this.strength = strength;
-        if (material != null) {
-            material.setFloat("Strength", strength);
-        }
-    }
-
-    /**
-     * Returns number of color levels used
-     *
-     * @return the count (&gt;0)
-     */
-    public int getNumColors() {
-        return numColors;
-    }
-
-    /**
-     * Returns current gamma value
-     *
-     * @return the exponent
-     */
-    public float getGamma() {
+    public ArgumentSocket<Float> getGamma() {
         return gamma;
     }
 
-    /**
-     * Returns current strength value, i.e. influence on final image
-     *
-     * @return the influence factor
-     */
-    public float getStrength() {
+    public ArgumentSocket<Float> getStrength() {
         return strength;
     }
 
-    /**
-     * Load properties when the filter is de-serialized, for example when
-     * loading from a J3O file.
-     *
-     * @param importer the importer to use (not null)
-     * @throws IOException from the importer
-     */
-    @Override
-    public void read(JmeImporter importer) throws IOException {
-        super.read(importer);
-        InputCapsule capsule = importer.getCapsule(this);
-
-        this.gamma = capsule.readFloat("gamma", 0.6f);
-        this.numColors = capsule.readInt("numColors", 8);
-        this.strength = capsule.readFloat("strength", 1f);
-    }
-
-    /**
-     * Save properties when the filter is serialized, for example when saving to
-     * a J3O file.
-     *
-     * @param exporter the exporter to use (not null)
-     * @throws IOException from the exporter
-     */
-    @Override
-    public void write(JmeExporter exporter) throws IOException {
-        super.write(exporter);
-        OutputCapsule capsule = exporter.getCapsule(this);
-
-        capsule.write(gamma, "gamma", 0.6f);
-        capsule.write(numColors, "numColors", 8);
-        capsule.write(strength, "strength", 1f);
-    }
-    
 }

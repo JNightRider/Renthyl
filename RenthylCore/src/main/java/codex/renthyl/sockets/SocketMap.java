@@ -1,14 +1,15 @@
 package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
-import codex.renthyl.render.RenderingQueue;
+import codex.renthyl.render.queue.RenderingQueue;
 
 import java.util.*;
+import java.util.function.IntFunction;
 
-public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> implements PointerSocket<Map<K, R>> {
+public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, T> implements PointerSocket<Map<K, R>> {
 
-    private final Renderable task;
-    private Socket<Map<K, R>> upstream;
+    protected final Renderable task;
+    private Socket<? extends Map<K, R>> upstream;
     private Map<K, R> resourceMap;
     private int activeRefs = 0;
 
@@ -24,13 +25,13 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     public void update(float tpf) {}
 
     @Override
-    public void setUpstream(Socket<Map<K, R>> upstream) {
+    public void setUpstream(Socket<? extends Map<K, R>> upstream) {
         assertNoActiveReferences();
         this.upstream = upstream;
     }
 
     @Override
-    public Socket<Map<K, R>> getUpstream() {
+    public Socket<? extends Map<K, R>> getUpstream() {
         return upstream;
     }
 
@@ -71,23 +72,23 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     }
 
     @Override
-    public void reset() {
+    public void resetSocket() {
         if (resourceMap != null) {
             resourceMap.clear();
         }
-        values().forEach(Socket::reset);
+        values().forEach(Socket::resetSocket);
         if (activeRefs != 0) {
             throw new IllegalStateException("Some references were not released.");
         }
     }
 
     @Override
-    public void queue(RenderingQueue queue) {
+    public void stage(RenderingQueue queue) {
         if (upstream != null) {
-            upstream.queue(queue);
+            upstream.stage(queue);
         }
-        values().forEach(s -> s.queue(queue));
-        task.queue(queue);
+        values().forEach(s -> s.stage(queue));
+        task.stage(queue);
     }
 
     @Override
@@ -128,9 +129,6 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
     }
 
     public Map<K, R> acquireOrElse(R orElse) {
-        if (upstream != null) {
-            return upstream.acquire();
-        }
         if (resourceMap == null) {
             resourceMap = new HashMap<>();
         } else {
@@ -142,10 +140,27 @@ public class SocketMap <K, T extends Socket<R>, R> extends HashMap<K, T> impleme
         Map<K, R> defaults = upstream != null ? upstream.acquire() : null;
         for (Entry<K, T> e : entrySet()) {
             T s = e.getValue();
-            R r = orElse == null ? s.acquire() : s.acquire(orElse);
-            resourceMap.put(e.getKey(), (orElse == null ? s.acquire() : s.acquire(orElse)));
+            R r = s.acquire();
+            if (r == null) {
+                r = defaults == null ? orElse : defaults.getOrDefault(e.getKey(), orElse);
+            }
+            resourceMap.put(e.getKey(), r);
         }
         return resourceMap;
+    }
+
+    @SafeVarargs
+    public final R[] acquireArray(IntFunction<R[]> factory, K... order) {
+        R[] array = factory.apply(order.length);
+        Map<K, R> map = acquire();
+        for (int i = 0; i < order.length; i++) {
+            R r = map.get(order[i]);
+            if (r == null) {
+                throw new NullPointerException("Expected \"" + order[i] + "\" to exist.");
+            }
+            array[i] = r;
+        }
+        return array;
     }
 
 }
