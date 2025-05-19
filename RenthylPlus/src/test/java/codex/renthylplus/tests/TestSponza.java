@@ -6,7 +6,6 @@ package codex.renthylplus.tests;
 
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
-import codex.renthylplus.RenthylPlus;
 import com.github.stephengold.wrench.LwjglAssetLoader;
 import com.jme3.app.SimpleApplication;
 import com.jme3.asset.plugins.FileLocator;

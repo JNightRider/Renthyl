@@ -29,7 +29,6 @@
 package codex.renthylplus.tests;
 
 import codex.renthyl.FrameGraph;
-import codex.renthylplus.RenthylPlus;
 import codex.renthyl.Renthyl;
 import codex.renthyl.client.MatParamTargetControl;
 import codex.renthyl.tasks.Attribute;

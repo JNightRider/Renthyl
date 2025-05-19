@@ -4,8 +4,6 @@
  */
 package codex.renthylplus.vxgi;
 
-import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.light.Light;

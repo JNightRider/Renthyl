@@ -47,7 +47,7 @@ public class MapToListPass <K, R> extends AbstractTask {
 
     @Override
     public void reset() {
-        super.resetSocket();
+        super.reset();
         list.getValue().clear();
     }
 

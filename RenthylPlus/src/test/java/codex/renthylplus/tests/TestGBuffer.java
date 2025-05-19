@@ -29,7 +29,6 @@
 package codex.renthylplus.tests;
 
 import codex.renthyl.FrameGraph;
-import codex.renthylplus.RenthylPlus;
 import codex.renthyl.Renthyl;
 import codex.renthylplus.deferred.DeferredGBufferPass;
 import com.jme3.input.KeyInput;

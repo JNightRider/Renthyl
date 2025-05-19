@@ -84,7 +84,7 @@ public class SceneEnqueuePass extends RenderTask {
 
     @Override
     public void reset() {
-        super.resetSocket();
+        super.reset();
         for (ValueSocket<GeometryQueue> q : queueMap.values()) {
             q.getValue().clear();
         }
