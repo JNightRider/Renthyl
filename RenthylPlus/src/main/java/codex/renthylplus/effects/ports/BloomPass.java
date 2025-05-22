@@ -27,14 +27,13 @@ public class BloomPass extends Frame implements PostProcessFilter {
     private final PerObjectGlowPass objectGlow;
     private final GlowMapSwitch glowSwitch = new GlowMapSwitch(BloomFilter.GlowMode.Scene);
     private final ExtractionPass extraction;
-    private final GaussianBlurPass hBlur, vBlur;
     private final InjectionPass inject;
 
     public BloomPass(AssetManager assetManager, ResourceAllocator allocator) {
         objectGlow = new PerObjectGlowPass(allocator);
         extraction = new ExtractionPass(assetManager, allocator);
-        hBlur = new GaussianBlurPass(assetManager, allocator, false);
-        vBlur = new GaussianBlurPass(assetManager, allocator, true);
+        GaussianBlurPass hBlur = new GaussianBlurPass(assetManager, allocator, false);
+        GaussianBlurPass vBlur = new GaussianBlurPass(assetManager, allocator, true);
         inject = new InjectionPass(assetManager, allocator);
         addSockets(sceneColor, sceneDepth, scale, downSamplingFactor);
         objectGlow.setContext(getContext());
