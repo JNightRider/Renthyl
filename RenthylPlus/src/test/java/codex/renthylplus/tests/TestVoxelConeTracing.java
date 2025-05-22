@@ -38,10 +38,8 @@ import com.jme3.system.AppSettings;
 public class TestVoxelConeTracing extends SimpleApplication implements AnalogListener {
     
     private int frame = 0;
-    private SpotLight spot;
     private Spatial meshLight;
-    private final float moveSpeed = 4f;
-    
+
     public static void main(String[] args) {
         TestVoxelConeTracing app = new TestVoxelConeTracing();
         AppSettings settings = new AppSettings(true);
@@ -79,8 +77,8 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         if (meshLight == null) {
             throw new NullPointerException("Could not locate mesh light.");
         }
-        
-        spot = new SpotLight();
+
+        SpotLight spot = new SpotLight();
         spot.setPosition(new Vector3f(100, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
         spot.setColor(ColorRGBA.White.mult(2.0f));
@@ -142,11 +140,10 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         if (++frame < 5) {
             cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
         }
-        //spot.setPosition(cam.getLocation());
-        //spot.setDirection(cam.getDirection());
     }
     @Override
     public void onAnalog(String name, float value, float tpf) {
+        float moveSpeed = 4f;
         switch (name) {
             case "x+": meshLight.move(moveSpeed * tpf, 0, 0); break;
             case "x-": meshLight.move(-moveSpeed * tpf, 0, 0); break;

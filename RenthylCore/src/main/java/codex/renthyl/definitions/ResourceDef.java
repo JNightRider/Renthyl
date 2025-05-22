@@ -31,7 +31,7 @@ package codex.renthyl.definitions;
 import codex.renthyl.resources.Disposer;
 
 /**
- * Manages the behavior of a {@link codex.renthyl.resources.ResourceView}, especially for creation,
+ * Manages the behavior of an allocated resource, especially for creation,
  * reallocation, and disposal of related raw resources.
  * 
  * @author codex

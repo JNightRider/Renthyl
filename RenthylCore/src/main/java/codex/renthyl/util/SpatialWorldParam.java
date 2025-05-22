@@ -39,8 +39,9 @@ import java.util.function.Function;
  */
 public abstract class SpatialWorldParam <T> {
     
-    protected String userdata;
-    protected T start, inherit;
+    protected final String userdata;
+    protected final T start;
+    protected final T inherit;
     
     /**
      * 

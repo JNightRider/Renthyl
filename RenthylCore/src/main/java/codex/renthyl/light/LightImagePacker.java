@@ -124,7 +124,7 @@ public class LightImagePacker {
             // match tile index lists to number of tiles
             int n = tileInfo.getNumTiles();
             while (tileIndices.size() > n) {
-                tileIndices.remove(tileIndices.size()-1);
+                tileIndices.removeLast();
             }
             while (tileIndices.size() < n) {
                 tileIndices.add(new LinkedList<>());

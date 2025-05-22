@@ -7,6 +7,7 @@ package codex.renthylplus.shadow;
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.Socket;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
@@ -31,10 +32,12 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
     private final Camera shadowCam;
     private final float[] splits;
     private final Vector3f[] points = new Vector3f[8];
-    private final float lambda = 0.65f;
+
+    private final ArgumentSocket<Float> lambda = new ArgumentSocket<>(this, 0.65f);
     
     public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int numSplits) {
         super(assetManager, allocator, Light.Type.Directional, numSplits, shadowMapSize);
+        addSocket(lambda);
         shadowCam = new Camera(shadowMapSize, shadowMapSize);
         shadowCam.setParallelProjection(true);
         splits = new float[numShadowMaps + 1];
@@ -49,7 +52,7 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
         float near = Math.max(viewCam.getFrustumNear(), 0.001f);
         shadowCam.setFrustumFar(viewCam.getFrustumFar());
         ShadowUtil.updateFrustumPoints(viewCam, near, viewCam.getFrustumFar(), 1.0f, points);
-        PssmShadowUtil.updateFrustumSplits(splits, near, viewCam.getFrustumFar(), lambda);
+        PssmShadowUtil.updateFrustumSplits(splits, near, viewCam.getFrustumFar(), lambda.acquire());
         if (viewCam.isParallelProjection()) {
             float factor = 1f / (viewCam.getFrustumFar() - near);
             for (int i = 0; i < numShadowMaps; i++) {

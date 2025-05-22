@@ -31,7 +31,7 @@ private void prepare(FGRenderContext context) {
 }
 
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setPrimitive(myTicket, myValue);
 ```
 
@@ -51,7 +51,7 @@ private void prepare(FGRenderContext context) {
 }
 
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     Texture2D temp = resources.acquire(tempTex);
     ...
     // after finished with "temp", manually release the resource

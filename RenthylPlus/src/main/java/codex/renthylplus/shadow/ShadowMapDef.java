@@ -6,7 +6,6 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.definitions.ResourceDef;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.resources.ResourceException;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -21,9 +20,6 @@ public class ShadowMapDef implements ResourceDef<ShadowMap> {
     
     public ShadowMapDef() {
         mapDef.setFormat(Image.Format.Depth);
-        //mapDef.setShadowCompare(Texture.ShadowCompareMode.LessOrEqual);
-        //mapDef.setMagFilter(Texture.MagFilter.Nearest);
-        //mapDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
     }
     
     @Override

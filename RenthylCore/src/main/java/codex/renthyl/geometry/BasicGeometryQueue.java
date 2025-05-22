@@ -293,10 +293,10 @@ public class BasicGeometryQueue implements GeometryQueue {
         }
 
         @Override
-        public void write(JmeExporter ex) throws IOException {}
+        public void write(JmeExporter ex) {}
 
         @Override
-        public void read(JmeImporter im) throws IOException {}
+        public void read(JmeImporter im) {}
 
     }
 

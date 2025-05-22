@@ -49,11 +49,6 @@ public class VoxelShadowComposerPass extends AbstractTask {
         lightDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
         //lightDef.setAccess(Image.Access.ReadWrite);
         shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylPlus/MatDefs/VXGI/voxelShadowComposer.glsl");
-        /*shader.uniformImage("VoxelLightMap");
-        shader.uniformsVector3("GridMin", "GridMax");
-        shader.uniformTexture("ShadowMap");
-        shader.uniformMatrix4("LightMatrix");
-        shader.uniformInt("LightIndex");*/
     }
 
     @Override

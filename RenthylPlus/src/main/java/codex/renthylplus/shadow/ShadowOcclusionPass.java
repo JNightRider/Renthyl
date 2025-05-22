@@ -121,6 +121,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderTask i
     protected abstract boolean lightSourceInsideFrustum(Camera cam, T light);
     protected abstract Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, T light, int index);
     
+    @SuppressWarnings("SameReturnValue")
     protected boolean frustumIntersect(Camera cam1, Camera cam2) {
         return true;
     }
