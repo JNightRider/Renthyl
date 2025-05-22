@@ -84,19 +84,19 @@ public class ProbeRenderUtils {
     /**
      * Extract which lightProbes should affect the currently rendered object. Currently, this method is only used in deferredPath and only works for the first three collected lightProbes, so it is problematic, but I put it here to prepare for future functionality (and compatibilty with current lightProbes).
      * @param lightList
-     * @param ambientLightColor
-     * @param skyLightAndReflectionProbes
+     * @param ambient
+     * @param probes
      * @param removeLights
      * @return hasAmbientLight
      */
-    public static boolean extractSkyLightAndReflectionProbes(LightList lightList, ColorRGBA ambientLightColor, List<LightProbe> skyLightAndReflectionProbes, boolean removeLights) {
-        ambientLightColor.set(0, 0, 0, 1);
+    public static boolean extractAmbientAndProbes(LightList lightList, ColorRGBA ambient, List<LightProbe> probes, boolean removeLights) {
+        ambient.set(0, 0, 0, 1);
         boolean hasAmbientLight = false;
-        skyLightAndReflectionProbes.clear();
+        probes.clear();
         for (int j = 0; j < lightList.size(); j++) {
             Light l = lightList.get(j);
             if (l instanceof AmbientLight) {
-                ambientLightColor.addLocal(l.getColor());
+                ambient.addLocal(l.getColor());
                 hasAmbientLight = true;
                 if(removeLights){
                     lightList.remove(j);
@@ -104,7 +104,7 @@ public class ProbeRenderUtils {
                 }
             }
             if (l instanceof LightProbe) {
-                skyLightAndReflectionProbes.add((LightProbe) l);
+                probes.add((LightProbe) l);
                 if(removeLights){
                     lightList.remove(j);
                     j--;
@@ -112,7 +112,7 @@ public class ProbeRenderUtils {
             }
         }
         // todo: For reflection probes, only three in the view frustum are processed per frame (but scene can contain large number of probes)
-        ambientLightColor.a = 1.0f;
+        ambient.a = 1.0f;
         return hasAmbientLight;
     }
 
