@@ -1,14 +1,26 @@
 package codex.renthyl.tasks;
 
 import codex.renthyl.render.RenderWorker;
+import codex.renthyl.render.queue.RenderingQueue;
 
-public class RenderFrame extends RenderTask {
-
-    @Override
-    public final void prepare() {}
+public class Frame extends RenderTask {
 
     @Override
-    public boolean claim(RenderWorker worker) {
+    public void stage(RenderingQueue queue) {
+        if (position < QUEUED) {
+            position = queue.stage(this);
+        }
+    }
+
+    @Override
+    public final void prepare() {
+        if (position < QUEUED) {
+            throw new IllegalStateException("Frame is being prepared, but is not properly queued.");
+        }
+    }
+
+    @Override
+    public final boolean claim(RenderWorker worker) {
         throw new UnsupportedOperationException("Does not directly support rendering.");
     }
 
@@ -18,7 +30,7 @@ public class RenderFrame extends RenderTask {
     }
 
     @Override
-    public boolean isRenderingComplete() {
+    public final boolean isRenderingComplete() {
         return true;
     }
 

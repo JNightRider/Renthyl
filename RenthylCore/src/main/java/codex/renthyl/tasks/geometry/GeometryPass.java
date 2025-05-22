@@ -31,6 +31,7 @@ package codex.renthyl.tasks.geometry;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.render.RenderEnvironment;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.RenderTask;
@@ -68,9 +69,13 @@ public class GeometryPass extends RenderTask {
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private final FrameBufferDef bufferDef = new FrameBufferDef();
+    private RenderEnvironment env;
     private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
 
     public GeometryPass(ResourceAllocator allocator) {
+        this(allocator, null);
+    }
+    public GeometryPass(ResourceAllocator allocator, RenderEnvironment env) {
         addSockets(geometry, inColor, inDepth);
         outColor = addSocket(new AllocationSocket<>(this, allocator, colorDef));
         outDepth = addSocket(new AllocationSocket<>(this, allocator, depthDef));
@@ -92,6 +97,9 @@ public class GeometryPass extends RenderTask {
         context.getFrameBuffer().pushValue(fb);
         context.clearBuffers();
         context.renderTextures(inColor.acquire(), inDepth.acquire());
+        if (env != null) {
+            env.applySettings(context);
+        }
         List<GeometryQueue> queues = geometry.acquire();
         for (GeometryQueue q : queues) {
             q.applySettings(context);
@@ -100,6 +108,10 @@ public class GeometryPass extends RenderTask {
         }
         context.getFrameBuffer().pop();
 
+    }
+
+    public void setEnvironment(RenderEnvironment env) {
+        this.env = env;
     }
 
     public void setGeometryHandler(GeometryRenderHandler geometryHandler) {

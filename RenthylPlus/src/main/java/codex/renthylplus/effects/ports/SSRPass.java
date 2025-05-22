@@ -40,7 +40,7 @@ import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.macros.ArgumentMacro;
 import codex.renthyl.tasks.PostProcessFilter;
-import codex.renthyl.tasks.RenderFrame;
+import codex.renthyl.tasks.Frame;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -56,7 +56,7 @@ import java.util.List;
  * 
  * @author ricardobl (shaders), neph1 (JME filter), codex (Renthyl adaptation)
  */
-public class SSRPass extends RenderFrame implements PostProcessFilter {
+public class SSRPass extends Frame implements PostProcessFilter {
 
     private final AssetManager assetManager;
     private final ResourceAllocator allocator;

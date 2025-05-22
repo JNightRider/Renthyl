@@ -28,6 +28,7 @@
  */
 package codex.renthyl;
 
+import codex.renthyl.render.ContextRenderer;
 import codex.renthyl.render.queue.BasicRenderingQueue;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
@@ -107,6 +108,16 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
 
     public <T extends Renderable> T addTask(T task) {
         add(task);
+        return task;
+    }
+
+    public <T extends ContextRenderer> T addContextTask(T task) {
+        task.setContext(contextAttr);
+        return addTask(task);
+    }
+
+    public <T extends ContextRenderer> T connectContextTask(T task) {
+        task.setContext(contextAttr);
         return task;
     }
 

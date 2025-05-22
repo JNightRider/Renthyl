@@ -8,7 +8,7 @@ import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.macros.ArgumentMacro;
 import codex.renthyl.tasks.PostProcessFilter;
 import codex.renthyl.tasks.Multiplexor;
-import codex.renthyl.tasks.RenderFrame;
+import codex.renthyl.tasks.Frame;
 import codex.renthyl.tasks.RenderTask;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
@@ -18,7 +18,7 @@ import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
-public class BloomPass extends RenderFrame implements PostProcessFilter {
+public class BloomPass extends Frame implements PostProcessFilter {
 
     private final TransitiveSocket<Texture2D> sceneColor = new TransitiveSocket<>(this);
     private final OptionalSocket<Texture2D> sceneDepth = new OptionalSocket<>(this, false);

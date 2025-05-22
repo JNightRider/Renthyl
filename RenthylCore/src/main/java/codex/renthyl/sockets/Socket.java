@@ -1,12 +1,12 @@
 package codex.renthyl.sockets;
 
-import codex.renthyl.render.queue.Queueable;
+import codex.renthyl.render.queue.Stageable;
 import codex.renthyl.render.Referenceable;
 import com.jme3.material.Material;
 
 import java.util.Objects;
 
-public interface Socket <T> extends Queueable, Referenceable {
+public interface Socket <T> extends Stageable, Referenceable {
 
     void update(float tpf);
 

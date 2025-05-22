@@ -35,7 +35,7 @@ import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.PostProcessFilter;
-import codex.renthyl.tasks.RenderFrame;
+import codex.renthyl.tasks.Frame;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -49,7 +49,7 @@ import com.jme3.texture.Texture2D;
  *
  * @author codex
  */
-public class SSAOPass extends RenderFrame implements PostProcessFilter {
+public class SSAOPass extends Frame implements PostProcessFilter {
 
     private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> depth = new TransitiveSocket<>(this);

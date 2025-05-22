@@ -51,6 +51,9 @@ public class Attribute <T> extends AbstractTask implements Socket<T>, Macro<T> {
     protected void renderTask() {}
 
     @Override
+    public void update(float tpf) {}
+
+    @Override
     public boolean isAvailableToDownstream(int queuePosition) {
         return true;
     }

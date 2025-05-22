@@ -7,6 +7,7 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.PostProcessFilter;
 import codex.renthyl.tasks.RenderTask;
+import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.renderer.Camera;
 import com.jme3.texture.FrameBuffer;
@@ -15,7 +16,7 @@ import com.jme3.texture.Texture2D;
 
 public abstract class AbstractFilterTask extends RenderTask implements PostProcessFilter {
 
-    private final Material material;
+    private Material material;
     private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
     private final OptionalSocket<Texture2D> depth = new OptionalSocket<>(this);
     private final AllocationSocket<Texture2D> result;
@@ -24,6 +25,12 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final CameraState camera = new CameraState(new Camera(1024, 1024), true);
 
+    public AbstractFilterTask(ResourceAllocator allocator) {
+        this(allocator, null);
+    }
+    public AbstractFilterTask(ResourceAllocator allocator, boolean useDepth) {
+        this(allocator, null, useDepth);
+    }
     public AbstractFilterTask(ResourceAllocator allocator, Material material) {
         this(allocator, material, true);
     }
@@ -37,6 +44,10 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
 
     @Override
     protected void renderTask() {
+
+        if (material == null) {
+            material = createMaterial(context.getAssetManager());
+        }
 
         Texture2D colorTex = color.acquireOrThrow("Scene color required.");
         configureResult(resultDef, colorTex);
@@ -85,6 +96,10 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
     @Override
     public Socket<Texture2D> getFilterResult() {
         return result;
+    }
+
+    protected Material createMaterial(AssetManager assetManager) {
+        throw new UnsupportedOperationException("Material not defined in constructor.");
     }
 
     protected void configureResult(TextureDef<Texture2D> def, Texture2D color) {

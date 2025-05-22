@@ -32,6 +32,9 @@ public class Multiplexor <T> extends AbstractTask implements Socket<T> {
     }
 
     @Override
+    public void update(float tpf) {}
+
+    @Override
     public boolean isAvailableToDownstream(int queuePosition) {
         return isRenderingComplete() && isUpstreamAvailable(queuePosition);
     }

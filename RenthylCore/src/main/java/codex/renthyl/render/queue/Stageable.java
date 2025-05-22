@@ -1,6 +1,6 @@
 package codex.renthyl.render.queue;
 
-public interface Queueable {
+public interface Stageable {
 
     void stage(RenderingQueue queue);
 

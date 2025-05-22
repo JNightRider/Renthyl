@@ -8,27 +8,18 @@ import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.Renthyl;
-import codex.renthyl.client.GraphSetting;
-import codex.renthyl.client.GraphSource;
-import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.tasks.ControlRenderPass;
-import codex.renthyl.modules.Junction;
-import codex.renthyl.tasks.OutputPass;
-import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.AbstractRenderModule;
-import codex.renthyl.modules.RenderModule;
-import codex.renthyl.modules.RenderPass;
+import codex.renthyl.render.RenderEnvironment;
+import codex.renthyl.resources.ResourceAllocationState;
+import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.tasks.*;
 import codex.renthyl.tasks.geometry.GeometryPass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
-import codex.renthyl.modules.protocol.FilterProtocol;
-import codex.renthyl.resources.tickets.ResourceTicket;
-import codex.renthyl.resources.tickets.TicketSelector;
-import codex.renthyl.geometry.GeometryRenderHandler;
-import codex.renthylplus.effects.FilterChain;
 import codex.renthylplus.effects.ports.*;
 import com.jme3.app.SimpleApplication;
+import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
@@ -38,16 +29,15 @@ import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
-import com.jme3.post.filters.BloomFilter;
-import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 import com.jme3.shader.Shader;
-import com.jme3.shader.VarType;
 import com.jme3.system.AppSettings;
-import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -56,8 +46,8 @@ import com.jme3.texture.Texture2D;
 public class TestJmeFilters extends SimpleApplication {
     
     private GeometryPass geometry;
-    private RenderContainer<AbstractRenderModule> fpp;
-    private JunctionCycleSource activeFilterSource, outputColor;
+    private FilterCycle cycle;
+    private Multiplexor<Texture2D> channels;
     private BitmapText filterLabel, formatLabel;
     private int colorFormat = 0;
     
@@ -73,8 +63,7 @@ public class TestJmeFilters extends SimpleApplication {
     
     @Override
     public void simpleInitApp() {
-        
-        Renthyl.initialize(this);
+
         assetManager.registerLocator("", ImmediateShader.class);
         flyCam.setMoveSpeed(10);
         
@@ -90,94 +79,79 @@ public class TestJmeFilters extends SimpleApplication {
     }
     
     private void setupFrameGraph() {
-        
+
+        ResourceAllocationState allocator = new ResourceAllocationState();
+        stateManager.attach(allocator);
+
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
         
-        fg.add(new ControlRenderPass());
-        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.add(new QueueMergePass());
-        geometry = fg.add(new GeometryPass());
-        NormalPass normals = fg.add(new NormalPass());
-        fpp = fg.add(new RenderContainer<>());
-        TextureSliderPass slider = fg.add(new TextureSliderPass());
-        Junction colorOut = fg.add(new Junction());
-        OutputPass out = fg.add(new OutputPass());
-        
-        fpp.addInput("Color");
-        fpp.addInput("Depth");
-        fpp.addInput("Normals");
-        fpp.addInput("Geometry");
-        fpp.addOutput("Result");
-        
-        CartoonEdgePass cartoon = fpp.add(new CartoonEdgePass());
-        cartoon.setEdgeColor(ColorRGBA.Black);
-        fpp.makeInternalInput("Normals", "Normals", cartoon);
-        SSAOPass ssao = fpp.add(new SSAOPass(5, 10, 0.2f, 0.1f));
-        fpp.makeInternalInput("Normals", "Normals", ssao);
-        fpp.add(new CrossHatchPass());
-        fpp.add(new FXAAPass());
-        fpp.add(new PosterizationPass());
-        fpp.add(new ContrastAdjustmentPass(2f));
-        BloomPass bloom = fpp.add(new BloomPass(BloomFilter.GlowMode.Objects));
-        fpp.makeInternalInput("Geometry", "Geometry", bloom);
-        fpp.add(new DepthOfFieldPass());
-        fpp.add(new FogPass(ColorRGBA.Black, 5, 100));
-        fpp.add(new FilmicToneMapPass(new Vector3f(.5f, .5f, .5f)));
-        SoftBloomPass softBloom = fpp.add(new SoftBloomPass());
-        softBloom.setGlowFactor(0.5f);
-        SSRPass ssr = fpp.add(new SSRPass());
-        fpp.makeInternalInput("Normals", "Normals", ssr);
-        
-        FilterChain<FilterProtocol> chain = fpp.add(new FilterChain());
-        chain.addInput("Normals");
-        fpp.makeInternalInput("Normals", "Normals", chain);
-        CartoonEdgePass cartoon2 = chain.add(new CartoonEdgePass());
-        cartoon2.setEdgeColor(ColorRGBA.Green);
-        chain.makeInternalInput("Normals", "Normals", cartoon2);
-        chain.add(new FXAAPass());
-        
-        Junction activeFilter = fpp.add(new Junction());
-        activeFilterSource = new JunctionCycleSource(activeFilter);
-        int i = 0;
-        for (RenderModule m : fpp) {
-            if (m == activeFilter) {
-                continue;
-            }
-            fpp.makeInternalInput("Color", "Color", m);
-            fpp.makeInternalInput("Depth", "Depth", m);
-            activeFilter.makeInput(m.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.All);
-        }
-        
-        merge.makeInput(enqueue, "Opaque", "Queues[0]");
-        merge.makeInput(enqueue, "Sky", "Queues[1]");
-        merge.makeInput(enqueue, "Transparent", "Queues[2]");
-        merge.makeInput(enqueue, "Gui", "Queues[3]");
-        merge.makeInput(enqueue, "Translucent", "Queues[4]");
-        merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
-        
-        geometry.makeInput(merge, "Result", "Geometry");
-        geometry.getColorDef().setFormatFlexible(false);
-        normals.makeInput(merge, "Result", "Geometry");
-        
-        fpp.makeInput(geometry, "Color", "Color");
-        fpp.makeInput(geometry, "Depth", "Depth");
-        fpp.makeInput(normals, "Result", "Normals");
-        fpp.makeInput(merge, "Result", "Geometry");
-        fpp.getMainOutputGroup().makeInput(activeFilter.getMainOutputGroup(),
-                TicketSelector.name(Junction.OUTPUT), TicketSelector.name("Result"));
-        
-        slider.setDivide(new GraphSetting<>("SliderDivide", 0.5f));
-        slider.makeInput(geometry, "Color", "Texture1");
-        slider.makeInput(fpp, "Result", "Texture2");
-        
-        outputColor = new JunctionCycleSource(colorOut);
-        colorOut.makeInput(slider.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.First);
-        colorOut.makeInput(geometry.getMainOutputGroup(), TicketSelector.name("Color"), TicketSelector.First);
-        colorOut.makeInput(normals.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.First);
-        
-        out.makeInput(colorOut, Junction.OUTPUT, "Color");
-        out.makeInput(geometry, "Depth", "Depth");
+        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
+        SceneEnqueuePass enqueue = SceneEnqueuePass.withSingleQueue();
+        geometry = new GeometryPass(allocator);
+        NormalPass normals = new NormalPass(assetManager, allocator);
+        cycle = new FilterCycle();
+        channels = new Multiplexor<>();
+        OutputPass out = fg.addTask(new OutputPass());
+
+        // cartoon edge
+        CartoonEdgePass cartoon = cycle.add(new CartoonEdgePass(assetManager, allocator));
+        cartoon.getEdgeColor().setValue(ColorRGBA.Black);
+        cartoon.getNormals().setUpstream(normals.getOutColor());
+
+        // screenspace ambient occlusion
+        SSAOPass ssao = cycle.add(new SSAOPass(assetManager, allocator, 5, 10, 0.2f, 0.1f));
+        ssao.getNormals().setUpstream(normals.getOutColor());
+
+        // crosshatch
+        CrossHatchPass crosshatch = cycle.add(new CrossHatchPass(assetManager, allocator));
+
+        // anti-aliasing
+        FXAAPass fxaa = cycle.add(new FXAAPass(assetManager, allocator));
+
+        // posterization
+        PosterizationPass poster = cycle.add(new PosterizationPass(assetManager, allocator));
+
+        // contrast
+        ContrastAdjustmentPass contrast = cycle.add(new ContrastAdjustmentPass(assetManager, allocator, 2f));
+
+        // guassian blur bloom
+        BloomPass bloom = cycle.add(new BloomPass(assetManager, allocator));
+
+        // depth of field
+        DepthOfFieldPass depth = cycle.add(new DepthOfFieldPass(assetManager, allocator));
+
+        // fog
+        FogPass fog = cycle.add(new FogPass(assetManager, allocator, ColorRGBA.Black, 5, 100));
+
+        // tonemapping
+        FilmicToneMapPass toneMap = cycle.add(new FilmicToneMapPass(assetManager, allocator, new Vector3f(0.5f, 0.5f, 0.5f)));
+
+        // soft bloom
+        SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
+        softBloom.getFactor().setValue(0.5f);
+
+        // screenspace reflections
+        SSRPass ssr = cycle.add(new SSRPass(assetManager, allocator));
+
+        // test chaining filters together
+        FilterChain chain = cycle.add(new FilterChain());
+        CartoonEdgePass cartoon2 = chain.add(new CartoonEdgePass(assetManager, allocator));
+        cartoon2.getEdgeColor().setValue(ColorRGBA.Green);
+        cartoon2.getNormals().setUpstream(normals.getOutColor());
+        chain.add(new FXAAPass(assetManager, allocator));
+
+        geometry.getGeometry().addMapSource(enqueue.getQueues());
+        normals.getGeometry().addMapSource(enqueue.getQueues());
+        cycle.getSceneColor().setUpstream(geometry.getOutColor());
+        cycle.getSceneDepth().setUpstream(geometry.getOutDepth());
+        channels.addUpstream(cycle.getFilterResult());
+        channels.addUpstream(geometry.getOutColor());
+        channels.addUpstream(geometry.getOutDepth());
+        channels.addUpstream(normals.getOutColor());
+        out.getColor().setUpstream(channels);
+
+        channels.getIndex().setValue(0);
         
     }
     private void setupScene() {
@@ -199,14 +173,14 @@ public class TestJmeFilters extends SimpleApplication {
         filterLabel = new BitmapText(guiFont);
         filterLabel.setSize(guiFont.getCharSet().getRenderedSize());
         filterLabel.setText("");
-        filterLabel.setLocalTranslation(context.getFramebufferWidth()/2 + 5, context.getFramebufferHeight() - 5, 0);
+        filterLabel.setLocalTranslation((float)context.getFramebufferWidth()/2 + 5, context.getFramebufferHeight() - 5, 0);
         guiNode.attachChild(filterLabel);
         formatLabel = new BitmapText(guiFont);
         formatLabel.setSize(guiFont.getCharSet().getRenderedSize());
         formatLabel.setText("Format: RGBA8");
         formatLabel.setLocalTranslation(5, context.getFramebufferHeight() - 5, 0);
         guiNode.attachChild(formatLabel);
-        updateGui(fpp.get(0).getClass().getSimpleName());
+        updateGui(cycle.getActiveFilter().getClass().getSimpleName());
     }
     private void setupInput() {
         inputManager.addMapping("nextFilter", new KeyTrigger(KeyInput.KEY_1));
@@ -216,16 +190,19 @@ public class TestJmeFilters extends SimpleApplication {
             if (isPressed) {
                 switch (name) {
                     case "nextFilter":
-                        activeFilterSource.increment();
-                        updateGui(fpp.get(activeFilterSource.getValue()).getClass().getSimpleName());
+                        cycle.increment();
+                        updateGui(cycle.getActiveFilter().getClass().getSimpleName());
                         break;
                     case "nextColorOut":
-                        outputColor.increment();
-                        switch (outputColor.getValue()) {
-                            case 0: updateGui(fpp.get(activeFilterSource.getValue()).getClass().getSimpleName()); break;
+                        int i = channels.getIndex().preview();
+                        switch (i) {
+                            case 4: i = -1;
+                            case 0: updateGui(cycle.getActiveFilter().getClass().getSimpleName()); break;
                             case 1: updateGui("Scene"); break;
-                            case 2: updateGui("Normals"); break;
+                            case 2: updateGui("Depth"); break;
+                            case 3: updateGui("Normals"); break;
                         }
+                        channels.getIndex().setValue(++i);
                         break;
                     case "nextFormat":
                         switch (++colorFormat) {
@@ -264,184 +241,106 @@ public class TestJmeFilters extends SimpleApplication {
         return g;
     }
     
-    private static class NormalPass extends RenderPass {
+    private static class NormalPass extends GeometryPass implements RenderEnvironment {
 
         private static ImmediateMatDef matdef;
-        
-        private ResourceTicket<GeometryQueue> geometry;
-        private ResourceTicket<Texture2D> result;
-        private final ResourceTicket<Texture2D> depth = new ResourceTicket<>("_depth");
-        private final TextureDef<Texture2D> resultDef = TextureDef.texture2D(Image.Format.RGBA8);
-        private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
-        private Material material;
-        
-        @Override
-        protected void initialize(FrameGraph frameGraph) {
-            geometry = addInput("Geometry");
-            result = addOutput("Result");
+        private final Material material;
+
+        public NormalPass(AssetManager assetManager, ResourceAllocator allocator) {
+            super(allocator);
+            setEnvironment(this);
             if (matdef == null) {
                 ImmediateShader vert = new ImmediateShader(Shader.ShaderType.Vertex, true)
-                    .includeGlslCompat().includeInstancing().includeSkinning().includeMorphing()
-                    .attribute("vec3", "inPosition").attribute("vec3", "inNormal")
-                    .varying("vec3", "wNormal")
-                    .main()
+                        .includeGlslCompat().includeInstancing().includeSkinning().includeMorphing()
+                        .attribute("vec3", "inPosition").attribute("vec3", "inNormal")
+                        .varying("vec3", "wNormal")
+                        .main()
                         .assign("vec4", "modelSpacePos", "vec4(inPosition, 1.0)")
                         .assign("vec3", "modelSpaceNorm", "inNormal")
                         .ifdef("NUM_MORPH_TARGETS")
-                            .call("Morph_Compute", "modelSpacePos", "modelSpaceNorm")
+                        .call("Morph_Compute", "modelSpacePos", "modelSpaceNorm")
                         .endif()
                         .ifdef("NUM_BONES")
-                            .call("Skinning_Compute", "modelSpacePos", "modelSpaceNorm")
+                        .call("Skinning_Compute", "modelSpacePos", "modelSpaceNorm")
                         .endif()
                         .assign("gl_Position", "TransformWorldViewProjection(modelSpacePos)")
                         .assign("wNormal", "TransformWorldNormal(modelSpaceNorm)")
-                    .end();
+                        .end();
                 ImmediateShader frag = new ImmediateShader(Shader.ShaderType.Fragment, true)
-                    .includeGlslCompat()
-                    .varying("vec3", "wNormal")
-                    .main()
+                        .includeGlslCompat()
+                        .varying("vec3", "wNormal")
+                        .main()
                         .assign("gl_FragColor.rgb", "wNormal")
-                    .end();
-                matdef = new ImmediateMatDef(frameGraph.getAssetManager(), "Normals");
+                        .end();
+                matdef = new ImmediateMatDef(assetManager, "Normals");
                 matdef.createTechnique("PreNormalPass")
-                    .setVersions(450, 310, 150)
-                    .setShader(vert).setShader(frag)
-                    .addWorldParameters("WorldViewProjectionMatrix", "WorldNormalMatrix")
-                    .add();
+                        .setVersions(450, 310, 150)
+                        .setShader(vert).setShader(frag)
+                        .addWorldParameters("WorldViewProjectionMatrix", "WorldNormalMatrix")
+                        .add();
             }
             material = matdef.createMaterial();
         }
+
         @Override
-        protected void prepare(FrameGraphContext context) {
-            declareTemporary(depthDef, depth);
-            declare(resultDef, result);
-            reserve(result);
-            reference(geometry);
+        public void applySettings(FrameGraphContext context) {
+            context.getForcedTechnique().pushValue("PreNormalPass");
+            context.getForcedMaterial().pushValue(material);
         }
+
         @Override
-        protected void execute(FrameGraphContext context) {
-            FrameBuffer fb = getFrameBuffer(context, 1);
-            resultDef.setSize(fb.getWidth(), fb.getHeight());
-            depthDef.setSize(fb.getWidth(), fb.getHeight());
-            resources.acquireColorTarget(fb, result);
-            resources.acquireDepthTarget(fb, depth);
-            context.registerMode(RenderMode.frameBuffer(fb));
-            context.clearBuffers();
-            context.registerMode(RenderMode.forcedTechnique("PreNormalPass"));
-            context.registerMode(RenderMode.forcedMaterial(material));
-            resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
+        public void restoreSettings(FrameGraphContext context) {
+            context.getForcedTechnique().pop();
+            context.getForcedMaterial().pop();
         }
-        @Override
-        protected void reset(FrameGraphContext context) {}
-        @Override
-        protected void cleanup(FrameGraph frameGraph) {}
-        
+
     }
-    private static class TextureSliderPass extends RenderPass {
-        
-        private static ImmediateMatDef matdef;
-        
-        private ResourceTicket<Texture2D> tex1, tex2;
-        private ResourceTicket<Texture2D> result;
-        private final TextureDef<Texture2D> resultDef = TextureDef.texture2D();
-        private Material material;
-        private GraphSource<Float> divideSource;
 
-        @Override
-        protected void initialize(FrameGraph frameGraph) {
-            tex1 = addInput("Texture1");
-            tex2 = addInput("Texture2");
-            result = addOutput("Result");
-            if (matdef == null) {
-                ImmediateShader frag = new ImmediateShader(Shader.ShaderType.Fragment, true)
-                    .includeGlslCompat()
-                    .uniform("sampler2D", "Texture1", false)
-                    .uniform("sampler2D", "Texture2", false)
-                    .uniform("float", "Divide", false)
-                    .uniform("float", "DividerThickness", false)
-                    .varying("vec2", "texCoord")
-                    .main()
-                        .assign("float", "dist", "abs(m_Divide - texCoord.x)")
-                        ._if("dist < m_DividerThickness")
-                            .assign("gl_FragColor", "vec4(1.0)")
-                        ._elseif("texCoord.x < m_Divide")
-                            .assign("gl_FragColor", "texture2D(m_Texture1, texCoord)")
-                        ._else()
-                            .assign("gl_FragColor", "texture2D(m_Texture2, texCoord)")
-                        .end()
-                    .end();
-                matdef = new ImmediateMatDef(frameGraph.getAssetManager(), "TextureSlider")
-                    .addParam(VarType.Texture2D, "Texture1")
-                    .addParam(VarType.Texture2D, "Texture2")
-                    .addParam(VarType.Float, "Divide", 0.5f)
-                    .addParam(VarType.Float, "DividerThickness", 0.001f);
-                matdef.createTechnique()
-                    .setVersions(450, 310, 150)
-                    .setVertexShader("RenthylCore/MatDefs/Fullscreen/Screen.vert")
-                    .setShader(frag)
-                    .add();
-            }
-            material = matdef.createMaterial();
-        }
-        @Override
-        protected void prepare(FrameGraphContext context) {
-            declare(resultDef, result);
-            reserve(result);
-            reference(tex1, tex2);
-        }
-        @Override
-        protected void execute(FrameGraphContext context) {
-            Texture2D inTex1 = resources.acquire(tex1);
-            Texture2D inTex2 = resources.acquire(tex2);
-            int w = inTex1.getImage().getWidth();
-            int h = inTex1.getImage().getHeight();
-            resultDef.setSize(w, h);
-            resultDef.setFormat(inTex1.getImage().getFormat());
-            FrameBuffer fb = getFrameBuffer(w, h, 1);
-            resources.acquireColorTarget(fb, result);
-            context.registerMode(RenderMode.cameraSize(w, h));
-            context.registerMode(RenderMode.frameBuffer(fb));
-            context.clearBuffers();
-            material.setTexture("Texture1", inTex1);
-            material.setTexture("Texture2", inTex2);
-            if (divideSource != null) {
-                material.setFloat("Divide", divideSource.getGraphValue(frameGraph, context.getViewPort()));
-            }
-            context.renderFullscreen(material);
-        }
-        @Override
-        protected void reset(FrameGraphContext context) {}
-        @Override
-        protected void cleanup(FrameGraph frameGraph) {}
-        
-        public void setDivide(GraphSource<Float> divide) {
-            this.divideSource = divide;
-        }
-        
-    }
-    private static class JunctionCycleSource implements GraphSource<Integer> {
+    private static class FilterCycle extends Frame implements PostProcessFilter {
 
-        private final Junction junction;
-        private int value = 0;
+        public final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
+        public final TransitiveSocket<Texture2D> depth = new TransitiveSocket<>(this);
+        public final Multiplexor<Texture2D> result = new Multiplexor<>();
+        public final List<PostProcessFilter> filters = new ArrayList<>();
 
-        public JunctionCycleSource(Junction junction) {
-            this.junction = junction;
-            this.junction.setIndexSource(this);
+        public FilterCycle() {
+            addSockets(color, depth, result);
+            result.getIndex().setValue(0);
+        }
+
+        public <T extends PostProcessFilter> T add(T filter) {
+            filter.getSceneColor().setUpstream(color);
+            filter.getSceneDepth().setUpstream(depth);
+            result.addUpstream(filter.getFilterResult());
+            filters.add(filter);
+            return filter;
         }
 
         @Override
-        public Integer getGraphValue(FrameGraph frameGraph, ViewPort viewPort) {
-            return value;
+        public PointerSocket<Texture2D> getSceneColor() {
+            return color;
+        }
+
+        @Override
+        public PointerSocket<Texture2D> getSceneDepth() {
+            return depth;
+        }
+
+        @Override
+        public Socket<Texture2D> getFilterResult() {
+            return result;
+        }
+
+        public PostProcessFilter getActiveFilter() {
+            return filters.get(result.getIndex().preview());
         }
 
         public void increment() {
-            if (++value >= junction.getLength()) {
-                value = 0;
+            int i = result.getIndex().preview();
+            if (i >= filters.size()) {
+                i = -1;
             }
-        }
-        
-        public int getValue() {
-            return value;
+            result.getIndex().setValue(i + 1);
         }
 
     }

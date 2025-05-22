@@ -17,7 +17,7 @@ public abstract class AbstractTask implements Renderable {
     protected final Collection<Socket> sockets = new ArrayList<>();
     private final AtomicBoolean claimed = new AtomicBoolean(false);
     private boolean complete = false;
-    private int position = UNQUEUED;
+    protected int position = UNQUEUED;
 
     @Override
     public void stage(RenderingQueue queue) {

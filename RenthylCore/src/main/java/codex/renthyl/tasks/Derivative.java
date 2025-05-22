@@ -24,7 +24,10 @@ public abstract class Derivative<In, Out> extends RenderTask implements Socket<O
 
     @Override
     public Out acquire() {
-        return upstream != null ? apply(upstream.acquire()) : null;
+        if (upstream != null) {
+            In v = upstream.acquire();
+            return v != null ? apply(v) : null;
+        } else return null;
     }
 
     @Override
@@ -54,6 +57,9 @@ public abstract class Derivative<In, Out> extends RenderTask implements Socket<O
     public int getActiveReferences() {
         return activeRefs;
     }
+
+    @Override
+    public void resetSocket() {}
 
     public void setUpstream(Socket<? extends In> upstream) {
         assertNoActiveReferences();

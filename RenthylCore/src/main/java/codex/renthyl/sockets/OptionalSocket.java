@@ -28,7 +28,7 @@ public class OptionalSocket <T> extends TransitiveSocket<T> {
     public void reference(int queuePosition) {
         queued = true;
         if (enabled) {
-            reference(queuePosition);
+            super.reference(queuePosition);
         }
     }
 

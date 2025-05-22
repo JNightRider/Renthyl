@@ -1,8 +1,8 @@
 package codex.renthyl.render;
 
-import codex.renthyl.render.queue.Queueable;
+import codex.renthyl.render.queue.Stageable;
 
-public interface Renderable extends Queueable {
+public interface Renderable extends Stageable {
 
     void update(float tpf);
 
