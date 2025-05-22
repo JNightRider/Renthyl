@@ -111,7 +111,7 @@ public class ProbeRenderUtils {
                 }
             }
         }
-        // todo: For reflection probes, only top three in view frustum are processed per frame (but scene can contain large amount of reflection probes)
+        // todo: For reflection probes, only three in the view frustum are processed per frame (but scene can contain large number of probes)
         ambientLightColor.a = 1.0f;
         return hasAmbientLight;
     }
