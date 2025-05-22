@@ -109,11 +109,10 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         ShadowComposerPass composer = new ShadowComposerPass(assetManager, allocator);
         LightGatherPass lightGatherPass = new LightGatherPass();
         LightBufferPass lightBufferPass = new LightBufferPass(allocator);
-        VoxelConeTracer vct = new VoxelConeTracer(assetManager, allocator, fg.getContext());
+        VoxelConeTracer vct = new VoxelConeTracer(assetManager, allocator);
         OutputPass out = fg.addTask(new OutputPass());
 
         geometryDepth.setContext(fg.getContext());
-        shadows.setContext(fg.getContext());
         composer.setContext(fg.getContext());
         lightGatherPass.setContext(fg.getContext());
         out.setContext(fg.getContext());

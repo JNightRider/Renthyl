@@ -53,8 +53,8 @@ public class FogPass extends AbstractFilterTask {
     /**
      * Creates a FogFilter
      */
-    public FogPass(Socket<? extends FrameGraphContext> context, AssetManager assetManager, ResourceAllocator allocator) {
-        this(context, assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
+    public FogPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
     }
 
     /**
