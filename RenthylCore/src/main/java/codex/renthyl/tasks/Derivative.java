@@ -4,7 +4,7 @@ import codex.renthyl.sockets.Socket;
 
 import java.util.function.Function;
 
-public abstract class Derivative<In, Out> extends RenderTask implements Socket<Out>, Function<In, Out> {
+public abstract class Derivative<In, Out> extends AbstractTask implements Socket<Out>, Function<In, Out> {
 
     private Socket<? extends In> upstream;
     private int activeRefs = 0;

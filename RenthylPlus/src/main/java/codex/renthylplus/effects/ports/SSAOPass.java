@@ -31,6 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
@@ -78,8 +79,6 @@ public class SSAOPass extends Frame implements PostProcessFilter {
         ssao.intensity.setValue(intensity);
         ssao.scale.setValue(scale);
         ssao.bias.setValue(bias);
-        ssao.setContext(getContext());
-        blur.setContext(getContext());
         blur.ssao.setUpstream(ssao.getFilterResult());
         blur.frustumNearFar.setUpstream(ssao.frustumNearFar);
     }
@@ -149,7 +148,7 @@ public class SSAOPass extends Frame implements PostProcessFilter {
         private final Vector3f frustumCorner = new Vector3f();
 
         public AOPass(AssetManager assetManager, ResourceAllocator allocator) {
-            super(allocator, new Material(assetManager, "Common/MatDefs/SSAO/ssao.j3md"));
+            super(allocator, new Material(assetManager, "Common/MatDefs/SSAO/ssao.j3md"), true);
             addSockets(normals, radius, intensity, scale, bias, samples, frustumNearFar);
         }
 

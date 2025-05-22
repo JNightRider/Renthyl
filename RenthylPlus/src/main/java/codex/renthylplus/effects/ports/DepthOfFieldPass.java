@@ -31,8 +31,10 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -50,7 +52,7 @@ public class DepthOfFieldPass extends AbstractFilterTask {
     private final ArgumentSocket<Boolean> debugUnfocus = new ArgumentSocket<>(this, false);
 
     public DepthOfFieldPass(AssetManager assetManager, ResourceAllocator allocator) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/DepthOfField.j3md"));
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/DepthOfField.j3md"), true);
         addSockets(focusDistance, focusRange, blurScale, blurThreshold, debugUnfocus);
     }
 

@@ -31,8 +31,10 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -51,8 +53,8 @@ public class FogPass extends AbstractFilterTask {
     /**
      * Creates a FogFilter
      */
-    public FogPass(AssetManager assetManager, ResourceAllocator allocator) {
-        this(assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
+    public FogPass(Socket<? extends FrameGraphContext> context, AssetManager assetManager, ResourceAllocator allocator) {
+        this(context, assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
     }
 
     /**
@@ -62,7 +64,7 @@ public class FogPass extends AbstractFilterTask {
      * @param distance the distance of the fog (default is 1000)
      */
     public FogPass(AssetManager assetManager, ResourceAllocator allocator, ColorRGBA color, float density, float distance) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Fog.j3md"));
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Fog.j3md"), true);
         addSocket(this.color).setValue(color);
         addSocket(this.density).setValue(density);
         addSocket(this.distance).setValue(distance);

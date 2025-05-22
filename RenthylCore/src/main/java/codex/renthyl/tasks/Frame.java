@@ -1,12 +1,13 @@
 package codex.renthyl.tasks;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.queue.RenderingQueue;
 
-public class Frame extends RenderTask {
+public class Frame extends AbstractTask {
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUED) {
             position = queue.stage(this);
         }

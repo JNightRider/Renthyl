@@ -28,7 +28,9 @@
  */
 package codex.renthyl.tasks;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import com.jme3.texture.Texture2D;
 

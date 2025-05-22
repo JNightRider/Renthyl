@@ -31,8 +31,10 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -57,7 +59,7 @@ public class LightScatteringPass extends AbstractFilterTask {
     private final ArgumentSocket<Boolean> adaptive = new ArgumentSocket<>(this, true);
 
     public LightScatteringPass(AssetManager assetManager, ResourceAllocator allocator, Vector3f lightPosition) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/LightScattering.j3md"));
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/LightScattering.j3md"), true);
         addSockets(samples, blurStart, blurWidth, lightDensity, adaptive);
         addSocket(this.lightPosition).setValue(lightPosition);
     }

@@ -2,8 +2,10 @@ package codex.renthylplus.effects;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;

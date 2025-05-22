@@ -4,6 +4,8 @@
  */
 package codex.renthylplus.vxgi;
 
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.light.Light;

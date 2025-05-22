@@ -80,7 +80,7 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
 
         // prepare
         for (Renderable t : this) {
-            t.stage(queue);
+            t.stage(pContext.getGlobals(), queue);
         }
         queue.update(tpf);
         queue.prepare();

@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -71,17 +72,17 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         for (Socket<? extends Collection<T>> s : collectionSources) {
-            s.stage(queue);
+            s.stage(globals, queue);
         }
         for (Socket<? extends Map<?, T>> s : mapSources) {
-            s.stage(queue);
+            s.stage(globals, queue);
         }
         for (Socket<T> s : sources) {
-            s.stage(queue);
+            s.stage(globals, queue);
         }
-        task.stage(queue);
+        task.stage(globals, queue);
     }
 
     @Override

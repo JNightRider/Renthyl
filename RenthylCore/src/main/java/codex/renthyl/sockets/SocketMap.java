@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -83,12 +84,12 @@ public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, 
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (upstream != null) {
-            upstream.stage(queue);
+            upstream.stage(globals, queue);
         }
-        values().forEach(s -> s.stage(queue));
-        task.stage(queue);
+        values().forEach(s -> s.stage(globals, queue));
+        task.stage(globals, queue);
     }
 
     @Override

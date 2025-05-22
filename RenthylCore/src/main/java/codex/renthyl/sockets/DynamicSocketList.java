@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -74,12 +75,12 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (upstream != null) {
-            upstream.stage(queue);
+            upstream.stage(globals, queue);
         }
-        sockets.forEach(s -> s.stage(queue));
-        task.stage(queue);
+        sockets.forEach(s -> s.stage(globals, queue));
+        task.stage(globals, queue);
     }
 
     @Override

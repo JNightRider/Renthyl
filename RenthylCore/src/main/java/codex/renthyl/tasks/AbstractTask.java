@@ -1,12 +1,12 @@
 package codex.renthyl.tasks;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -20,12 +20,12 @@ public abstract class AbstractTask implements Renderable {
     protected int position = UNQUEUED;
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUING) {
             // set flag immediately in anticipation of callbacks from sockets
             position = QUEUING;
             // queue upstream before queueing this
-            queueSockets(queue);
+            queueSockets(globals, queue);
             position = queue.stage(this);
         }
     }
@@ -76,13 +76,16 @@ public abstract class AbstractTask implements Renderable {
     }
 
     protected <T extends Socket> T addSocket(T socket) {
+        if (socket == this) {
+            throw new IllegalArgumentException("Cannot add socket to itself.");
+        }
         sockets.add(socket);
         return socket;
     }
 
-    protected void queueSockets(RenderingQueue queue) {
+    protected void queueSockets(GlobalAttributes globals, RenderingQueue queue) {
         for (Socket s : sockets) {
-            s.stage(queue);
+            s.stage(globals, queue);
         }
     }
 
@@ -93,7 +96,12 @@ public abstract class AbstractTask implements Renderable {
     }
 
     protected void addSockets(Socket... sockets) {
-        this.sockets.addAll(Arrays.asList(sockets));
+        for (Socket s : sockets) {
+            if (s == this) {
+                throw new IllegalArgumentException("Cannot add socket to itself.");
+            }
+            this.sockets.add(s);
+        }
     }
 
     protected void removeSocket(Socket socket) {

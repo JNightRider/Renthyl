@@ -1,8 +1,10 @@
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
@@ -22,7 +24,7 @@ public class CartoonEdgePass extends AbstractFilterTask {
     private final ArgumentSocket<ColorRGBA> edgeColor = new ArgumentSocket<>(this, ColorRGBA.Black.clone());
 
     public CartoonEdgePass(AssetManager assetManager, ResourceAllocator allocator) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/CartoonEdge.j3md"));
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/CartoonEdge.j3md"), true);
         addSockets(normals, edgeWidth, edgeIntensity, normalThreshold, depthThreshold, normalSensitivity, depthSensitivity, edgeColor);
     }
 

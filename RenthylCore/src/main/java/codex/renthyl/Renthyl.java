@@ -5,6 +5,7 @@
 package codex.renthyl;
 
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.sockets.Socket;
 import codex.renthyl.tasks.ControlRenderPass;
 import codex.renthyl.tasks.MapToListPass;
 import codex.renthyl.tasks.OutputPass;

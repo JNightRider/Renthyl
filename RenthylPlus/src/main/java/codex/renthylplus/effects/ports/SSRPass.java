@@ -31,6 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
@@ -77,7 +78,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         int passes = numBlurPasses.preview();
         if (passes != blurPasses.size()) {
             if (passes > 0) {
@@ -97,7 +98,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
                 blurPasses.clear();
             }
         }
-        super.stage(queue);
+        super.stage(globals, queue);
     }
 
     @Override
@@ -196,7 +197,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
         private final ArgumentSocket<Float> downSamplingFactor = new ArgumentSocket<>(this, 1f);
 
         public ReflectionPass(AssetManager assetManager, ResourceAllocator allocator) {
-            super(allocator, new Material(assetManager, "RenthylPlus/MatDefs/Effects/SSR.j3md"));
+            super(allocator, new Material(assetManager, "RenthylPlus/MatDefs/Effects/SSR.j3md"), true);
             addSockets(normals, raySteps, sampleNearby, stepLength, reflectionFactor, glossinessPackedInNormals,
                     approximateNormals, nearFade, farFade, format, downSamplingFactor);
         }

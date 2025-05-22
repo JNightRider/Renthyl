@@ -28,6 +28,7 @@
  */
 package codex.renthyl.tasks.geometry;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;

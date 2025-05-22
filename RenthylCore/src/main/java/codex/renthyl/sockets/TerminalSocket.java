@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -23,8 +24,8 @@ public abstract class TerminalSocket <T> implements Socket<T> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
-        task.stage(queue);
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        task.stage(globals, queue);
     }
 
     @Override

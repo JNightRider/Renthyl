@@ -65,13 +65,15 @@ import java.util.function.Predicate;
  */
 public class FrameGraphContext implements PipelineContext {
 
+    public static final String CONTEXT_GLOBAL = "framegraph_context";
+
     private final AssetManager assetManager;
     private final RenderManager renderManager;
     private final FullScreenQuad screen;
+    private boolean rendered = false;
     private ViewPort viewPort;
     private int width, height;
     private float tpf;
-    private boolean rendered = false;
 
     private final RenderSetting<FrameBuffer> frameBuffer = new RenderSetting<>((rm, fbo) -> rm.getRenderer().setFrameBuffer(fbo), rm -> rm.getRenderer().getCurrentFrameBuffer());
     private final RenderSetting<String> forcedTechnique = new RenderSetting<>(RenderManager::setForcedTechnique, RenderManager::getForcedTechnique);
@@ -85,10 +87,13 @@ public class FrameGraphContext implements PipelineContext {
     private final RenderSetting<Integer> lightBatchSize = new RenderSetting<>(RenderManager::setSinglePassLightBatchSize, RenderManager::getSinglePassLightBatchSize);
     private final CameraSetting camera = new CameraSetting();
 
+    private final GlobalAttributes globals = new GlobalAttributes();
+
     public FrameGraphContext(AssetManager assetManager, RenderManager renderManager) {
         this.assetManager = assetManager;
         this.renderManager = renderManager;
         this.screen = new FullScreenQuad(assetManager);
+        this.globals.set(CONTEXT_GLOBAL, this, false);
     }
 
     @Override
@@ -160,6 +165,10 @@ public class FrameGraphContext implements PipelineContext {
 
     public void renderTextures(Texture2D color, Texture2D depth) {
         screen.render(renderManager, color, depth);
+    }
+
+    public GlobalAttributes getGlobals() {
+        return globals;
     }
 
     public AssetManager getAssetManager() {

@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.ResourceDef;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
@@ -100,12 +101,12 @@ public class AllocationSocket<T> implements Socket<T> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         // queue upstream before queueing owning task
         if (upstream != null) {
-            upstream.stage(queue);
+            upstream.stage(globals, queue);
         }
-        task.stage(queue);
+        task.stage(globals, queue);
     }
 
     public void setUpstream(Socket upstream) {

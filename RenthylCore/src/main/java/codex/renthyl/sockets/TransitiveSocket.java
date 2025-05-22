@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -68,12 +69,12 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         // queue upstream before queueing owning task
         if (upstream != null) {
-            upstream.stage(queue);
+            upstream.stage(globals, queue);
         }
-        task.stage(queue);
+        task.stage(globals, queue);
     }
 
     @Override

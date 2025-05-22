@@ -4,6 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;

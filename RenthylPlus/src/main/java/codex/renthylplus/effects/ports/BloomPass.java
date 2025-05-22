@@ -1,5 +1,6 @@
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.geometry.GeometryQueue;
@@ -36,11 +37,6 @@ public class BloomPass extends Frame implements PostProcessFilter {
         GaussianBlurPass vBlur = new GaussianBlurPass(assetManager, allocator, true);
         inject = new InjectionPass(assetManager, allocator);
         addSockets(sceneColor, sceneDepth, scale, downSamplingFactor);
-        objectGlow.setContext(getContext());
-        extraction.setContext(getContext());
-        hBlur.setContext(getContext());
-        vBlur.setContext(getContext());
-        inject.setContext(getContext());
         glowSwitch.addUpstream(objectGlow.color);
         extraction.getSceneColor().setUpstream(sceneColor);
         extraction.glow.setUpstream(glowSwitch);
@@ -108,6 +104,7 @@ public class BloomPass extends Frame implements PostProcessFilter {
         private final FrameBufferDef bufferDef = new FrameBufferDef();
 
         public PerObjectGlowPass(ResourceAllocator allocator) {
+            super();
             addSocket(geometry);
             color = addSocket(new AllocationSocket<>(this, allocator, colorDef));
             depth = addSocket(new AllocationSocket<>(this, allocator, depthDef));

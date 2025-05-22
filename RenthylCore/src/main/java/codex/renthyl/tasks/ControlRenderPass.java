@@ -28,6 +28,8 @@
  */
 package codex.renthyl.tasks;
 
+import codex.renthyl.FrameGraphContext;
+import codex.renthyl.sockets.Socket;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.SceneGraphIterator;

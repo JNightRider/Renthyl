@@ -1,5 +1,6 @@
 package codex.renthylplus.effects;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.render.CameraState;
@@ -25,14 +26,8 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final CameraState camera = new CameraState(new Camera(1024, 1024), true);
 
-    public AbstractFilterTask(ResourceAllocator allocator) {
-        this(allocator, null);
-    }
     public AbstractFilterTask(ResourceAllocator allocator, boolean useDepth) {
         this(allocator, null, useDepth);
-    }
-    public AbstractFilterTask(ResourceAllocator allocator, Material material) {
-        this(allocator, material, true);
     }
     public AbstractFilterTask(ResourceAllocator allocator, Material material, boolean useDepth) {
         this.material = material;

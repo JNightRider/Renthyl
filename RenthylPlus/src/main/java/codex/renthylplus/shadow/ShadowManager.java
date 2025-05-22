@@ -4,12 +4,14 @@
  */
 package codex.renthylplus.shadow;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.CollectorSocket;
 import codex.renthyl.sockets.DynamicSocketList;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.tasks.Frame;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.DirectionalLight;
@@ -26,8 +28,9 @@ import java.util.List;
  *
  * @author codex
  */
-public class ShadowManager extends RenderTask {
+public class ShadowManager extends Frame {
 
+    private final Socket<? extends FrameGraphContext> context;
     private final AssetManager assetManager;
     private final ResourceAllocator allocator;
     private final DynamicSocketList<TransitiveSocket<Light>, Light> lights = new DynamicSocketList<>(this, () -> new TransitiveSocket<>(this));
@@ -35,40 +38,37 @@ public class ShadowManager extends RenderTask {
     private final ShadowQueuePass queues = new ShadowQueuePass();
     private final Collection<ShadowOcclusionPass> occluders = new ArrayList<>();
 
-    public ShadowManager(AssetManager assetManager, ResourceAllocator allocator) {
+    public ShadowManager(Socket<? extends FrameGraphContext> context, AssetManager assetManager, ResourceAllocator allocator) {
+        this.context = context;
         this.assetManager = assetManager;
         this.allocator = allocator;
         addSockets(lights, shadowMaps);
     }
 
-    @Override
-    protected void renderTask() {}
-
     private <T extends Light> void addOcclusion(ShadowOcclusionPass<T> occlusion) {
         occlusion.getOccluders().setUpstream(queues.getOccluders());
         occlusion.getReceivers().setUpstream(queues.getReceivers());
-        occlusion.setContext(contextSocket);
         shadowMaps.addCollectionSource(occlusion.getShadowMaps());
         occluders.add(occlusion);
     }
 
     public void addDirectionalLightSource(Socket<DirectionalLight> socket, int size, int splits) {
         lights.add(socket);
-        DirectionalShadowPass dsp = new DirectionalShadowPass(assetManager, allocator, size, splits);
+        DirectionalShadowPass dsp = new DirectionalShadowPass(context, assetManager, allocator, size, splits);
         dsp.getLight().setUpstream(socket);
         addOcclusion(dsp);
     }
 
     public void addPointLightSource(Socket<PointLight> socket, int size) {
         lights.add(socket);
-        PointShadowPass psp = new PointShadowPass(assetManager, allocator, size);
+        PointShadowPass psp = new PointShadowPass(context, assetManager, allocator, size);
         psp.getLight().setUpstream(socket);
         addOcclusion(psp);
     }
 
     public void addSpotLightSource(Socket<SpotLight> socket, int size) {
         lights.add(socket);
-        SpotShadowPass ssp = new SpotShadowPass(assetManager, allocator, size);
+        SpotShadowPass ssp = new SpotShadowPass(context, assetManager, allocator, size);
         ssp.getLight().setUpstream(socket);
         addOcclusion(ssp);
     }

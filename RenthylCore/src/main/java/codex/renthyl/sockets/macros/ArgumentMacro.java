@@ -1,9 +1,10 @@
 package codex.renthyl.sockets.macros;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
-public class ArgumentMacro<T> implements Socket<T>, Macro<T> {
+public class ArgumentMacro<T> implements Socket<T>, PointerMacro<T> {
 
     private Macro<? extends T> upstream;
     private T value;
@@ -45,7 +46,7 @@ public class ArgumentMacro<T> implements Socket<T>, Macro<T> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {}
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {}
 
     @Override
     public void reference(int queuePosition) {}
@@ -58,16 +59,18 @@ public class ArgumentMacro<T> implements Socket<T>, Macro<T> {
         return 0;
     }
 
+    @Override
     public void setUpstream(Macro<? extends T> upstream) {
         this.upstream = upstream;
     }
 
-    public void setValue(T value) {
-        this.value = value;
-    }
-
+    @Override
     public Macro<? extends T> getUpstream() {
         return upstream;
+    }
+
+    public void setValue(T value) {
+        this.value = value;
     }
 
     public T getValue() {

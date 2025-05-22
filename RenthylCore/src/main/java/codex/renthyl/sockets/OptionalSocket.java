@@ -1,5 +1,6 @@
 package codex.renthyl.sockets;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
@@ -18,9 +19,9 @@ public class OptionalSocket <T> extends TransitiveSocket<T> {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (enabled) {
-            super.stage(queue);
+            super.stage(globals, queue);
         }
     }
 

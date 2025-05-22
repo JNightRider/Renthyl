@@ -32,16 +32,16 @@ public class VoxelConeTracer extends AbstractTask {
     private final TransitiveSocket<Texture2D> lightContribution = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> result = new TransitiveSocket<>(this);
     
-    public VoxelConeTracer(AssetManager assetManager, ResourceAllocator allocator, Socket<FrameGraphContext> context) {
+    public VoxelConeTracer(Socket<? extends FrameGraphContext> context, AssetManager assetManager, ResourceAllocator allocator) {
 
         addSockets(shadowMaps, geometry, lightBuffer, lightContribution, result);
 
         Attribute<Integer> gridSize = new Attribute<>(64);
         Attribute<BoundingBox> voxelBounds = new Attribute<>(new BoundingBox(new Vector3f(0, 10.1f, 0), 20, 20, 20));
         VoxelShadowComposerPass voxShadows = new VoxelShadowComposerPass(assetManager, allocator);
-        DirectLightingPass direct = new DirectLightingPass(allocator);
-        VoxelizationPass voxels = new VoxelizationPass(assetManager, allocator);
-        IndirectLightingPass indirect = new IndirectLightingPass(assetManager, allocator);
+        DirectLightingPass direct = new DirectLightingPass(context, allocator);
+        VoxelizationPass voxels = new VoxelizationPass(context, assetManager, allocator);
+        IndirectLightingPass indirect = new IndirectLightingPass(context, assetManager, allocator);
 
         direct.setContext(context);
         voxels.setContext(context);

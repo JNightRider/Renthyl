@@ -31,6 +31,7 @@
  */
 package codex.renthylplus.effects.ports;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.render.CameraState;
@@ -81,7 +82,7 @@ public class SoftBloomPass extends RenderTask implements PostProcessFilter {
     }
 
     @Override
-    public void stage(RenderingQueue queue) {
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
         int passes = numSamplingSteps.preview() + 1;
         if (passes < 2) {
             throw new IllegalArgumentException("Must have at least one sampling pass.");
@@ -91,7 +92,7 @@ public class SoftBloomPass extends RenderTask implements PostProcessFilter {
         while (cameras.size() > passes) {
             cameras.removeLast();
         }
-        super.stage(queue);
+        super.stage(globals, queue);
     }
 
     @Override

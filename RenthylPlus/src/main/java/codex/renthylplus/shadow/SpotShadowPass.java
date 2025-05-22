@@ -7,6 +7,7 @@ package codex.renthylplus.shadow;
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.Socket;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.Light;
 import com.jme3.light.SpotLight;

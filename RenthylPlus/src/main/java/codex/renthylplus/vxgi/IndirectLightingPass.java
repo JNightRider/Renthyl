@@ -9,6 +9,7 @@ import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.jmecompute.opengl.uniforms.buffers.FloatArrayUniform;
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
