@@ -33,8 +33,7 @@ public class ShadowMapDef implements ResourceDef<ShadowMap> {
 
     @Override
     public Float evaluateResource(Object resource) {
-        if (resource instanceof ShadowMap) {
-            ShadowMap shadow = (ShadowMap)resource;
+        if (resource instanceof ShadowMap shadow) {
             return mapDef.evaluateResource(shadow.getMap());
         } else if (resource instanceof Texture) {
             return mapDef.evaluateResource(resource);
@@ -44,8 +43,7 @@ public class ShadowMapDef implements ResourceDef<ShadowMap> {
 
     @Override
     public ShadowMap conformResource(Object resource) {
-        if (resource instanceof ShadowMap) {
-            ShadowMap shadow = (ShadowMap)resource;
+        if (resource instanceof ShadowMap shadow) {
             Texture2D tex = mapDef.conformResource(shadow.getMap());
             if (tex != shadow.getMap()) {
                 return new ShadowMap(tex);

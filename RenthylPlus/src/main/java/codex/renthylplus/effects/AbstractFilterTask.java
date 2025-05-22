@@ -1,6 +1,5 @@
 package codex.renthylplus.effects;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.render.CameraState;

@@ -26,14 +26,13 @@ Declaring a ResourceView as a primitive through `Resource#declarePrimitive` allo
 
 ```java
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declarePrimitive(myTicket);
 }
 
 @Override
 protected void execute(FGRenderContext context) {
     resources.setPrimitive(myTicket, myValue);
-}
 ```
 
 Note that no ResourceDef is required to declare a primitive ResourceView. For primitive ResourceViews, `setPrimitive` should be called before acquiring, otherwise an exception will occur because no ResourceDef is defined.
@@ -47,7 +46,7 @@ private final ResourceTicket<Texture2D> tempTex = new ResourceTicket<>("tempTex"
 private final TextureDef<Texture2D> tempTexDef = ...
 
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declareTemporary(tempTexDef, tempTex);
 }
 
@@ -57,7 +56,6 @@ protected void execute(FGRenderContext context) {
     ...
     // after finished with "temp", manually release the resource
     resources.release(tempTex);
-}
 ```
 
 Note that the ResourceTicket corresponding to the temporary ResourceView should not be registered as either an input or output ticket. Also note that the resource must be manually released after the resource is used. This is done automatically for input and output resources, but not for temporary resources.
@@ -68,7 +66,7 @@ Sometimes, especially for textures, it is desirable to acquire the same resource
 
 ```java
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declare(myDef, myTicket);
     reserve(myTicket);
 }
@@ -82,7 +80,7 @@ An undefined ResourceView can never be associated with a resource, and non-optio
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setUndefined(myTicket);
 }
 ```
@@ -95,7 +93,7 @@ When a resource is marked as constant, it cannot be reallocated to any ResourceV
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setConstant(myTicket);
 }
 ```
@@ -112,7 +110,7 @@ A ResourceView is virtual when it is not associated with a resource and it is no
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     Texture2D tex = resources.modify(inputTicket, outputTicket);
 }
 ```

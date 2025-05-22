@@ -31,7 +31,7 @@ public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight>
     private final Camera shadowCam;
     private final float[] splits;
     private final Vector3f[] points = new Vector3f[8];
-    private float lambda = 0.65f;
+    private final float lambda = 0.65f;
     
     public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int numSplits) {
         super(assetManager, allocator, Light.Type.Directional, numSplits, shadowMapSize);

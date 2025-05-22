@@ -25,10 +25,9 @@ public class FrameBufferDef implements ResourceDef<FrameBuffer> {
 
     @Override
     public Float evaluateResource(Object resource) {
-        if (!(resource instanceof FrameBuffer)) {
+        if (!(resource instanceof FrameBuffer fbo)) {
             return null;
         }
-        FrameBuffer fbo = (FrameBuffer)resource;
         if (fbo.getWidth() != width || fbo.getHeight() != height || fbo.getSamples() != samples) {
             return null;
         }

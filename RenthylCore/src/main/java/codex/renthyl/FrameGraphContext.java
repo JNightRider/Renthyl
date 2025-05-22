@@ -254,8 +254,7 @@ public class FrameGraphContext implements PipelineContext {
          */
         Mesh mesh = geometry.getMesh();
         int lodLevel = geometry.getLodLevel();
-        if (geometry instanceof InstancedGeometry) {
-            InstancedGeometry instGeom = (InstancedGeometry) geometry;
+        if (geometry instanceof InstancedGeometry instGeom) {
             int numVisibleInstances = instGeom.getNumVisibleInstances();
             if (numVisibleInstances > 0) {
                 renderer.renderMesh(mesh, lodLevel, numVisibleInstances, instGeom.getAllInstanceData());

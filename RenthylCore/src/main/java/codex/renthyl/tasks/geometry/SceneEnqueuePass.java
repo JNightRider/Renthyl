@@ -102,8 +102,7 @@ public class SceneEnqueuePass extends RenderTask {
             for (Spatial s : ((Node)spatial).getChildren()) {
                 queueSubScene(s, queueParam);
             }
-        } else if (spatial instanceof Geometry) {
-            Geometry g = (Geometry)spatial;
+        } else if (spatial instanceof Geometry g) {
             if (g.getMaterial() == null) {
                 throw new IllegalStateException("No material present for geometry: " + g.getName());
             }

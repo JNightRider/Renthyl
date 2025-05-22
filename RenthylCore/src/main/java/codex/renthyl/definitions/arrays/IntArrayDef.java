@@ -21,8 +21,7 @@ public class IntArrayDef extends AbstractArrayDef<int[]> {
     }
     @Override
     public Float evaluateResource(Object resource) {
-        if (resource instanceof int[]) {
-            int[] array = (int[])resource;
+        if (resource instanceof int[] array) {
             if (array.length >= size) {
                 return 0f;
             }

@@ -54,7 +54,7 @@ For example, MyCustomProtocol could define a method that returns a TicketSignatu
 ```java
 public interface MyCustomProtocol extends SignatureProtocol {
     
-    public TicketSignature getRenderedColor();
+    TicketSignature getRenderedColor();
     
 }
 ```

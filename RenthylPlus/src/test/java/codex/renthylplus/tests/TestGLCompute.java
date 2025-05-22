@@ -14,7 +14,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  */
 public class TestGLCompute {
     
-    private static String codeSource = "to-be-implemented";
+    private static final String codeSource = "to-be-implemented";
     
     public static void main(String[] args) {
         
