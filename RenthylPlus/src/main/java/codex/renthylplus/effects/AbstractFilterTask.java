@@ -43,7 +43,7 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
             material = createMaterial(context.getAssetManager());
         }
 
-        Texture2D colorTex = color.acquireOrThrow("Scene color required.");
+        Texture2D colorTex = color.acquireOrThrow(getClass().getName() + " requires scene color.");
         configureResult(resultDef, colorTex);
 
         bufferDef.setColorTargets(result.acquire());
@@ -60,7 +60,7 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
         }
         material.setTexture("Texture", colorTex);
         if (depth.isEnabled()) {
-            Texture2D depthTex = depth.acquireOrThrow("Scene depth required.");
+            Texture2D depthTex = depth.acquireOrThrow(getClass().getName() + " requires scene depth.");
             material.setTexture("DepthTexture", depthTex);
             int depthSamples = depthTex.getImage().getMultiSamples();
             if (depthSamples > 1) {

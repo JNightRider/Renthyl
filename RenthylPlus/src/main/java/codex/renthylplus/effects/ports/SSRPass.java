@@ -33,6 +33,7 @@ package codex.renthylplus.effects.ports;
 
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
@@ -55,7 +56,9 @@ import java.util.List;
 /**
  * Screenspace reflection pass.
  * 
- * @author ricardobl (shaders), neph1 (JME filter), codex (Renthyl adaptation)
+ * @author riccardoblb (shaders)
+ * @author neph1 (JME filter)
+ * @author codex (Renthyl adaptation)
  */
 public class SSRPass extends Frame implements PostProcessFilter {
 
@@ -63,7 +66,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
     private final ResourceAllocator allocator;
     private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> result = new TransitiveSocket<>(this);
-    private final ArgumentMacro<Integer> numBlurPasses = new ArgumentMacro<>(4);
+    private final ArgumentMacro<Integer> numBlurPasses = new ArgumentMacro<>(5);
     private final ArgumentSocket<Boolean> fastBlur = new ArgumentSocket<>(this, false);
     private final ArgumentSocket<Float> blurScale = new ArgumentSocket<>(this, 1f);
     private final ArgumentSocket<Float> blurSigma = new ArgumentSocket<>(this, 5f);
@@ -71,31 +74,37 @@ public class SSRPass extends Frame implements PostProcessFilter {
     private final List<BlurPass> blurPasses = new ArrayList<>();
 
     public SSRPass(AssetManager assetManager, ResourceAllocator allocator) {
+        addSockets(color, result, numBlurPasses, fastBlur, blurScale, blurSigma);
         this.assetManager = assetManager;
         this.allocator = allocator;
         reflection = new ReflectionPass(assetManager, allocator);
-        addSockets(color, result, numBlurPasses, fastBlur, blurScale, blurSigma);
+        reflection.getSceneColor().setUpstream(color);
     }
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        int passes = numBlurPasses.preview();
-        if (passes != blurPasses.size()) {
-            if (passes > 0) {
-                if (blurPasses.isEmpty()) {
-                    createBlur(0).ssr.setUpstream(reflection.getFilterResult());
+        if (position < QUEUED) {
+            int passes = numBlurPasses.preview();
+            if (passes != blurPasses.size()) {
+                if (passes > 0) {
+                    if (blurPasses.isEmpty()) {
+                        createBlur(0).ssr.setUpstream(reflection.getFilterResult());
+                    }
+                    while (blurPasses.size() < passes) {
+                        BlurPass b = blurPasses.getLast();
+                        createBlur(blurPasses.size()).ssr.setUpstream(b.getFilterResult());
+                    }
+                    while (blurPasses.size() > passes) {
+                        blurPasses.removeLast();
+                    }
+                    result.setUpstream(blurPasses.getLast().getFilterResult());
+                } else {
+                    result.setUpstream(reflection.getFilterResult());
+                    blurPasses.clear();
                 }
-                while (blurPasses.size() < passes) {
-                    BlurPass b = blurPasses.getLast();
-                    createBlur(blurPasses.size()).ssr.setUpstream(b.getFilterResult());
-                }
-                while (blurPasses.size() > passes) {
-                    blurPasses.removeLast();
-                }
-                result.setUpstream(blurPasses.getLast().getFilterResult());
-            } else {
+            }
+            if (result.getUpstream() == null) {
                 result.setUpstream(reflection.getFilterResult());
-                blurPasses.clear();
             }
         }
         super.stage(globals, queue);
@@ -124,6 +133,10 @@ public class SSRPass extends Frame implements PostProcessFilter {
         b.sigma.setUpstream(blurSigma);
         blurPasses.add(b);
         return b;
+    }
+
+    public PointerSocket<Texture2D> getNormals() {
+        return reflection.normals;
     }
 
     public ArgumentSocket<Integer> getRaySteps() {
@@ -211,6 +224,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
+            System.out.println("configure reflection material.");
             normals.acquireToMaterial(material, "Normals");
             raySteps.acquireToMaterial(material, "RaySamples");
             material.setInt("NearbySamples", sampleNearby.acquireOrThrow() ? 4 : 0);
@@ -221,6 +235,18 @@ public class SSRPass extends Frame implements PostProcessFilter {
             approximateNormals.acquireToMaterial(material, "ApproximateNormals");
             nearFade.acquireToMaterial(material, "NearReflectionsFade");
             farFade.acquireToMaterial(material, "FarReflectionsFade");
+        }
+
+        @Override
+        public void stage(GlobalAttributes globals, RenderingQueue queue) {
+            System.out.println("stage SSR reflection");
+            super.stage(globals, queue);
+        }
+
+        @Override
+        public boolean claim(RenderWorker worker) {
+            System.out.println("claim SSR reflection");
+            return super.claim(worker);
         }
 
     }
@@ -244,6 +270,18 @@ public class SSRPass extends Frame implements PostProcessFilter {
             fastBlur.acquireToMaterial(material, "FastBlur");
             scale.acquireToMaterial(material, "BlurScale");
             sigma.acquireToMaterial(material, "Sigma");
+        }
+
+        @Override
+        public void stage(GlobalAttributes globals, RenderingQueue queue) {
+            System.out.println("stage SSR blur");
+            super.stage(globals, queue);
+        }
+
+        @Override
+        public boolean claim(RenderWorker worker) {
+            System.out.println("claim SSR blur");
+            return super.claim(worker);
         }
 
     }

@@ -73,12 +73,12 @@ public class BasicRenderingQueue implements RenderingQueue {
         }
         main.run();
         if (error != null) {
-            throw new RuntimeException("Rendering failed with exception: " + error.getMessage(), error);
+            throw new RuntimeException("Rendering failed with an exception: " + error.getMessage(), error);
         }
     }
 
     private void render(Worker worker) throws InterruptedException, TimeoutException {
-        while (!queue.isEmpty() && error == null) {
+        loop: while (!queue.isEmpty() && error == null) {
             int size = queue.size();
             for (Iterator<Renderable> it = queue.iterator(); it.hasNext(); ) {
                 if (error != null) {
@@ -87,23 +87,23 @@ public class BasicRenderingQueue implements RenderingQueue {
                 Renderable ex = it.next();
                 // submit task for execution
                 if (worker.submit(ex)) {
-                    worker.render(); // render submitted task
                     it.remove();
+                    worker.render(); // render submitted task
                     lock.lock();
                     inactive.signalAll();
                     lock.unlock();
-                    break;
+                    continue loop;
                 }
             }
-            if (size != queue.size() || error != null) {
-                continue;
+            if (activeWorkers.size() == 1) {
+                throw new TimeoutException("Failed to locate a renderable task. Next: " + Arrays.toString(staged.toArray()));
             }
             // worker has become inactive
             // if all workers end up here at once, a deadlock has occured
             lock.lock();
             while (size == queue.size() && error == null) {
                 if (!inactive.await(5000, TimeUnit.MILLISECONDS)) {
-                    throw new TimeoutException("Worker timed out waiting for tasks to complete.");
+                    throw new TimeoutException("Worker timed out waiting for tasks to complete. Next: " + Arrays.toString(queue.toArray()));
                 }
             }
             lock.unlock();
@@ -112,7 +112,8 @@ public class BasicRenderingQueue implements RenderingQueue {
 
     @Override
     public void reset() {
-        forEach(Renderable::reset);
+        staged.forEach(Renderable::reset);
+        activeWorkers.forEach(Worker::clean);
         queue.clear();
         staged.clear();
         error = null;
@@ -139,7 +140,6 @@ public class BasicRenderingQueue implements RenderingQueue {
 
         private final int index;
         private Renderable task;
-        private boolean complete = false;
 
         public Worker(int index) {
             this.index = index;
@@ -162,7 +162,7 @@ public class BasicRenderingQueue implements RenderingQueue {
         }
 
         public boolean submit(Renderable task) {
-            if (this.task != null || complete || !task.claim(this)) {
+            if (this.task != null || !task.claim(this)) {
                 return false;
             }
             this.task = task;
@@ -184,7 +184,6 @@ public class BasicRenderingQueue implements RenderingQueue {
 
         public void clean() {
             task = null;
-            complete = false;
         }
 
     }

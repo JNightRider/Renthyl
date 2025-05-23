@@ -28,15 +28,14 @@
  */
 package codex.renthyl.tasks.geometry;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.geometry.GeometryRenderHandler;
 import codex.renthyl.render.RenderEnvironment;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.RenderTask;
-import codex.renthyl.geometry.GeometryRenderHandler;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
@@ -106,6 +105,9 @@ public class GeometryPass extends RenderTask {
             q.applySettings(context);
             q.render(context, geometryHandler);
             q.restoreSettings(context);
+        }
+        if (env != null) {
+            env.restoreSettings(context);
         }
         context.getFrameBuffer().pop();
 

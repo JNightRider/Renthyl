@@ -31,12 +31,11 @@
  */
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
-import codex.renthyl.tasks.PostProcessFilter;
 import codex.renthyl.tasks.Frame;
+import codex.renthyl.tasks.PostProcessFilter;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -53,7 +52,6 @@ import com.jme3.texture.Texture2D;
 public class SSAOPass extends Frame implements PostProcessFilter {
 
     private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
-    private final TransitiveSocket<Texture2D> depth = new TransitiveSocket<>(this);
     private final AOPass ssao;
     private final BlurPass blur;
 
@@ -72,13 +70,15 @@ public class SSAOPass extends Frame implements PostProcessFilter {
      * @param bias the width of the occlusion cone considered by the occludee. default 0.1f
      */
     public SSAOPass(AssetManager assetManager, ResourceAllocator allocator, float radius, float intensity, float scale, float bias) {
-        addSockets(color, depth);
+        addSockets(color);
         ssao = new AOPass(assetManager, allocator);
         blur = new BlurPass(assetManager, allocator);
+        ssao.getSceneColor().setUpstream(color);
         ssao.radius.setValue(radius);
         ssao.intensity.setValue(intensity);
         ssao.scale.setValue(scale);
         ssao.bias.setValue(bias);
+        blur.getSceneColor().setUpstream(color);
         blur.ssao.setUpstream(ssao.getFilterResult());
         blur.frustumNearFar.setUpstream(ssao.frustumNearFar);
     }
@@ -90,7 +90,7 @@ public class SSAOPass extends Frame implements PostProcessFilter {
 
     @Override
     public PointerSocket<Texture2D> getSceneDepth() {
-        return depth;
+        return ssao.getSceneDepth();
     }
 
     @Override

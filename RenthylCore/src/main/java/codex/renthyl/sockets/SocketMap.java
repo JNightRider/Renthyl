@@ -13,6 +13,7 @@ public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, 
     private Socket<? extends Map<K, R>> upstream;
     private Map<K, R> resourceMap;
     private int activeRefs = 0;
+    private boolean staged = false;
 
     public SocketMap(Renderable task) {
         this(task, null);
@@ -74,22 +75,26 @@ public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, 
 
     @Override
     public void resetSocket() {
+        if (activeRefs != 0) {
+            throw new IllegalStateException("Some references were not released.");
+        }
         if (resourceMap != null) {
             resourceMap.clear();
         }
         values().forEach(Socket::resetSocket);
-        if (activeRefs != 0) {
-            throw new IllegalStateException("Some references were not released.");
-        }
+        staged = false;
     }
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        if (upstream != null) {
-            upstream.stage(globals, queue);
+        if (!staged) {
+            staged = true;
+            task.stage(globals, queue);
+            if (upstream != null) {
+                upstream.stage(globals, queue);
+            }
+            values().forEach(s -> s.stage(globals, queue));
         }
-        values().forEach(s -> s.stage(globals, queue));
-        task.stage(globals, queue);
     }
 
     @Override

@@ -16,7 +16,7 @@ public class Frame extends AbstractTask {
     @Override
     public final void prepare() {
         if (position < QUEUED) {
-            throw new IllegalStateException("Frame is being prepared, but is not properly queued.");
+            throw new IllegalStateException("Frame is being prepared, but is not properly staged.");
         }
     }
 

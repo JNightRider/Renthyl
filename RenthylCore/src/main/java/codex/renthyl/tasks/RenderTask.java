@@ -20,7 +20,7 @@ public abstract class RenderTask extends AbstractTask implements ContextRenderer
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUING && contextSocket.getUpstream() == null) {
-            contextSocket.setUpstream(globals.get("context"));
+            contextSocket.setUpstream(globals.get(FrameGraphContext.CONTEXT_GLOBAL));
         }
         super.stage(globals, queue);
     }

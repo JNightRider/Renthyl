@@ -18,6 +18,7 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     private Socket<? extends List<R>> upstream;
     private List<R> resourceList;
     private int activeRefs = 0;
+    private boolean staged = false;
 
     public DynamicSocketList(Renderable task, Supplier<T> factory) {
         this.task = task;
@@ -65,22 +66,26 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
 
     @Override
     public void resetSocket() {
+        if (activeRefs != 0) {
+            throw new IllegalStateException("Some references were not released.");
+        }
         if (resourceList != null) {
             resourceList.clear();
         }
         sockets.forEach(Socket::resetSocket);
-        if (activeRefs != 0) {
-            throw new IllegalStateException("Some references were not released.");
-        }
+        staged = false;
     }
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        if (upstream != null) {
-            upstream.stage(globals, queue);
+        if (!staged) {
+            staged = true;
+            task.stage(globals, queue);
+            if (upstream != null) {
+                upstream.stage(globals, queue);
+            }
+            sockets.forEach(s -> s.stage(globals, queue));
         }
-        sockets.forEach(s -> s.stage(globals, queue));
-        task.stage(globals, queue);
     }
 
     @Override

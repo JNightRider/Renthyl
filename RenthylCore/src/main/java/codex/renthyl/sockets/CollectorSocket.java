@@ -18,6 +18,7 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     private final List<Socket<T>> sources = new ArrayList<>();
     private final List<T> target;
     private int activeRefs = 0;
+    private boolean staged = false;
 
     public CollectorSocket(Renderable task) {
         this(task, new ArrayList<>());
@@ -69,20 +70,24 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     @Override
     public void resetSocket() {
         target.clear();
+        staged = false;
     }
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        for (Socket<? extends Collection<T>> s : collectionSources) {
-            s.stage(globals, queue);
+        if (!staged) {
+            staged = true;
+            task.stage(globals, queue);
+            for (Socket<? extends Collection<T>> s : collectionSources) {
+                s.stage(globals, queue);
+            }
+            for (Socket<? extends Map<?, T>> s : mapSources) {
+                s.stage(globals, queue);
+            }
+            for (Socket<T> s : sources) {
+                s.stage(globals, queue);
+            }
         }
-        for (Socket<? extends Map<?, T>> s : mapSources) {
-            s.stage(globals, queue);
-        }
-        for (Socket<T> s : sources) {
-            s.stage(globals, queue);
-        }
-        task.stage(globals, queue);
     }
 
     @Override

@@ -19,6 +19,7 @@ import codex.renthyl.tasks.geometry.GeometryPass;
 import codex.renthyl.tasks.geometry.SceneEnqueuePass;
 import codex.renthylplus.effects.ports.*;
 import com.jme3.app.SimpleApplication;
+import com.jme3.app.StatsAppState;
 import com.jme3.asset.AssetManager;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
@@ -50,6 +51,10 @@ public class TestJmeFilters extends SimpleApplication {
     private Multiplexor<Texture2D> channels;
     private BitmapText filterLabel, formatLabel;
     private int colorFormat = 0;
+
+    public TestJmeFilters() {
+        super(new StatsAppState());
+    }
     
     public static void main(String[] args) {
         TestJmeFilters app = new TestJmeFilters();
@@ -65,7 +70,7 @@ public class TestJmeFilters extends SimpleApplication {
     public void simpleInitApp() {
 
         assetManager.registerLocator("", ImmediateShader.class);
-        flyCam.setMoveSpeed(10);
+        //flyCam.setMoveSpeed(10);
         
         setupFrameGraph();
         setupScene();
@@ -80,6 +85,8 @@ public class TestJmeFilters extends SimpleApplication {
     
     private void setupFrameGraph() {
 
+        assetManager.registerLocator("", ImmediateShader.class);
+
         ResourceAllocationState allocator = new ResourceAllocationState();
         stateManager.attach(allocator);
 
@@ -87,17 +94,21 @@ public class TestJmeFilters extends SimpleApplication {
         viewPort.setPipeline(fg);
         
         fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
-        SceneEnqueuePass enqueue = SceneEnqueuePass.withSingleQueue();
+        SceneEnqueuePass enqueue = SceneEnqueuePass.withLegacyQueues();
         geometry = new GeometryPass(allocator);
         NormalPass normals = new NormalPass(assetManager, allocator);
         cycle = new FilterCycle();
         channels = new Multiplexor<>();
         OutputPass out = fg.addTask(new OutputPass());
 
+        // soft bloom
+        //SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
+        //softBloom.getFactor().setValue(0.5f);
+
         // cartoon edge
-        CartoonEdgePass cartoon = cycle.add(new CartoonEdgePass(assetManager, allocator));
-        cartoon.getEdgeColor().setValue(ColorRGBA.Black);
-        cartoon.getNormals().setUpstream(normals.getOutColor());
+        //CartoonEdgePass cartoon = cycle.add(new CartoonEdgePass(assetManager, allocator));
+        //cartoon.getEdgeColor().setValue(ColorRGBA.Black);
+        //cartoon.getNormals().setUpstream(normals.getOutColor());
 
         // screenspace ambient occlusion
         SSAOPass ssao = cycle.add(new SSAOPass(assetManager, allocator, 5, 10, 0.2f, 0.1f));
@@ -127,12 +138,9 @@ public class TestJmeFilters extends SimpleApplication {
         // tonemapping
         FilmicToneMapPass toneMap = cycle.add(new FilmicToneMapPass(assetManager, allocator, new Vector3f(0.5f, 0.5f, 0.5f)));
 
-        // soft bloom
-        SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
-        softBloom.getFactor().setValue(0.5f);
-
         // screenspace reflections
         SSRPass ssr = cycle.add(new SSRPass(assetManager, allocator));
+        ssr.getNormals().setUpstream(normals.getOutColor());
 
         // test chaining filters together
         FilterChain chain = cycle.add(new FilterChain());
@@ -154,6 +162,7 @@ public class TestJmeFilters extends SimpleApplication {
         channels.getIndex().setValue(0);
         
     }
+
     private void setupScene() {
         
         createCube(0, 0, 0, 1, 1, 1, ColorRGBA.Blue);
@@ -194,15 +203,15 @@ public class TestJmeFilters extends SimpleApplication {
                         updateGui(cycle.getActiveFilter().getClass().getSimpleName());
                         break;
                     case "nextColorOut":
-                        int i = channels.getIndex().preview();
+                        int i = channels.getIndex().preview() + 1;
                         switch (i) {
-                            case 4: i = -1;
+                            case 4: i = 0;
                             case 0: updateGui(cycle.getActiveFilter().getClass().getSimpleName()); break;
                             case 1: updateGui("Scene"); break;
                             case 2: updateGui("Depth"); break;
                             case 3: updateGui("Normals"); break;
                         }
-                        channels.getIndex().setValue(++i);
+                        channels.getIndex().setValue(i);
                         break;
                     case "nextFormat":
                         switch (++colorFormat) {
@@ -337,10 +346,7 @@ public class TestJmeFilters extends SimpleApplication {
 
         public void increment() {
             int i = result.getIndex().preview();
-            if (i >= filters.size()) {
-                i = -1;
-            }
-            result.getIndex().setValue(i + 1);
+            result.getIndex().setValue(++i < filters.size() ? i : 0);
         }
 
     }

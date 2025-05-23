@@ -18,6 +18,7 @@ public class AllocationSocket<T> implements Socket<T> {
     private int startingPosition = Integer.MAX_VALUE;
     private int endingPosition = -1;
     private int activeRefs = 0;
+    private boolean staged = false;
 
     public AllocationSocket(Renderable task, ResourceAllocator allocator, ResourceDef<T> def) {
         this.task = task;
@@ -59,7 +60,7 @@ public class AllocationSocket<T> implements Socket<T> {
                     return (resource = def.conformResource(val));
                 }
             }
-            if (wrapper == null || def.evaluateResource(wrapper.get()) == null || !wrapper.acquire(startingPosition, endingPosition)) {
+            if (!acquireCurrentWrapper()) {
                 wrapper = allocator.allocate(def, startingPosition, endingPosition);
             }
             resource = def.conformResource(wrapper.get());
@@ -93,6 +94,7 @@ public class AllocationSocket<T> implements Socket<T> {
         resource = null;
         startingPosition = Integer.MAX_VALUE;
         endingPosition = -1;
+        staged = false;
     }
 
     @Override
@@ -102,11 +104,20 @@ public class AllocationSocket<T> implements Socket<T> {
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        // queue upstream before queueing owning task
-        if (upstream != null) {
-            upstream.stage(globals, queue);
+        if (!staged) {
+            staged = true;
+            task.stage(globals, queue);
+            if (upstream != null) {
+                upstream.stage(globals, queue);
+            }
         }
-        task.stage(globals, queue);
+    }
+
+    private boolean acquireCurrentWrapper() {
+        return wrapper != null
+                && wrapper.isAvailable()
+                && def.evaluateResource(wrapper.get()) != null
+                && wrapper.acquire(startingPosition, endingPosition);
     }
 
     public void setUpstream(Socket upstream) {

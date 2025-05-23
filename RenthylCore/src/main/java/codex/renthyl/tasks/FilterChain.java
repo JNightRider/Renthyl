@@ -48,7 +48,7 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         if (i > 0) {
             filter.getSceneColor().setUpstream(filters.get(i - 1).getFilterResult());
         } else {
-            filter.getSceneDepth().setUpstream(color);
+            filter.getSceneColor().setUpstream(color);
         }
         filter.getSceneDepth().setUpstream(depth);
         if (i < filters.size()) {

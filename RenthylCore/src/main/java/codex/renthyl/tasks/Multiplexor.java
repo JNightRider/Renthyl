@@ -8,7 +8,7 @@ import codex.renthyl.sockets.macros.ArgumentMacro;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Multiplexor <T> extends AbstractTask implements Socket<T> {
+public class Multiplexor <T> extends Frame implements Socket<T> {
 
     private final List<Socket<? extends T>> upstream = new ArrayList<>();
     private final ArgumentMacro<Integer> indexMacro = new ArgumentMacro<>();
@@ -84,9 +84,6 @@ public class Multiplexor <T> extends AbstractTask implements Socket<T> {
     public int getActiveReferences() {
         return activeRefs;
     }
-
-    @Override
-    protected void renderTask() {}
 
     protected int getNextIndex(int index) {
         return indexMacro.preview();

@@ -13,6 +13,7 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     private Socket<? extends List<R>> upstream;
     private List<R> resourceList;
     private int activeRefs = 0;
+    private boolean staged = false;
 
     public SocketList(Renderable task) {
         this.task = task;
@@ -50,22 +51,26 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
 
     @Override
     public void resetSocket() {
+        if (activeRefs != 0) {
+            throw new IllegalStateException("Some references were not released.");
+        }
         if (resourceList != null) {
             resourceList.clear();
         }
         forEach(Socket::resetSocket);
-        if (activeRefs != 0) {
-            throw new IllegalStateException("Some references were not released.");
-        }
+        staged = false;
     }
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        if (upstream != null) {
-            upstream.stage(globals, queue);
+        if (!staged) {
+            staged = true;
+            task.stage(globals, queue);
+            if (upstream != null) {
+                upstream.stage(globals, queue);
+            }
+            forEach(s -> s.stage(globals, queue));
         }
-        forEach(s -> s.stage(globals, queue));
-        task.stage(globals, queue);
     }
 
     @Override

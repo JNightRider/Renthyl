@@ -1,10 +1,8 @@
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
-import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;

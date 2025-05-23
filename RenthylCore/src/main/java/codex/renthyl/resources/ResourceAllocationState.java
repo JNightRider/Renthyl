@@ -8,6 +8,7 @@ import com.jme3.renderer.RenderManager;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -115,7 +116,7 @@ public class ResourceAllocationState extends BaseAppState implements ResourceAll
         public AllocatedResource(long id, int timeout, T resource, Disposer<T> disposer) {
             this.id = id;
             this.timeoutLength = this.timeout = timeout;
-            this.resource = resource;
+            this.resource = Objects.requireNonNull(resource, "Resource cannot be null.");
             this.disposer = disposer;
         }
 

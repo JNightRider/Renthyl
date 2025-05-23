@@ -25,7 +25,7 @@ public abstract class AbstractTask implements Renderable {
             // set flag immediately in anticipation of callbacks from sockets
             position = QUEUING;
             // queue upstream before queueing this
-            queueSockets(globals, queue);
+            stageSockets(globals, queue);
             position = queue.stage(this);
         }
     }
@@ -83,7 +83,7 @@ public abstract class AbstractTask implements Renderable {
         return socket;
     }
 
-    protected void queueSockets(GlobalAttributes globals, RenderingQueue queue) {
+    protected void stageSockets(GlobalAttributes globals, RenderingQueue queue) {
         for (Socket s : sockets) {
             s.stage(globals, queue);
         }
