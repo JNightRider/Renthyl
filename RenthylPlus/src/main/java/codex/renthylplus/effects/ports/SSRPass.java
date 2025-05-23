@@ -224,7 +224,6 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            System.out.println("configure reflection material.");
             normals.acquireToMaterial(material, "Normals");
             raySteps.acquireToMaterial(material, "RaySamples");
             material.setInt("NearbySamples", sampleNearby.acquireOrThrow() ? 4 : 0);
@@ -239,13 +238,11 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         public void stage(GlobalAttributes globals, RenderingQueue queue) {
-            System.out.println("stage SSR reflection");
             super.stage(globals, queue);
         }
 
         @Override
         public boolean claim(RenderWorker worker) {
-            System.out.println("claim SSR reflection");
             return super.claim(worker);
         }
 
@@ -274,13 +271,11 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         public void stage(GlobalAttributes globals, RenderingQueue queue) {
-            System.out.println("stage SSR blur");
             super.stage(globals, queue);
         }
 
         @Override
         public boolean claim(RenderWorker worker) {
-            System.out.println("claim SSR blur");
             return super.claim(worker);
         }
 
