@@ -104,7 +104,7 @@ public class TestJmeFilters extends SimpleApplication {
         ssr.getBlurScale().setValue(0.1f);
         ssr.getApproximateNormals().setValue(false);
         ssr.getNumBlurPasses().setValue(0);
-        ssr.getReflectionFactor().setValue(1f);
+        ssr.getReflectionFactor().setValue(100f);
 
         // soft bloom
         SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
