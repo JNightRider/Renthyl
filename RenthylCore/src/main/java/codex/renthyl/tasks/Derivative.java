@@ -1,5 +1,7 @@
 package codex.renthyl.tasks;
 
+import codex.renthyl.GlobalAttributes;
+import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
 import java.util.function.Function;
@@ -61,8 +63,16 @@ public abstract class Derivative<In, Out> extends AbstractTask implements Socket
     @Override
     public void resetSocket() {}
 
+    @Override
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        if (position < QUEUING && upstream != null) {
+            upstream.stage(globals, queue);
+        }
+        super.stage(globals, queue);
+    }
+
     public void setUpstream(Socket<? extends In> upstream) {
-        assertNoActiveReferences();
+        assertUnqueued();
         this.upstream = upstream;
     }
 

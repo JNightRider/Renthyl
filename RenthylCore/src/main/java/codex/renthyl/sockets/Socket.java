@@ -26,7 +26,7 @@ public interface Socket <T> extends Stageable, Referenceable {
     }
 
     default T acquireOrThrow() {
-        return acquireOrThrow("Unable to acquireType.");
+        return acquireOrThrow("Unable to acquire.");
     }
 
     default T acquireOrThrow(String message) {
@@ -38,10 +38,10 @@ public interface Socket <T> extends Stageable, Referenceable {
         if (v == null) {
             return null;
         }
-        if (!type.isAssignableFrom(v.getClass())) {
+        if (type.isAssignableFrom(v.getClass())) {
             return (R)v;
         }
-        throw new ClassCastException("Cannot cast " + v.getClass() + " resource to " + type);
+        throw new ClassCastException("Cannot cast " + v.getClass() + " to " + type);
     }
 
     default T acquireToMaterial(Material material, String param) {

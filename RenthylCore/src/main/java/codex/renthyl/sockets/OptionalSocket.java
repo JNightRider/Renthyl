@@ -20,6 +20,7 @@ public class OptionalSocket <T> extends TransitiveSocket<T> {
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        queued = true;
         if (enabled) {
             super.stage(globals, queue);
         }
@@ -27,7 +28,6 @@ public class OptionalSocket <T> extends TransitiveSocket<T> {
 
     @Override
     public void reference(int queuePosition) {
-        queued = true;
         if (enabled) {
             super.reference(queuePosition);
         }

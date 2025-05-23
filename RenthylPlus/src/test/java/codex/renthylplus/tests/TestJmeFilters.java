@@ -51,10 +51,6 @@ public class TestJmeFilters extends SimpleApplication {
     private Multiplexor<Texture2D> channels;
     private BitmapText filterLabel, formatLabel;
     private int colorFormat = 0;
-
-    public TestJmeFilters() {
-        super(new StatsAppState());
-    }
     
     public static void main(String[] args) {
         TestJmeFilters app = new TestJmeFilters();
@@ -70,7 +66,8 @@ public class TestJmeFilters extends SimpleApplication {
     public void simpleInitApp() {
 
         assetManager.registerLocator("", ImmediateShader.class);
-        //flyCam.setMoveSpeed(10);
+        flyCam.setMoveSpeed(10);
+        flyCam.setDragToRotate(true);
         
         setupFrameGraph();
         setupScene();
@@ -101,18 +98,28 @@ public class TestJmeFilters extends SimpleApplication {
         channels = new Multiplexor<>();
         OutputPass out = fg.addTask(new OutputPass());
 
+        // screenspace reflections
+        SSRPass ssr = cycle.add(new SSRPass(assetManager, allocator));
+        ssr.getNormals().setUpstream(normals.getOutColor());
+        ssr.getBlurScale().setValue(0.1f);
+        ssr.getApproximateNormals().setValue(false);
+        ssr.getNumBlurPasses().setValue(0);
+        ssr.getReflectionFactor().setValue(1f);
+
         // soft bloom
-        //SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
-        //softBloom.getFactor().setValue(0.5f);
+        SoftBloomPass softBloom = cycle.add(new SoftBloomPass(assetManager, allocator));
+        softBloom.getFactor().setValue(0.3f);
+        softBloom.getNumSamplingSteps().setValue(5);
 
         // cartoon edge
-        //CartoonEdgePass cartoon = cycle.add(new CartoonEdgePass(assetManager, allocator));
-        //cartoon.getEdgeColor().setValue(ColorRGBA.Black);
-        //cartoon.getNormals().setUpstream(normals.getOutColor());
+        CartoonEdgePass cartoon = cycle.add(new CartoonEdgePass(assetManager, allocator));
+        cartoon.getEdgeColor().setValue(ColorRGBA.Black);
+        cartoon.getNormals().setUpstream(normals.getOutColor());
 
         // screenspace ambient occlusion
         SSAOPass ssao = cycle.add(new SSAOPass(assetManager, allocator, 5, 10, 0.2f, 0.1f));
         ssao.getNormals().setUpstream(normals.getOutColor());
+        ssao.getRadius().setValue(0.5f);
 
         // crosshatch
         CrossHatchPass crosshatch = cycle.add(new CrossHatchPass(assetManager, allocator));
@@ -137,10 +144,6 @@ public class TestJmeFilters extends SimpleApplication {
 
         // tonemapping
         FilmicToneMapPass toneMap = cycle.add(new FilmicToneMapPass(assetManager, allocator, new Vector3f(0.5f, 0.5f, 0.5f)));
-
-        // screenspace reflections
-        SSRPass ssr = cycle.add(new SSRPass(assetManager, allocator));
-        ssr.getNormals().setUpstream(normals.getOutColor());
 
         // test chaining filters together
         FilterChain chain = cycle.add(new FilterChain());

@@ -17,7 +17,7 @@ import com.jme3.texture.Texture2D;
 public abstract class AbstractFilterTask extends RenderTask implements PostProcessFilter {
 
     private Material material;
-    private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
+    private final OptionalSocket<Texture2D> color = new OptionalSocket<>(this);
     private final OptionalSocket<Texture2D> depth = new OptionalSocket<>(this);
     private final AllocationSocket<Texture2D> result;
     private final AllocationSocket<FrameBuffer> frameBuffer;
@@ -45,12 +45,13 @@ public abstract class AbstractFilterTask extends RenderTask implements PostProce
 
         Texture2D colorTex = color.acquireOrThrow(getClass().getName() + " requires scene color.");
         configureResult(resultDef, colorTex);
+        camera.resize(colorTex.getImage().getWidth(), colorTex.getImage().getHeight(), false);
+        context.getCamera().pushValue(camera);
 
         bufferDef.setColorTargets(result.acquire());
         FrameBuffer fbo = frameBuffer.acquire();
         context.getFrameBuffer().pushValue(fbo);
-        camera.resize(colorTex.getImage().getWidth(), colorTex.getImage().getHeight(), false);
-        context.getCamera().pushValue(camera);
+        context.clearBuffers();
 
         int colorSamples = colorTex.getImage().getMultiSamples();
         if (colorSamples > 1) {

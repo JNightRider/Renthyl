@@ -105,11 +105,11 @@ public class AllocationSocket<T> implements Socket<T> {
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
-            staged = true;
-            task.stage(globals, queue);
+            task.preStage(globals);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }
+            task.stage(globals, queue);
         }
     }
 

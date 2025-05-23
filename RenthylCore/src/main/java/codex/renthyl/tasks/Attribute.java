@@ -28,6 +28,8 @@
  */
 package codex.renthyl.tasks;
 
+import codex.renthyl.GlobalAttributes;
+import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.macros.Macro;
 

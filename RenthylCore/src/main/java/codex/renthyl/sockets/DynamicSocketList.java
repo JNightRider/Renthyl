@@ -80,11 +80,12 @@ public class DynamicSocketList <T extends PointerSocket<R>, R> implements Pointe
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
             staged = true;
-            task.stage(globals, queue);
+            task.preStage(globals);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }
             sockets.forEach(s -> s.stage(globals, queue));
+            task.stage(globals, queue);
         }
     }
 

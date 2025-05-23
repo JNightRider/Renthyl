@@ -65,11 +65,12 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
             staged = true;
-            task.stage(globals, queue);
+            task.preStage(globals);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }
             forEach(s -> s.stage(globals, queue));
+            task.stage(globals, queue);
         }
     }
 

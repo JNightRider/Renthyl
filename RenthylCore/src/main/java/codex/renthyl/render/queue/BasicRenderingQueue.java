@@ -78,6 +78,10 @@ public class BasicRenderingQueue implements RenderingQueue {
     }
 
     private void render(Worker worker) throws InterruptedException, TimeoutException {
+        if (activeWorkers.size() == 1) {
+            renderSingle(worker);
+            return;
+        }
         loop: while (!queue.isEmpty() && error == null) {
             int size = queue.size();
             for (Iterator<Renderable> it = queue.iterator(); it.hasNext(); ) {
@@ -95,9 +99,6 @@ public class BasicRenderingQueue implements RenderingQueue {
                     continue loop;
                 }
             }
-            if (activeWorkers.size() == 1) {
-                throw new TimeoutException("Failed to locate a renderable task. Next: " + Arrays.toString(staged.toArray()));
-            }
             // worker has become inactive
             // if all workers end up here at once, a deadlock has occured
             lock.lock();
@@ -107,6 +108,17 @@ public class BasicRenderingQueue implements RenderingQueue {
                 }
             }
             lock.unlock();
+        }
+    }
+
+    private void renderSingle(Worker worker) throws TimeoutException {
+        while (!queue.isEmpty()) {
+            Renderable ex = queue.poll();
+            if (worker.submit(ex)) {
+                worker.render();
+            } else {
+                throw new TimeoutException("Failed to locate a renderable task. Next: " + Arrays.toString(staged.toArray()));
+            }
         }
     }
 

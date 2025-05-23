@@ -20,9 +20,14 @@ public abstract class AbstractTask implements Renderable {
     protected int position = UNQUEUED;
 
     @Override
+    public void preStage(GlobalAttributes globals) {}
+
+    @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUING) {
-            // set flag immediately in anticipation of callbacks from sockets
+            // call prestage in case it hasn't been called yet
+            preStage(globals);
+            // set flag in anticipation of callbacks from sockets
             position = QUEUING;
             // queue upstream before queueing this
             stageSockets(globals, queue);

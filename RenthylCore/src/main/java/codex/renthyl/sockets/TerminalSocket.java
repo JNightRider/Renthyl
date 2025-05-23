@@ -25,6 +25,7 @@ public abstract class TerminalSocket <T> implements Socket<T> {
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        task.preStage(globals);
         task.stage(globals, queue);
     }
 

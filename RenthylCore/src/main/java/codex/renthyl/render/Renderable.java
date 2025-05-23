@@ -1,8 +1,11 @@
 package codex.renthyl.render;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.queue.Stageable;
 
 public interface Renderable extends Stageable {
+
+    void preStage(GlobalAttributes globals);
 
     void update(float tpf);
 

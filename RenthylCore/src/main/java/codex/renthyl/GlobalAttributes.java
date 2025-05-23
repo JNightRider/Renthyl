@@ -24,7 +24,11 @@ public class GlobalAttributes {
     }
 
     public <T> Attribute<T> get(String name) {
-        return (Attribute<T>)globals.get(name);
+        Attribute attr = globals.get(name);
+        if (attr == null) {
+            throw new NullPointerException("Global attribute \"" + name + "\" is not defined.");
+        }
+        return (Attribute<T>)attr;
     }
 
 }

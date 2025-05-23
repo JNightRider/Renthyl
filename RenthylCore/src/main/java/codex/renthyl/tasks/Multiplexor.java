@@ -25,9 +25,11 @@ public class Multiplexor <T> extends Frame implements Socket<T> {
 
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        index = getNextIndex(index);
-        if (getPosition() < QUEUING && !isNullIndex()) {
-            upstream.get(index).stage(globals, queue);
+        if (position < QUEUING) {
+            index = getNextIndex(index);
+            if (!isNullIndex()) {
+                upstream.get(index).stage(globals, queue);
+            }
         }
         super.stage(globals, queue);
     }

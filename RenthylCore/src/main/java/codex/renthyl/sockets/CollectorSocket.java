@@ -77,7 +77,7 @@ public class CollectorSocket <T> implements Socket<List<T>> {
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
             staged = true;
-            task.stage(globals, queue);
+            task.preStage(globals);
             for (Socket<? extends Collection<T>> s : collectionSources) {
                 s.stage(globals, queue);
             }
@@ -87,6 +87,7 @@ public class CollectorSocket <T> implements Socket<List<T>> {
             for (Socket<T> s : sources) {
                 s.stage(globals, queue);
             }
+            task.stage(globals, queue);
         }
     }
 

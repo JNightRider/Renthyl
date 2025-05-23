@@ -9,7 +9,7 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     protected final Renderable task;
     protected Socket<? extends T> upstream;
     protected int activeRefs = 0;
-    protected boolean staged = false;
+    private boolean staged = false;
 
     public TransitiveSocket(Renderable task) {
         this.task = task;
@@ -73,13 +73,12 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
-            // set flag first, in anticipation of callback
             staged = true;
-            // stage task first, to allow the task to safely modify upstreams
-            task.stage(globals, queue);
+            task.preStage(globals);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }
+            task.stage(globals, queue);
         }
     }
 

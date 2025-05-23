@@ -89,11 +89,12 @@ public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, 
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (!staged) {
             staged = true;
-            task.stage(globals, queue);
+            task.preStage(globals);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }
             values().forEach(s -> s.stage(globals, queue));
+            task.stage(globals, queue);
         }
     }
 

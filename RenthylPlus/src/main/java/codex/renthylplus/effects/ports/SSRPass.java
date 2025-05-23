@@ -33,8 +33,6 @@ package codex.renthylplus.effects.ports;
 
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.render.RenderWorker;
-import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
@@ -82,8 +80,8 @@ public class SSRPass extends Frame implements PostProcessFilter {
     }
 
     @Override
-    public void stage(GlobalAttributes globals, RenderingQueue queue) {
-        if (position < QUEUED) {
+    public void preStage(GlobalAttributes globals) {
+        if (position < QUEUING) {
             int passes = numBlurPasses.preview();
             if (passes != blurPasses.size()) {
                 if (passes > 0) {
@@ -92,12 +90,15 @@ public class SSRPass extends Frame implements PostProcessFilter {
                     }
                     while (blurPasses.size() < passes) {
                         BlurPass b = blurPasses.getLast();
-                        createBlur(blurPasses.size()).ssr.setUpstream(b.getFilterResult());
+                        BlurPass blur = createBlur(blurPasses.size());
+                        blur.getSceneColor().setUpstream(b.getFilterResult());
+                        blur.ssr.setUpstream(b.getFilterResult());
                     }
                     while (blurPasses.size() > passes) {
                         blurPasses.removeLast();
                     }
                     result.setUpstream(blurPasses.getLast().getFilterResult());
+                    blurPasses.getLast().getSceneColor().setUpstream(color);
                 } else {
                     result.setUpstream(reflection.getFilterResult());
                     blurPasses.clear();
@@ -107,7 +108,7 @@ public class SSRPass extends Frame implements PostProcessFilter {
                 result.setUpstream(reflection.getFilterResult());
             }
         }
-        super.stage(globals, queue);
+        super.preStage(globals);
     }
 
     @Override
@@ -127,7 +128,6 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
     private BlurPass createBlur(int i) {
         BlurPass b = new BlurPass(assetManager, allocator, (i & 1) == 0);
-        b.getSceneColor().setUpstream(color);
         b.fastBlur.setUpstream(fastBlur);
         b.scale.setUpstream(blurScale);
         b.sigma.setUpstream(blurSigma);
@@ -236,16 +236,6 @@ public class SSRPass extends Frame implements PostProcessFilter {
             farFade.acquireToMaterial(material, "FarReflectionsFade");
         }
 
-        @Override
-        public void stage(GlobalAttributes globals, RenderingQueue queue) {
-            super.stage(globals, queue);
-        }
-
-        @Override
-        public boolean claim(RenderWorker worker) {
-            return super.claim(worker);
-        }
-
     }
 
     private static class BlurPass extends AbstractFilterTask {
@@ -267,16 +257,6 @@ public class SSRPass extends Frame implements PostProcessFilter {
             fastBlur.acquireToMaterial(material, "FastBlur");
             scale.acquireToMaterial(material, "BlurScale");
             sigma.acquireToMaterial(material, "Sigma");
-        }
-
-        @Override
-        public void stage(GlobalAttributes globals, RenderingQueue queue) {
-            super.stage(globals, queue);
-        }
-
-        @Override
-        public boolean claim(RenderWorker worker) {
-            return super.claim(worker);
         }
 
     }
