@@ -8,10 +8,10 @@ import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceAllocationState;
-import codex.renthyl.tasks.ControlRenderPass;
-import codex.renthyl.tasks.OutputPass;
-import codex.renthyl.tasks.geometry.GeometryDepthPass;
-import codex.renthyl.tasks.geometry.SceneEnqueuePass;
+import codex.renthyl.tasks.scene.ControlRenderPass;
+import codex.renthyl.tasks.scene.OutputPass;
+import codex.renthyl.tasks.scene.GeometryDepthPass;
+import codex.renthyl.tasks.scene.SceneEnqueuePass;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
 import codex.renthylplus.vxgi.LightBufferPass;
@@ -117,7 +117,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
 
         geometryDepth.getGeometry().addMapSource(enqueuePass.getQueues());
         shadows.getGeometry().addMapSource(enqueuePass.getQueues());
-        composer.getReceiverDepth().setUpstream(geometryDepth.getDepth());
+        composer.getSceneDepth().setUpstream(geometryDepth.getDepth());
         composer.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
         lightBufferPass.getLights().addCollectionSource(lightGatherPass.getLights());
         vct.getGeometry().addMapSource(enqueuePass.getQueues());

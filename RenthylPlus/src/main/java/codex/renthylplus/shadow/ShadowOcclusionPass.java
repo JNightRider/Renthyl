@@ -5,11 +5,15 @@
 package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.geometry.GeometryRenderHandler;
 import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyl.sockets.collections.SocketList;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.Light;
@@ -65,20 +69,25 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderTask i
     }
 
     @Override
+    public void preStage(GlobalAttributes globals) {
+        super.preStage(globals);
+    }
+
+    @Override
     protected void renderTask() {
 
-        Camera viewCam = context.getCamera().getValue().getCamera();
+        CameraState viewCam = context.getCamera().getValue();
         T lightSource = light.acquireOrThrow();
 
         // check if light influence intersects viewing camera
         TempVars vars = TempVars.get();
-        boolean intersects = lightSource != null && lightSource.intersectsFrustum(viewCam, vars);
+        boolean intersects = lightSource != null && lightSource.intersectsFrustum(viewCam.getCamera(), vars);
         vars.release();
         if (!intersects) {
             return;
         }
 
-        boolean containsAll = lightSourceInsideFrustum(viewCam, lightSource);
+        boolean containsAll = lightSourceInsideFrustum(viewCam.getCamera(), lightSource);
         GeometryQueue occluderQueue = occluders.acquireOrThrow();
         GeometryQueue receiverQueue = receivers.acquireOrThrow();
 
@@ -91,16 +100,16 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderTask i
 
         // render each shadow map
         for (int i = 0; i < numShadowMaps; i++) {
-            Camera shadowCam = getShadowCamera(context, viewCam, occluderQueue, receiverQueue, lightSource, i);
+            CameraState shadowCam = getShadowCamera(context, viewCam, occluderQueue, receiverQueue, lightSource, i);
             ShadowMap map = acquireShadowMap(shadowCam, lightSource, shadowMaps.get(i), i);
             bufferDef.setDepthTarget(map.getMap());
             FrameBuffer fbo = frameBuffers.get(i).acquire();
             context.getFrameBuffer().setValue(fbo);
-            if (containsAll || frustumIntersect(viewCam, shadowCam)) {
-                context.getCamera().setValue(shadowCam, false);
+            if (containsAll || frustumIntersect(viewCam.getCamera(), shadowCam.getCamera())) {
+                context.getCamera().setValue(shadowCam);
                 context.getFrameBuffer().setValue(fbo);
                 context.clearBuffers(false, true, false);
-                occluderQueue.render(context, this);
+                System.out.println("rendered " + occluderQueue.render(context, this) + " out of " + occluderQueue.size() + " occlusion geometries");
             }
         }
 
@@ -119,17 +128,19 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderTask i
     }
     
     protected abstract boolean lightSourceInsideFrustum(Camera cam, T light);
-    protected abstract Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, T light, int index);
+
+    protected abstract CameraState getShadowCamera(FrameGraphContext context, CameraState viewCam, GeometryQueue occluders, GeometryQueue receivers, T light, int index);
     
     @SuppressWarnings("SameReturnValue")
     protected boolean frustumIntersect(Camera cam1, Camera cam2) {
         return true;
     }
-    protected ShadowMap acquireShadowMap(Camera cam, T light, Socket<ShadowMap> socket, int i) {
+
+    protected ShadowMap acquireShadowMap(CameraState cam, T light, Socket<ShadowMap> socket, int i) {
         ShadowMap map = socket.acquire();
         map.setLight(light);
-        map.setProjection(cam.getViewProjectionMatrix());
-        map.setRange(cam.getFrustumNear(), cam.getFrustumFar());
+        map.setProjection(cam.getCamera().getViewProjectionMatrix());
+        map.setRange(cam.getCamera().getFrustumNear(), cam.getCamera().getFrustumFar());
         return map;
     }
 

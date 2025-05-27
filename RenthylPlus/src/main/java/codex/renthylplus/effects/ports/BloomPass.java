@@ -1,14 +1,15 @@
 package codex.renthylplus.effects.ports;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.macros.ArgumentMacro;
-import codex.renthyl.tasks.PostProcessFilter;
-import codex.renthyl.tasks.Multiplexor;
+import codex.renthyl.tasks.filter.PostProcessFilter;
+import codex.renthyl.tasks.utils.Multiplexor;
 import codex.renthyl.tasks.Frame;
 import codex.renthyl.tasks.RenderTask;
 import codex.renthylplus.effects.AbstractFilterTask;

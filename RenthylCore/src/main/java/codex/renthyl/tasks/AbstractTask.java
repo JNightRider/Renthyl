@@ -80,6 +80,11 @@ public abstract class AbstractTask implements Renderable {
         sockets.forEach(Socket::resetSocket);
     }
 
+    @Override
+    public String toString() {
+        return getClass().getSimpleName();
+    }
+
     protected <T extends Socket> T addSocket(T socket) {
         if (socket == this) {
             throw new IllegalArgumentException("Cannot add socket to itself.");

@@ -5,12 +5,11 @@
 package codex.renthyl;
 
 import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.sockets.Socket;
-import codex.renthyl.tasks.ControlRenderPass;
-import codex.renthyl.tasks.MapToListPass;
-import codex.renthyl.tasks.OutputPass;
-import codex.renthyl.tasks.geometry.GeometryPass;
-import codex.renthyl.tasks.geometry.SceneEnqueuePass;
+import codex.renthyl.tasks.scene.ControlRenderPass;
+import codex.renthyl.tasks.utils.MapToListPass;
+import codex.renthyl.tasks.scene.OutputPass;
+import codex.renthyl.tasks.scene.GeometryPass;
+import codex.renthyl.tasks.scene.SceneEnqueuePass;
 import codex.renthyl.resources.ResourceAllocator;
 import com.jme3.asset.AssetManager;
 

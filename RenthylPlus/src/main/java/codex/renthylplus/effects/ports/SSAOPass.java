@@ -35,7 +35,7 @@ import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.Frame;
-import codex.renthyl.tasks.PostProcessFilter;
+import codex.renthyl.tasks.filter.PostProcessFilter;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;

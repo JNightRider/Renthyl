@@ -10,6 +10,8 @@ import codex.jmecompute.opengl.GLComputeShader;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.AbstractTask;
 import codex.renthylplus.shadow.ShadowMap;
 import com.jme3.asset.AssetManager;

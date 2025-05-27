@@ -65,7 +65,8 @@ import java.util.function.Predicate;
  */
 public class FrameGraphContext implements PipelineContext {
 
-    public static final String CONTEXT_GLOBAL = "framegraph_context";
+    public static final String CONTEXT_GLOBAL = "__framegraph_context__";
+    public static final String CAMERA_GLOBAL = "__viewport_camera__";
 
     private final AssetManager assetManager;
     private final RenderManager renderManager;
@@ -93,7 +94,7 @@ public class FrameGraphContext implements PipelineContext {
         this.assetManager = assetManager;
         this.renderManager = renderManager;
         this.screen = new FullScreenQuad(assetManager);
-        this.globals.set(CONTEXT_GLOBAL, this, false);
+        this.globals.setSynchronized(CONTEXT_GLOBAL, this);
     }
 
     @Override
@@ -115,6 +116,7 @@ public class FrameGraphContext implements PipelineContext {
         Renderer r = getRenderer();
         frameBuffer.setValue(vp.getOutputFrameBuffer());
         camera.setValue(viewPort.getCamera(), false);
+        globals.set(CAMERA_GLOBAL, viewPort.getCamera());
         if (viewPort.isClearDepth() || viewPort.isClearColor() || viewPort.isClearStencil()) {
             if (viewPort.isClearColor()) {
                 r.setBackgroundColor(viewPort.getBackgroundColor());

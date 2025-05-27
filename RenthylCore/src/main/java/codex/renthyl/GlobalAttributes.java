@@ -1,7 +1,7 @@
 package codex.renthyl;
 
-import codex.renthyl.tasks.Attribute;
-import codex.renthyl.tasks.SynchronizedAttribute;
+import codex.renthyl.tasks.attributes.Attribute;
+import codex.renthyl.tasks.attributes.SynchronizedAttribute;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +14,10 @@ public class GlobalAttributes {
         set(name, value, true);
     }
 
+    public void setSynchronized(String name, Object value) {
+        set(name, value, false);
+    }
+
     public void set(String name, Object value, boolean async) {
         Attribute attr = globals.get(name);
         if (attr == null) {
@@ -24,11 +28,7 @@ public class GlobalAttributes {
     }
 
     public <T> Attribute<T> get(String name) {
-        Attribute attr = globals.get(name);
-        if (attr == null) {
-            throw new NullPointerException("Global attribute \"" + name + "\" is not defined.");
-        }
-        return (Attribute<T>)attr;
+        return (Attribute<T>)globals.get(name);
     }
 
 }

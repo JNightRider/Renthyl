@@ -2,6 +2,8 @@ package codex.renthyl.render.queue;
 
 import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.Renderable;
+import com.jme3.profile.AppProfiler;
+import com.jme3.profile.SpStep;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -17,6 +19,7 @@ public class BasicRenderingQueue implements RenderingQueue {
     private final Queue<Renderable> queue = new ConcurrentLinkedQueue<>();
     private final Lock lock = new ReentrantLock();
     private final Condition inactive = lock.newCondition();
+    private AppProfiler profiler;
     private Exception error;
 
     public BasicRenderingQueue() {
@@ -45,7 +48,8 @@ public class BasicRenderingQueue implements RenderingQueue {
     }
 
     @Override
-    public void render(int workers) {
+    public void render(AppProfiler profiler, int workers) {
+        this.profiler = profiler;
         if (workers > 1 && service == null) {
             throw new NullPointerException("No executor provided for multithreading.");
         }
@@ -104,7 +108,7 @@ public class BasicRenderingQueue implements RenderingQueue {
             lock.lock();
             while (size == queue.size() && error == null) {
                 if (!inactive.await(5000, TimeUnit.MILLISECONDS)) {
-                    throw new TimeoutException("Worker timed out waiting for tasks to complete. Next: " + Arrays.toString(queue.toArray()));
+                    throw new TimeoutException("Worker timed out waiting for tasks to complete. Candidates: " + Arrays.toString(queue.toArray()));
                 }
             }
             lock.unlock();
@@ -115,9 +119,12 @@ public class BasicRenderingQueue implements RenderingQueue {
         while (!queue.isEmpty()) {
             Renderable ex = queue.poll();
             if (worker.submit(ex)) {
+                if (profiler != null) {
+                    profiler.spStep(SpStep.ProcPostQueue, ex.toString());
+                }
                 worker.render();
             } else {
-                throw new TimeoutException("Failed to locate a renderable task. Next: " + Arrays.toString(staged.toArray()));
+                throw new TimeoutException("Failed to render next task: " + ex);
             }
         }
     }
@@ -161,10 +168,8 @@ public class BasicRenderingQueue implements RenderingQueue {
         public void run() {
             try {
                 BasicRenderingQueue.this.render(this);
-            } catch (TimeoutException e) {
-                submitError(new RuntimeException("Worker timed out waiting for runnable tasks.", e));
-            } catch (InterruptedException e) {
-                submitError(new RuntimeException("Worker interrupted waiting for runnable tasks.", e));
+            } catch (Exception e) {
+                submitError(new RuntimeException("Worker render failed with an exception.", e));
             }
         }
 

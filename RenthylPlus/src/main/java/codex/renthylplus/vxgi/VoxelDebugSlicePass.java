@@ -6,12 +6,10 @@ package codex.renthylplus.vxgi;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.AllocationSocket;
-import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.material.Material;

@@ -42,8 +42,8 @@ public interface GeometryQueue extends RenderEnvironment, Iterable<Geometry> {
 
     void clear();
 
-    default void render(FrameGraphContext context) {
-        render(context, GeometryRenderHandler.DEFAULT);
+    default int render(FrameGraphContext context) {
+        return render(context, GeometryRenderHandler.DEFAULT);
     }
 
 }

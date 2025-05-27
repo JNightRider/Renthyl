@@ -281,9 +281,9 @@ vec3 screenPosToWPos(in vec3 screenPos){
         #endif
         outFragColor.rgb=vec3(approximateGlossiness(wNormal,texCoord));
     }
-    void _testShowRayGloss(in Ray ray){g_View
-        outFragColor.rgb=vec3(ray.surfaceGlossiness);
-    }
+    //void _testShowRayGloss(in Ray ray){g_View
+    //    outFragColor.rgb = vec3(ray.surfaceGlossiness);
+    //}
 #endif
 // ####
 

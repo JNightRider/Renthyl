@@ -4,9 +4,11 @@
  */
 package codex.renthylplus.shadow;
 
+import codex.renthyl.GlobalAttributes;
 import codex.renthyl.geometry.BasicGeometryQueue;
 import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.sockets.CollectorSocket;
+import codex.renthyl.render.queue.RenderingQueue;
+import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.AbstractTask;
 import codex.renthyl.util.SpatialWorldParam;
@@ -15,6 +17,8 @@ import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
+
+import java.util.Collection;
 
 /**
  *
@@ -31,8 +35,14 @@ public class ShadowQueuePass extends AbstractTask {
     }
 
     @Override
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        super.stage(globals, queue);
+    }
+
+    @Override
     protected void renderTask() {
-        for (GeometryQueue q : geometry.acquire()) {
+        Collection<GeometryQueue> queues = geometry.acquire();
+        for (GeometryQueue q : queues) {
             for (Geometry g : q) {
                 ShadowMode mode = SpatialWorldParam.getWorldParameter(g, ShadowMode.Inherit, ShadowMode.Off, Spatial::getLocalShadowMode);
                 if (mode != null && mode != ShadowMode.Off) {
@@ -50,6 +60,7 @@ public class ShadowQueuePass extends AbstractTask {
 
     @Override
     public void reset() {
+        super.reset();
         occluders.getValue().clear();
         receivers.getValue().clear();
     }

@@ -33,7 +33,7 @@ import codex.renthyl.render.queue.BasicRenderingQueue;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
-import codex.renthyl.tasks.SynchronizedAttribute;
+import codex.renthyl.tasks.attributes.SynchronizedAttribute;
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.pipeline.RenderPipeline;
@@ -86,7 +86,7 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         queue.prepare();
 
         // render
-        queue.render(numWorkers);
+        queue.render(pContext.getRenderManager().getProfiler(), numWorkers);
 
         // reset
         queue.reset();

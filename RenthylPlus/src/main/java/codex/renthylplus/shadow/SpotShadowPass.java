@@ -6,6 +6,7 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.Socket;
 import com.jme3.asset.AssetManager;
@@ -31,7 +32,6 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
         shadowCam = new Camera(shadowMapDef.getMapDef().getWidth(), shadowMapDef.getMapDef().getHeight());
     }
 
-    @Override
     protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, SpotLight light, int index) {
         if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
                 || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
@@ -51,5 +51,10 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     protected boolean lightSourceInsideFrustum(Camera cam, SpotLight light) {
         return ShadowOcclusionPass.pointInsideFrustum(cam, light.getPosition());
     }
-    
+
+    @Override
+    protected CameraState getShadowCamera(FrameGraphContext context, CameraState viewCam, GeometryQueue occluders, GeometryQueue receivers, SpotLight light, int index) {
+        return null;
+    }
+
 }

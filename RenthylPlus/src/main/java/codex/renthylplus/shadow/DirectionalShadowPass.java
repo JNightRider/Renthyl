@@ -6,194 +6,189 @@ package codex.renthylplus.shadow;
 
 import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.geometry.GeometryRenderHandler;
+import codex.renthyl.geometry.Visibility;
+import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.ArgumentSocket;
-import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.collections.SocketList;
+import codex.renthyl.tasks.RenderTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
-import com.jme3.bounding.BoundingVolume;
 import com.jme3.light.DirectionalLight;
-import com.jme3.light.Light;
-import com.jme3.math.FastMath;
-import com.jme3.math.Matrix4f;
+import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Geometry;
-import com.jme3.shadow.PssmShadowUtil;
-import com.jme3.shadow.ShadowUtil;
-import com.jme3.util.TempVars;
+import com.jme3.scene.Spatial;
+import com.jme3.texture.FrameBuffer;
+
+import java.util.Collection;
 
 /**
  *
  * @author codex
  */
-public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight> {
-    
-    private final Camera shadowCam;
-    private final float[] splits;
-    private final Vector3f[] points = new Vector3f[8];
+public class DirectionalShadowPass extends RenderTask implements Occlusion<DirectionalLight>, GeometryRenderHandler {
 
-    private final ArgumentSocket<Float> lambda = new ArgumentSocket<>(this, 0.65f);
+    private static final float MIN_FRUSTUM = .5f;
+
+    private final int baseMapSize;
+    private final ArgumentSocket<DirectionalLight> light = new ArgumentSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> occluders = new TransitiveSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> receivers = new TransitiveSocket<>(this);
+    private final ArgumentSocket<Float> maxDistance = new ArgumentSocket<>(this, 1000f);
+    private final SocketList<ShadowMapSocket, ShadowMap> shadowMaps = new SocketList<>(this);
+    private final CameraState camera = new CameraState(new Camera(1024, 1024), false);
+    private final Material backupMat;
+    private final RenderState state = new RenderState();
     
-    public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int numSplits) {
-        super(assetManager, allocator, Light.Type.Directional, numSplits, shadowMapSize);
-        addSocket(lambda);
-        shadowCam = new Camera(shadowMapSize, shadowMapSize);
-        shadowCam.setParallelProjection(true);
-        splits = new float[numShadowMaps + 1];
-        for (int i = 0; i < points.length; i++) {
-            points[i] = new Vector3f();
+    public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int splits) {
+        if ((shadowMapSize >> (splits - 1)) <= 1) {
+            throw new IllegalArgumentException("Base shadow map size must be greater than 2^splits.");
         }
+        this.baseMapSize = shadowMapSize;
+        this.backupMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        addSockets(light, occluders, receivers, maxDistance, shadowMaps);
+        for (int i = 0; i < splits; i++) {
+            shadowMaps.add(new ShadowMapSocket(this, allocator));
+        }
+        camera.getCamera().setParallelProjection(true);
+        state.setColorWrite(false);
+        state.setDepthWrite(true);
+        state.setDepthTest(true);
     }
     
     @Override
     protected void renderTask() {
-        Camera viewCam = context.getCamera().getValue().getCamera();
-        float near = Math.max(viewCam.getFrustumNear(), 0.001f);
-        shadowCam.setFrustumFar(viewCam.getFrustumFar());
-        ShadowUtil.updateFrustumPoints(viewCam, near, viewCam.getFrustumFar(), 1.0f, points);
-        PssmShadowUtil.updateFrustumSplits(splits, near, viewCam.getFrustumFar(), lambda.acquire());
-        if (viewCam.isParallelProjection()) {
-            float factor = 1f / (viewCam.getFrustumFar() - near);
-            for (int i = 0; i < numShadowMaps; i++) {
-                splits[i] *= factor;
-            }
+
+        // setup context settings
+        context.getCamera().push();
+        context.getFrameBuffer().push();
+        context.getForcedTechnique().pushValue("PreShadow");
+        context.getForcedMaterial().pushValue(backupMat);
+        context.getForcedState().pushValue(state);
+
+        DirectionalLight dl = light.acquireOrThrow("Light required.");
+
+        // calculate frustum
+        float nearFrustum = MIN_FRUSTUM;
+        float farFrustum = maxDistance.acquireOrThrow("Maximum render distance required.");
+        GeometryQueue occluderQueue = occluders.acquireOrThrow("Occluder geometry required.");
+        GeometryQueue receiverQueue = receivers.acquireOrThrow("Receiver geometry required.");
+        BoundingBox occluderBB = new BoundingBox();
+        for (Geometry g : occluderQueue) {
+            g.updateGeometricState();
+            occluderBB.mergeLocal(g.getWorldBound());
         }
-        super.renderTask();
+        float radius = positionCamera(dl, occluderBB, nearFrustum, farFrustum);
+        farFrustum = Math.min(farFrustum, nearFrustum + radius * 2f);
+
+        int size = baseMapSize;
+        float splitLength = (farFrustum - nearFrustum) / shadowMaps.size();
+
+        for (ShadowMapSocket socket : shadowMaps) {
+            farFrustum = nearFrustum + splitLength;
+
+            // configure camera
+            camera.resize(size, size, false);
+            camera.getCamera().setFrustumNear(nearFrustum);
+            camera.getCamera().setFrustumFar(farFrustum);
+            camera.getCamera().update();
+            camera.getCamera().updateViewProjection();
+            context.getCamera().setValue(camera);
+
+            // configure shadow map
+            socket.setSize(size, size);
+            ShadowMap map = socket.getShadowMap().acquire();
+            map.setLight(dl);
+            map.setProjection(camera.getCamera().getViewProjectionMatrix());
+            map.setRange(nearFrustum, farFrustum);
+
+            // configure framebuffer
+            socket.setTargetDepth(map.getMap());
+            FrameBuffer fbo = socket.getFrameBuffer().acquire();
+            context.getFrameBuffer().setValue(fbo);
+            context.clearBuffers();
+
+            // render
+            occluderQueue.render(context);
+
+            nearFrustum = farFrustum;
+            size = size >> 1;
+        }
+
+        // restore context settings
+        context.getCamera().pop();
+        context.getFrameBuffer().pop();
+        context.getForcedTechnique().pop();
+        context.getForcedMaterial().pop();
+        context.getForcedState().pop();
+
     }
+
+    private float positionCamera(DirectionalLight dl, BoundingBox include, float near, float far) {
+        float radius = include.getMax(null).subtractLocal(include.getCenter()).length();
+        camera.getCamera().setLocation(include.getCenter().subtract(dl.getDirection().mult(radius + near)));
+        camera.getCamera().lookAtDirection(dl.getDirection(), camera.getCamera().getUp());
+        camera.getCamera().setFrustum(near, far, -radius, radius, radius, -radius);
+        return radius;
+    }
+
     @Override
-    protected boolean lightSourceInsideFrustum(Camera cam, DirectionalLight light) {
-        return true;
+    public ArgumentSocket<DirectionalLight> getLight() {
+        return light;
     }
+
     @Override
-    protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam,
-                                     GeometryQueue occluders, GeometryQueue receivers, DirectionalLight light, int index) {
-        shadowCam.getRotation().lookAt(light.getDirection(), shadowCam.getUp());
-        shadowCam.update();
-        shadowCam.updateViewProjection();
-        fitCameraToQueues(occluders, receivers, shadowCam, points, shadowMapDef.getMapDef().getWidth());
-        return shadowCam;
+    public PointerSocket<GeometryQueue> getOccluders() {
+        return occluders;
     }
+
     @Override
-    protected ShadowMap acquireShadowMap(Camera cam, DirectionalLight light, Socket<ShadowMap> socket, int i) {
-        ShadowMap map = super.acquireShadowMap(cam, light, socket, i);
-        map.setSplit(splits[i]);
-        return map;
+    public PointerSocket<GeometryQueue> getReceivers() {
+        return receivers;
     }
-    
-    public void fitCameraToQueues(GeometryQueue occluders, GeometryQueue receivers, Camera shadowCam, Vector3f[] points, float shadowMapSize) {
-        
-        /*
-         * Copyright (c) 2009-2021 jMonkeyEngine
-         * All rights reserved.
-         */
-        
-        int numOccluders = occluders.size();
-        if (numOccluders == 0) {
-            return;
-        }
 
-        if (shadowCam.isParallelProjection()) {
-            shadowCam.setFrustum(-shadowCam.getFrustumFar(), shadowCam.getFrustumFar(), -1, 1, 1, -1);
-        }
-        
-        Matrix4f viewProjMatrix = shadowCam.getViewProjectionMatrix();
-        BoundingBox splitBB = ShadowUtil.computeBoundForPoints(points, viewProjMatrix);
-        TempVars vars = TempVars.get();
-        BoundingBox casterBB = new BoundingBox();
-        for (Geometry g : occluders) {
-            casterBB.mergeLocal(g.getWorldBound());
-        }
-        BoundingBox receiverBB = new BoundingBox();
-
-        shadowCam.setProjectionMatrix(null);
-
-        int receiverCount = 0;
-        for (Geometry g : receivers) {
-            // transform geometry bound to projection space
-            BoundingVolume recvBox = g.getWorldBound().transform(viewProjMatrix, vars.bbox);
-            if (!Float.isNaN(recvBox.getCenter().x) && !Float.isInfinite(recvBox.getCenter().x)
-                    && splitBB.intersects(recvBox)) {
-                receiverBB.mergeLocal(recvBox);
-                receiverCount++;
-            }
-        }
-
-        //Nehon 08/18/2010 this is to avoid shadow bleeding when the ground is add to only receive shadows
-        if (numOccluders != receiverCount) {
-            casterBB.setXExtent(casterBB.getXExtent() + 2.0f);
-            casterBB.setYExtent(casterBB.getYExtent() + 2.0f);
-            casterBB.setZExtent(casterBB.getZExtent() + 2.0f);
-        }
-
-        Vector3f casterMin = casterBB.getMin(vars.vect1);
-        Vector3f casterMax = casterBB.getMax(vars.vect2);
-        Vector3f receiverMin = receiverBB.getMin(vars.vect3);
-        Vector3f receiverMax = receiverBB.getMax(vars.vect4);
-        Vector3f splitMin = splitBB.getMin(vars.vect5);
-        Vector3f splitMax = splitBB.getMax(vars.vect6);
-        splitMin.z = 0;
-
-        Matrix4f projMatrix = shadowCam.getProjectionMatrix();
-        Vector3f cropMin = vars.vect7;
-        Vector3f cropMax = vars.vect8;
-
-        // IMPORTANT: Special handling for Z values
-        cropMin.x = Math.max(Math.max(casterMin.x, receiverMin.x), splitMin.x);
-        cropMax.x = Math.min(Math.min(casterMax.x, receiverMax.x), splitMax.x);
-        cropMin.y = Math.max(Math.max(casterMin.y, receiverMin.y), splitMin.y);
-        cropMax.y = Math.min(Math.min(casterMax.y, receiverMax.y), splitMax.y);
-        cropMin.z = Math.min(casterMin.z, splitMin.z);
-        cropMax.z = Math.min(receiverMax.z, splitMax.z);
-
-        // Create the crop matrix.
-        float scaleX, scaleY, scaleZ;
-        float offsetX, offsetY, offsetZ;
-
-        float deltaCropX = cropMax.x - cropMin.x;
-        float deltaCropY = cropMax.y - cropMin.y;
-        scaleX = deltaCropX == 0 ? 0 : 2.0f / deltaCropX;
-        scaleY = deltaCropY == 0 ? 0 : 2.0f / deltaCropY;
-
-        //Shadow map stabilization approximation from shaderX 7
-        //from Practical Cascaded Shadow maps adapted to PSSM
-        //scale stabilization
-        float halfTextureSize = shadowMapSize * 0.5f;
-
-        if (halfTextureSize != 0 && scaleX >0 && scaleY>0) {
-            float scaleQuantizer = 0.1f;
-            scaleX = 1.0f / FastMath.ceil(1.0f / scaleX * scaleQuantizer) * scaleQuantizer;
-            scaleY = 1.0f / FastMath.ceil(1.0f / scaleY * scaleQuantizer) * scaleQuantizer;
-        }
-
-        offsetX = -0.5f * (cropMax.x + cropMin.x) * scaleX;
-        offsetY = -0.5f * (cropMax.y + cropMin.y) * scaleY;
-
-        //Shadow map stabilization approximation from shaderX 7
-        //from Practical Cascaded Shadow maps adapted to PSSM
-        //offset stabilization
-        if (halfTextureSize != 0  && scaleX >0 && scaleY>0) {
-            offsetX = FastMath.ceil(offsetX * halfTextureSize) / halfTextureSize;
-            offsetY = FastMath.ceil(offsetY * halfTextureSize) / halfTextureSize;
-        }
-
-        float deltaCropZ = cropMax.z - cropMin.z;
-        scaleZ = deltaCropZ == 0 ? 0 : 1.0f / deltaCropZ;
-        offsetZ = -cropMin.z * scaleZ;
-        
-        Matrix4f cropMatrix = vars.tempMat4;
-        cropMatrix.set(scaleX, 0f, 0f, offsetX,
-                0f, scaleY, 0f, offsetY,
-                0f, 0f, scaleZ, offsetZ,
-                0f, 0f, 0f, 1f);
-
-        Matrix4f result = new Matrix4f();
-        result.set(cropMatrix);
-        result.multLocal(projMatrix);
-        vars.release();
-
-        shadowCam.setProjectionMatrix(result);
-        
+    @Override
+    public ArgumentSocket<Float> getMaxDistance() {
+        return maxDistance;
     }
-    
+
+    @Override
+    public Socket<? extends Collection<ShadowMap>> getShadowMaps() {
+        return shadowMaps;
+    }
+
+    private Vector3f min(Vector3f v1, Vector3f v2, Vector3f store) {
+        if (store == null) {
+            store = new Vector3f();
+        }
+        store.x = Math.min(v1.x, v2.x);
+        store.y = Math.min(v1.y, v2.y);
+        store.z = Math.min(v1.z, v2.z);
+        return store;
+    }
+
+    private Vector3f max(Vector3f v1, Vector3f v2, Vector3f store) {
+        if (store == null) {
+            store = new Vector3f();
+        }
+        store.x = Math.max(v1.x, v2.x);
+        store.y = Math.max(v1.y, v2.y);
+        store.z = Math.max(v1.z, v2.z);
+        return store;
+    }
+
+    @Override
+    public void renderGeometry(FrameGraphContext context, Geometry geometry) {
+        context.getRenderManager().renderGeometry(geometry);
+    }
+
+    @Override
+    public Visibility evaluateSpatialCulling(CameraState camera, Spatial spatial) {
+        return Visibility.Inside;
+    }
+
 }

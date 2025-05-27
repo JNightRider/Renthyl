@@ -44,7 +44,6 @@ bool isExposedToLight(vec3 worldPos, sampler2D shadowMap, mat4 lightViewProjecti
     float depth = lightUv.z;
     if (depth >= 0.0 && lightUv.x >= 0.0 && lightUv.x <= 1.0 && lightUv.y >= 0.0 && lightUv.y <= 1.0) {
         float shadow = textureLod(shadowMap, lightUv.xy, 0.0).r;
-        //depth = linearizeDepth(depth, lightRangeInverse);
         return depth - 0.001 <= shadow;
     }
     return outOfBoundsExposed;

@@ -7,6 +7,8 @@ package codex.renthylplus.vxgi;
 import codex.renthyl.definitions.arrays.FloatArrayDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.AbstractTask;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;

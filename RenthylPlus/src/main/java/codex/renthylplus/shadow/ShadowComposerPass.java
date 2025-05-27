@@ -4,17 +4,23 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.RenderTask;
 import com.jme3.asset.AssetManager;
+import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
+import com.jme3.light.PointLight;
+import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.Vector2f;
+import com.jme3.renderer.Camera;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -30,19 +36,21 @@ public class ShadowComposerPass extends RenderTask {
     
     private static final int MAX_SHADOW_LIGHTS = 32;
 
-    private final TransitiveSocket<Texture2D> receiverDepth = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> sceneDepth = new TransitiveSocket<>(this);
+    private final TransitiveSocket<Texture2D> sceneNormals = new TransitiveSocket<>(this);
     private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
     private final AllocationSocket<Texture2D> lightContributions;
     private final AllocationSocket<FrameBuffer> frameBuffer;
-    private final ValueSocket<Light[]> lightShadowIndexSocket = new ValueSocket<>(this);
+    private final ValueSocket<Light[]> lightShadowIndices = new ValueSocket<>(this);
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final RenderState renderState = new RenderState();
     private final Material material;
     private final Vector2f tempInvRange = new Vector2f();
+    private final CameraState camera = new CameraState(new Camera(1024, 1024), true);
 
     public ShadowComposerPass(AssetManager assetManager, ResourceAllocator allocator) {
-        addSockets(receiverDepth, shadowMaps, lightShadowIndexSocket);
+        addSockets(sceneDepth, sceneNormals, shadowMaps, lightShadowIndices);
         lightContributions = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         contributionDef.setFormat(Image.Format.R32F);
@@ -56,10 +64,14 @@ public class ShadowComposerPass extends RenderTask {
 
     @Override
     protected void renderTask() {
-        
-        int w = context.getWidth();
-        int h = context.getHeight();
+
+        Texture2D depth = sceneDepth.acquireOrThrow("Scene depth required.");
+        int w = depth.getImage().getWidth();
+        int h = depth.getImage().getHeight();
         contributionDef.setSize(w, h);
+
+        camera.resize(w, h, false);
+        context.getCamera().pushValue(camera);
 
         bufferDef.setColorTargets(lightContributions.acquire());
         FrameBuffer fbo = frameBuffer.acquire();
@@ -67,14 +79,15 @@ public class ShadowComposerPass extends RenderTask {
         context.clearBuffers();
 
         context.getForcedState().pushValue(renderState);
-        material.setTexture("SceneDepthMap", receiverDepth.acquireOrThrow());
+        material.setTexture("SceneDepthMap", depth);
         material.setMatrix4("CamViewProjectionInverse", context.getViewPort().getCamera().getViewProjectionMatrix().invert());
+        boolean normals = sceneNormals.acquireToMaterial(material, "SceneNormalsMap") != null;
         
         // fullscreen render for each shadow map
         int nextIndex = 0;
         List<ShadowMap> maps = shadowMaps.acquire();
         Light[] indexMap = new Light[Math.min(maps.size(), MAX_SHADOW_LIGHTS)];
-        lightShadowIndexSocket.setValue(indexMap);
+        lightShadowIndices.setValue(indexMap);
         for (ShadowMap m : maps) {
             if (m == null) {
                 continue;
@@ -89,7 +102,21 @@ public class ShadowComposerPass extends RenderTask {
                 material.setMatrix4("LightViewProjectionMatrix", m.getProjection());
                 material.setInt("LightType", m.getLight().getType().getId());
                 material.setInt("LightIndex", i);
-                material.setVector2("LightRangeInverse", m.getInverseRange(tempInvRange));
+                material.setVector2("LightRange", m.getRange());
+                if (normals) {
+                    switch (m.getLight().getType()) {
+                        case Directional: {
+                            material.setVector3("LightPosition", ((DirectionalLight)m.getLight()).getDirection());
+                        } break;
+                        case Point: {
+                            material.setVector3("LightPosition", ((PointLight)m.getLight()).getPosition());
+                        } break;
+                        case Spot: {
+                            material.setVector3("LightPosition", ((SpotLight)m.getLight()).getPosition());
+                        } break;
+                        default: throw new UnsupportedOperationException("Shadows for " + m.getLight() + " are not supported.");
+                    }
+                }
                 context.renderFullscreen(material);
                 renderState.setBlendMode(RenderState.BlendMode.Additive);
             }
@@ -98,6 +125,7 @@ public class ShadowComposerPass extends RenderTask {
 
         context.getForcedState().pop();
         context.getFrameBuffer().pop();
+        context.getCamera().pop();
         
     }
     
@@ -110,8 +138,12 @@ public class ShadowComposerPass extends RenderTask {
         return -1;
     }
 
-    public TransitiveSocket<Texture2D> getReceiverDepth() {
-        return receiverDepth;
+    public PointerSocket<Texture2D> getSceneDepth() {
+        return sceneDepth;
+    }
+
+    public PointerSocket<Texture2D> getSceneNormals() {
+        return sceneNormals;
     }
 
     public CollectorSocket<ShadowMap> getShadowMaps() {

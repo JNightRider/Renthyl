@@ -39,7 +39,7 @@ import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.macros.ArgumentMacro;
-import codex.renthyl.tasks.PostProcessFilter;
+import codex.renthyl.tasks.filter.PostProcessFilter;
 import codex.renthyl.tasks.Frame;
 import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;

@@ -5,33 +5,26 @@ MaterialDef SlicedPBRLighting {
 
         // slicing
         Texture2D DisplacementMap -LINEAR
-        Vector2 DisplacementRange : 0.0 1.0
-        Int NumSlices : 10
-        Float StackHeight : 0.02
+        Vector2 DisplacementRange : 0.7 0.75
+        Int NumSlices : 15
+        Float StackHeight : 0.15
+        Boolean GenerateSlices : true
+        Boolean DebugLayerUsage : false
+
+        // gbuffers
+        Int DiffuseGBuffer
+        Int NormalsGBuffer
 
         // Alpha threshold for fragment discarding
         Float AlphaDiscardThreshold (AlphaTestFallOff)
 
-        //metallicity of the material
         Float Metallic : 1.0
-        //Roughness of the material
         Float Roughness : 1.0
-        // Base material color
         Color BaseColor : 1.0 1.0 1.0 1.0
-        // The emissive color of the object
-        Color Emissive
-        // the emissive power
-        Float EmissivePower : 3.0
-        // the emissive intensity
-        Float EmissiveIntensity : 2.0
 
         // BaseColor map
         Texture2D BaseColorMap
-
-        // Metallic map
         Texture2D MetallicMap -LINEAR
-
-        // Roughness Map
         Texture2D RoughnessMap -LINEAR
 
         //Metallic and Roughness are packed respectively in the b and g channel of a single map
@@ -42,13 +35,13 @@ MaterialDef SlicedPBRLighting {
 
         // Texture of the emissive parts of the material
         Texture2D EmissiveMap
+        Color Emissive
+        Float EmissivePower : 3.0
+        Float EmissiveIntensity : 2.0
 
         // Normal map
         Texture2D NormalMap -LINEAR
-        // The scalar parameter applied to each normal vector of the normal map
         Float NormalScale
-
-        //The type of normal map: -1.0 (DirectX), 1.0 (OpenGl)
         Float NormalType : -1.0
 
         // For Spec gloss pipeline
@@ -59,74 +52,54 @@ MaterialDef SlicedPBRLighting {
         Color Specular : 1.0 1.0 1.0 1.0
         Float Glossiness : 1.0
 
-        // Parallax/height map
-        Texture2D ParallaxMap -LINEAR
-
         // Specular-AA
         Boolean UseSpecularAA : true
-        // screen space variance,Use the slider to set the strength of the geometric specular anti-aliasing effect between 0 and 1. Higher values produce a blurrier result with less aliasing.
         Float SpecularAASigma
-        // clamping threshold,Use the slider to set a maximum value for the offset that HDRP subtracts from the smoothness value to reduce artifacts.
         Float SpecularAAKappa
 
-        //Set to true if parallax map is stored in the alpha channel of the normal map
+        // Parallax/height map
+        Texture2D ParallaxMap -LINEAR
         Boolean PackedNormalParallax
-
-        //Sets the relief height for parallax mapping
         Float ParallaxHeight : 0.05
-
-        //Set to true to activate Steep Parallax mapping
         Boolean SteepParallax
 
         //Horizon fade
         Boolean HorizonFade
 
-        // Set to Use Lightmap
         Texture2D LightMap
-
-        // A scalar multiplier controlling the amount of occlusion applied.
-        // A value of `0.0` means no occlusion. A value of `1.0` means full occlusion.
         Float AoStrength
 
-        // Set to use TexCoord2 for the lightmap sampling
         Boolean SeparateTexCoord
-        // the light map is a grayscale ao map, only the r channel will be read.
         Boolean LightMapAsAOMap
         Boolean AoPackedInMRMap
+
         //shadows
         Int FilterMode
         Boolean HardwareShadows
-
         Texture2D ShadowMap0
         Texture2D ShadowMap1
         Texture2D ShadowMap2
         Texture2D ShadowMap3
-        //pointLights
         Texture2D ShadowMap4
         Texture2D ShadowMap5
-
         Float ShadowIntensity
         Vector4 Splits
         Vector2 FadeInfo
-
         Matrix4 LightViewProjectionMatrix0
         Matrix4 LightViewProjectionMatrix1
         Matrix4 LightViewProjectionMatrix2
         Matrix4 LightViewProjectionMatrix3
-        //pointLight
         Matrix4 LightViewProjectionMatrix4
         Matrix4 LightViewProjectionMatrix5
         Vector3 LightPos
         Vector3 LightDir
-
         Float PCFEdge
         Float ShadowMapSize
+        Boolean BackfaceShadows : false
 
         // For hardware skinning
         Int NumberOfBones
         Matrix4Array BoneMatrices
-
-        // For Morph animation
         FloatArray MorphWeights
         Int NumberOfMorphTargets
         Int NumberOfTargetsBuffers
@@ -137,8 +110,6 @@ MaterialDef SlicedPBRLighting {
         // For Vertex Color
         Boolean UseVertexColor
 
-        Boolean BackfaceShadows : false
-
         Boolean UseFog
         Color FogColor
         Vector2 LinearFog
@@ -148,9 +119,9 @@ MaterialDef SlicedPBRLighting {
         Texture2D SunLightExposureMap
         Boolean UseVertexColorsAsSunIntensity
         Float StaticSunIntensity
-        Boolean BrightenIndoorShadows  //should be set true when shadows are enabled, in order to prevent areas with low SunExposure from being way too dark when shadows are cast
+        Boolean BrightenIndoorShadows
 
-         // debug the final value of the selected layer as a color output
+        // debug the final value of the selected layer as a color output
         Int DebugValuesMode
             // Layers:
             //   0 - albedo (un-shaded)
@@ -166,9 +137,9 @@ MaterialDef SlicedPBRLighting {
     Technique {
         LightMode SinglePassAndImageBased
 
-        VertexShader GLSL300 GLSL150:   Common/MatDefs/Light/PBRLighting.vert
-        GeometryShader GLSL300 GLSL150: MatDefs/SlicedPBRLighting.geom
-        FragmentShader GLSL300 GLSL150: MatDefs/SlicedPBRLighting.frag
+        VertexShader GLSL450:   RenthylPlus/MatDefs/SlicedPBRLighting.vert
+        //GeometryShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.geom
+        FragmentShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.frag
 
         WorldParameters {
             WorldViewProjectionMatrix
@@ -180,6 +151,15 @@ MaterialDef SlicedPBRLighting {
         }
 
         Defines {
+            SCENE_DEPTH : SceneDepth
+
+            GENERATE_SLICES : GenerateSlices
+            NUM_SLICES : NumSlices
+            LAYER_USAGE_DEBUG : DebugLayerUsage
+            
+            DIFFUSE_GBUFFER : DiffuseGBuffer
+            NORMALS_GBUFFER : NormalsGBuffer
+
             BOUND_DRAW_BUFFER: BoundDrawBuffer
             BASECOLORMAP : BaseColorMap
             NORMALMAP : NormalMap
@@ -223,7 +203,6 @@ MaterialDef SlicedPBRLighting {
             FOG_EXPSQ : ExpSqFog
         }
     }
-
 
     Technique PreShadow {
 
