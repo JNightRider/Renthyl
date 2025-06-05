@@ -8,6 +8,13 @@ import codex.renthyl.resources.ResourceWrapper;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.sockets.Socket;
 
+/**
+ * Socket that allocates a resource from a {@link ResourceAllocator} according
+ * to a {@link ResourceDef} on acquire.
+ *
+ * @param <T>
+ * @author codex
+ */
 public class AllocationSocket<T> implements Socket<T> {
 
     private final Renderable task;
@@ -121,15 +128,34 @@ public class AllocationSocket<T> implements Socket<T> {
                 && wrapper.acquire(startingPosition, endingPosition);
     }
 
+    /**
+     * Sets the upstream socket.
+     *
+     * <p>On acquire, the resource returned by upstream socket's acquire is considered
+     * using the {@link ResourceDef} before acquiring a resource from the
+     * {@link ResourceAllocator}.</p>
+     *
+     * @param upstream upstream socket (may be null)
+     */
     public void setUpstream(Socket upstream) {
         assertNoActiveReferences();
         this.upstream = upstream;
     }
 
+    /**
+     * Gets the upstream socket.
+     *
+     * @return
+     */
     public Socket getUpstream() {
         return upstream;
     }
 
+    /**
+     * Gets the resource definition used to evaluate, conform, and create resources.
+     *
+     * @return
+     */
     public ResourceDef<T> getDef() {
         return def;
     }

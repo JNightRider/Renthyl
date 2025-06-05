@@ -11,6 +11,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Socket similar to {@link AllocationSocket} that conserves previously used resources
+ * from past renders.
+ *
+ * @param <T>
+ * @author codex
+ */
 public class TemporalSocket <T> extends TerminalSocket<List<T>> {
 
     private final ResourceAllocator allocator;
@@ -19,6 +26,13 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
     private final ArrayList<T> resources = new ArrayList<>();
     private int startingPosition = Integer.MAX_VALUE;
 
+    /**
+     *
+     * @param task underlying task
+     * @param allocator resource allocator
+     * @param def resource definition
+     * @param memory number of frames worth of resources to conserve
+     */
     public TemporalSocket(Renderable task, ResourceAllocator allocator, ResourceDef<T> def, int memory) {
         super(task);
         this.allocator = allocator;
@@ -78,19 +92,40 @@ public class TemporalSocket <T> extends TerminalSocket<List<T>> {
         }
     }
 
+    /**
+     * Gets the snapshot from {@code i} frames ago, where 0 is the current frame.
+     *
+     * @param i
+     * @return
+     */
     public Socket<T> getSnapshot(int i) {
         return snapshots[i];
     }
 
+    /**
+     * Gets the resource for the current frame.
+     *
+     * @return
+     */
     public Socket<T> getCurrent() {
         return snapshots[0];
     }
 
+    /**
+     * Gets the resource definition used to evaluate, conform, and create resources.
+     *
+     * @return
+     */
     public ResourceDef<T> getDef() {
         return def;
     }
 
-    public int getNumSnapshots() {
+    /**
+     * Gets the number of frames worth of resources conserved.
+     *
+     * @return
+     */
+    public int getMemoryLength() {
         return snapshots.length;
     }
 

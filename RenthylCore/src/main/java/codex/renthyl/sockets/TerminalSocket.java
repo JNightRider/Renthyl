@@ -4,6 +4,12 @@ import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
+/**
+ * Socket which cannot reference any upstream sockets.
+ *
+ * @param <T>
+ * @author codex
+ */
 public abstract class TerminalSocket <T> implements Socket<T> {
 
     protected final Renderable task;

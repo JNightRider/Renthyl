@@ -1,5 +1,10 @@
 package codex.renthyl.tasks.attributes;
 
+/**
+ * Attribute which throttles access to its value to ensure thread safety.
+ *
+ * @param <T>
+ */
 public class SynchronizedAttribute <T> extends Attribute<T> {
 
     private static final int PADDING = 5;

@@ -13,6 +13,11 @@ import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
+/**
+ * Renders geometry to only a depth texture.
+ *
+ * @author codex
+ */
 public class GeometryDepthPass extends RenderTask {
 
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
@@ -48,10 +53,20 @@ public class GeometryDepthPass extends RenderTask {
 
     }
 
+    /**
+     * Gets socket accepting geometry queues (input).
+     *
+     * @return
+     */
     public CollectorSocket<GeometryQueue> getGeometry() {
         return geometry;
     }
 
+    /**
+     * Gets socket for resulting depth texture (output).
+     *
+     * @return
+     */
     public Socket<Texture2D> getDepth() {
         return depth;
     }

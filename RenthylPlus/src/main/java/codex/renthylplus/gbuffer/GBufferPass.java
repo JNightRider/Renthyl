@@ -1,8 +1,10 @@
 package codex.renthylplus.gbuffer;
 
+import codex.renthyl.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyl.geometry.GeometryRenderHandler;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
@@ -10,12 +12,15 @@ import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketList;
 import codex.renthyl.tasks.RenderTask;
+import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.renderer.Camera;
+import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
-public class GBufferPass extends RenderTask {
+public class GBufferPass extends RenderTask implements GeometryRenderHandler {
 
     public static final String TECHNIQUE = "GBuffer";
     public static final String DEPTH = "DepthGBuffer";
@@ -51,17 +56,18 @@ public class GBufferPass extends RenderTask {
             colorTargets[location++] = g.acquire();
         }
         bufferDef.setColorTargets(colorTargets);
+
         depthDef.setSize(w, h);
         bufferDef.setDepthTarget(depth.acquire());
 
         FrameBuffer fbo = frameBuffer.acquire();
         fbo.setMultiTarget(true);
         context.getFrameBuffer().pushValue(fbo);
-        context.clearBuffers(true, true, true);
+        context.clearBuffers();
 
         for (GeometryQueue q : geometry.acquire()) {
             q.applySettings(context);
-            q.render(context);
+            q.render(context, this);
             q.restoreSettings(context);
         }
 
@@ -70,8 +76,37 @@ public class GBufferPass extends RenderTask {
 
     }
 
+    @Override
+    public void renderGeometry(FrameGraphContext context, Geometry geometry) {
+        Material mat = geometry.getMaterial();
+        if (mat.getMaterialDef().getMaterialParam("UseGBuffers") != null) {
+            mat.setBoolean("UseGBuffers", true);
+        }
+        context.getRenderManager().renderGeometry(geometry);
+        // todo: this is not efficient
+        if (mat.getMaterialDef().getMaterialParam("UseGBuffers") != null) {
+            mat.setBoolean("UseGBuffers", false);
+        }
+    }
+
     public void addBuffer(TextureDef<Texture2D> def) {
         gbuffers.add(new DefinedAllocationSocket<>(this, allocator, def));
+    }
+
+    public CollectorSocket<GeometryQueue> getGeometry() {
+        return geometry;
+    }
+
+    public TransitiveSocket<Camera> getCamera() {
+        return camera;
+    }
+
+    public SocketList<? extends Socket<Texture2D>, Texture2D> getGBuffers() {
+        return gbuffers;
+    }
+
+    public Socket<Texture2D> getDepth() {
+        return depth;
     }
 
     public TextureDef<Texture2D> getDepthDef() {

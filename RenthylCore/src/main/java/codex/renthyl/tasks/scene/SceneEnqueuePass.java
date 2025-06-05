@@ -44,7 +44,7 @@ import com.jme3.scene.Spatial;
 import java.util.*;
 
 /**
- * Enqueues geometries into different {@link GeometryQueue}s based on world
+ * Enqueues geometries into different {@link GeometryQueue GeometryQueues} based on world
  * render bucket value.
  * <p>
  * A geometry is placed in queues according to the userdata found at
@@ -112,7 +112,13 @@ public class SceneEnqueuePass extends RenderTask {
             }
         }
     }
-    
+
+    /**
+     * Adds a queue that can be filled with geometries from the viewport's scenes.
+     *
+     * @param name
+     * @param queue
+     */
     public void addQueue(String name, GeometryQueue queue) {
         if (defaultQueue == null) {
             defaultQueue = name;
@@ -120,18 +126,38 @@ public class SceneEnqueuePass extends RenderTask {
         queueMap.put(name, new ValueSocket<>(this, Objects.requireNonNull(queue, "GeometryQueue cannot be null.")));
     }
 
+    /**
+     * Names the queue geometries are put into be default.
+     *
+     * @param defaultQueue
+     */
     public void setDefaultQueue(String defaultQueue) {
         this.defaultQueue = defaultQueue;
     }
 
+    /**
+     * Gets the name of the default queue.
+     *
+     * @return
+     */
     public String getDefaultQueue() {
         return defaultQueue;
     }
 
+    /**
+     * Gets socket for all queues by name (output).
+     *
+     * @return
+     */
     public Socket<Map<String, GeometryQueue>> getQueues() {
         return queueMap;
     }
-    
+
+    /**
+     * Creates a SceneEnqueuePass with queues corresponding to JMonkeyEngine's own RenderQueues.
+     *
+     * @return
+     */
     public static SceneEnqueuePass withLegacyQueues() {
         SceneEnqueuePass p = new SceneEnqueuePass();
         p.addQueue(OPAQUE, new BasicGeometryQueue(new OpaqueComparator()));
@@ -162,6 +188,11 @@ public class SceneEnqueuePass extends RenderTask {
         return p;
     }
 
+    /**
+     * Creates a SceneEnqueuePass with only one queue to fill.
+     *
+     * @return
+     */
     public static SceneEnqueuePass withSingleQueue() {
         SceneEnqueuePass p = new SceneEnqueuePass();
         p.addQueue(SINGLE_QUEUE, new BasicGeometryQueue(new OpaqueComparator()));

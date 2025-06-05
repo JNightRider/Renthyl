@@ -10,6 +10,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Transfers elements acquired from an input Map into a List, either according to an
+ * array of keys, or by iterating over the Map's entry set.
+ *
+ * @param <K> key type
+ * @param <R> resource type
+ */
 public class MapToListPass <K, R> extends AbstractTask {
 
     private final K[] order;
@@ -52,10 +59,20 @@ public class MapToListPass <K, R> extends AbstractTask {
         list.getValue().clear();
     }
 
+    /**
+     * Gets socket for incoming Map (input).
+     *
+     * @return
+     */
     public PointerSocket<Map<K, R>> getMap() {
         return map;
     }
 
+    /**
+     * Gets socket for outgoing List (output).
+     *
+     * @return
+     */
     public Socket<List<R>> getList() {
         return list;
     }

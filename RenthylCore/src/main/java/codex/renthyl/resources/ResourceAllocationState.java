@@ -12,6 +12,13 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Basic resource allocator.
+ *
+ * <p>All resources is disposed on cleanup.</p>
+ *
+ * @author codex
+ */
 public class ResourceAllocationState extends BaseAppState implements ResourceAllocator<ResourceWrapper> {
 
     private final Map<Long, AllocatedResource> resources = new ConcurrentHashMap<>();
@@ -72,6 +79,9 @@ public class ResourceAllocationState extends BaseAppState implements ResourceAll
         return target;
     }
 
+    /**
+     * Disposes all held unused resources.
+     */
     public void flush() {
         for (Iterator<AllocatedResource> it = resources.values().iterator(); it.hasNext();) {
             AllocatedResource res = it.next();
@@ -82,23 +92,51 @@ public class ResourceAllocationState extends BaseAppState implements ResourceAll
         }
     }
 
+    /**
+     * Disposes all held resources.
+     */
     public void clear() {
         resources.values().forEach(AllocatedResource::dispose);
         resources.clear();
     }
 
+    /**
+     * Sets the number of resources that passed in order for another attempt to be made
+     * if a resource gets stolen. Resources can only be stolen in multithreaded renderings,
+     * and even then it is very rare.
+     *
+     * <p>default=4</p>
+     *
+     * @param retryThreshold
+     */
     public void setRetryThreshold(int retryThreshold) {
         this.retryThreshold = retryThreshold;
     }
 
+    /**
+     * Sets the number of frames resources last without being used before being
+     * disposed by {@link #flush()}.
+     *
+     * @param timeoutLength
+     */
     public void setTimeoutLength(int timeoutLength) {
         this.timeoutLength = timeoutLength;
     }
 
+    /**
+     * Gets the retry threshold.
+     *
+     * @return
+     */
     public int getRetryThreshold() {
         return retryThreshold;
     }
 
+    /**
+     * Gets the timeout length.
+     *
+     * @return
+     */
     public int getTimeoutLength() {
         return timeoutLength;
     }

@@ -2,6 +2,20 @@ package codex.renthyl.sockets;
 
 import codex.renthyl.render.Renderable;
 
+/**
+ * Socket which only allows the underlying task to run once all other tasks
+ * are finished with the underlying resource. Like this name suggests, this
+ * allows the underlying task to modifying the incoming resource, as all other
+ * tasks are finished with it.
+ *
+ * <p>This is a rather risky socket type to use. It can potentially slow down
+ * rendering, particularly in multithreaded situations, and it can easily lead to deadlocking
+ * if multiple modifying sockets are waiting for the same resource to become available.
+ * In most cases, it is better to use another socket type.</p>
+ *
+ * @param <T>
+ * @author codex
+ */
 public class ModifyingSocket <T> extends TransitiveSocket<T> {
 
     public ModifyingSocket(Renderable task) {

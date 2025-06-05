@@ -7,6 +7,13 @@ import codex.renthyl.tasks.AbstractTask;
 
 import java.util.function.Function;
 
+/**
+ * Transforms the resource from the upstream socket before returning it on acquire.
+ * If no upstream socket is defined, acquiring returns null.
+ *
+ * @param <In> input resource type
+ * @param <Out> output resource type
+ */
 public abstract class Derivative<In, Out> extends AbstractTask implements Socket<Out>, Function<In, Out> {
 
     private Socket<? extends In> upstream;
@@ -76,11 +83,21 @@ public abstract class Derivative<In, Out> extends AbstractTask implements Socket
         }
     }
 
+    /**
+     * Sets the upstream socket.
+     *
+     * @param upstream
+     */
     public void setUpstream(Socket<? extends In> upstream) {
         assertUnqueued();
         this.upstream = upstream;
     }
 
+    /**
+     * Gets the upstream socket.
+     *
+     * @return
+     */
     public Socket<? extends In> getUpstream() {
         return upstream;
     }

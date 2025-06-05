@@ -14,8 +14,8 @@ import codex.renthyl.tasks.scene.GeometryDepthPass;
 import codex.renthyl.tasks.scene.SceneEnqueuePass;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
-import codex.renthylplus.vxgi.LightBufferPass;
-import codex.renthylplus.vxgi.LightGatherPass;
+import codex.renthylplus.lights.LightBufferPass;
+import codex.renthylplus.lights.LightGatherPass;
 import codex.renthylplus.vxgi.VoxelConeTracer;
 import com.github.stephengold.wrench.LwjglAssetLoader;
 import com.jme3.app.DetailedProfilerState;
@@ -122,7 +122,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         lightBufferPass.getLights().addCollectionSource(lightGatherPass.getLights());
         vct.getGeometry().addMapSource(enqueuePass.getQueues());
         vct.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
-        vct.getLightBuffer().setUpstream(lightBufferPass.getLightBuffer());
+        vct.getLightBuffer().setUpstream(lightBufferPass.getLightData());
         vct.getLightContribution().setUpstream(composer.getLightContribution());
         out.getColor().setUpstream(vct.getResult());
         

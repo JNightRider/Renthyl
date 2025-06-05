@@ -35,6 +35,8 @@ import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
 
 /**
+ * Runs {@link com.jme3.scene.control.Control#render(RenderManager, ViewPort) control render} for all
+ * spatials attached to the viewport being rendered.
  *
  * @author codex
  */

@@ -4,6 +4,14 @@ import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
+/**
+ * Basic {@link PointerSocket} implementation that is designed purely for
+ * passing resources along. It has no default fallback in case the upstream
+ * is null.
+ *
+ * @param <T>
+ * @author codex
+ */
 public class TransitiveSocket<T> implements PointerSocket<T> {
 
     protected final Renderable task;
@@ -11,6 +19,10 @@ public class TransitiveSocket<T> implements PointerSocket<T> {
     protected int activeRefs = 0;
     private boolean staged = false;
 
+    /**
+     *
+     * @param task renderable task this socket is attached to
+     */
     public TransitiveSocket(Renderable task) {
         this.task = task;
     }

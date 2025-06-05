@@ -9,6 +9,15 @@ import codex.renthyl.sockets.Socket;
 import java.util.*;
 import java.util.function.IntFunction;
 
+/**
+ * Manages a set of internal sockets mapped to keys.
+ *
+ * <p>Resources acquired from internal sockets are accumulated in a map using the same keys.</p>
+ *
+ * @param <K> key type
+ * @param <T> socket type
+ * @param <R> resource type
+ */
 public class SocketMap <K, T extends Socket<? extends R>, R> extends HashMap<K, T> implements PointerSocket<Map<K, R>> {
 
     protected final Renderable task;

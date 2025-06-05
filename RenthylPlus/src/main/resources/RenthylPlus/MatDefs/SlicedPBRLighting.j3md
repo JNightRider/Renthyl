@@ -8,12 +8,11 @@ MaterialDef SlicedPBRLighting {
         Vector2 DisplacementRange : 0.7 0.75
         Int NumSlices : 15
         Float StackHeight : 0.15
-        Boolean GenerateSlices : true
+        Boolean GenerateSlices
         Boolean DebugLayerUsage : false
 
         // gbuffers
-        Int DiffuseGBuffer
-        Int NormalsGBuffer
+        Boolean UseGBuffers : false
 
         // Alpha threshold for fragment discarding
         Float AlphaDiscardThreshold (AlphaTestFallOff)
@@ -138,7 +137,7 @@ MaterialDef SlicedPBRLighting {
         LightMode SinglePassAndImageBased
 
         VertexShader GLSL450:   RenthylPlus/MatDefs/SlicedPBRLighting.vert
-        //GeometryShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.geom
+            //GeometryShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.geom
         FragmentShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.frag
 
         WorldParameters {
@@ -151,14 +150,12 @@ MaterialDef SlicedPBRLighting {
         }
 
         Defines {
-            SCENE_DEPTH : SceneDepth
 
             GENERATE_SLICES : GenerateSlices
             NUM_SLICES : NumSlices
             LAYER_USAGE_DEBUG : DebugLayerUsage
-            
-            DIFFUSE_GBUFFER : DiffuseGBuffer
-            NORMALS_GBUFFER : NormalsGBuffer
+
+            GBUFFER_WRITE : UseGBuffers
 
             BOUND_DRAW_BUFFER: BoundDrawBuffer
             BASECOLORMAP : BaseColorMap

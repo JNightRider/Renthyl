@@ -34,9 +34,9 @@ import codex.renthyl.tasks.AbstractTask;
 
 /**
  * Interface pass between the framegraph and game logic, allowing them to communicate.
- * 
- * @author codex
+ *
  * @param <T>
+ * @author codex
  */
 public class Attribute <T> extends AbstractTask implements Socket<T>, Macro<T> {
 

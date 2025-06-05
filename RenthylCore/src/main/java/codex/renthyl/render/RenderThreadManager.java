@@ -7,6 +7,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Basic thread executor that uses an {@link ExecutorService} to manage
+ * worker threads.
+ *
+ * <p>All threads are {@link ExecutorService#shutdown()} on cleanup.</p>
+ *
+ * @author codex
+ */
 public class RenderThreadManager extends BaseAppState implements Executor {
 
     private final ExecutorService service;

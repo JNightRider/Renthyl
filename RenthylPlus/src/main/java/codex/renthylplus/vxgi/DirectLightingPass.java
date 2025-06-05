@@ -17,6 +17,7 @@ import codex.renthyl.sockets.collections.AllocationSocketMap;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyl.tasks.RenderTask;
+import codex.renthylplus.lights.LightBuffer;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
 import com.jme3.scene.Geometry;
@@ -42,12 +43,13 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
     }
 
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
-    private final TransitiveSocket<float[]> lights = new TransitiveSocket<>(this);
+    private final TransitiveSocket<LightBuffer> lights = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> lightContribution = new TransitiveSocket<>(this);
     private final AllocationSocketMap<String, TextureDef<Texture2D>, Texture2D> gbufferMap = new AllocationSocketMap<>(this);
     private final AllocationSocket<FrameBuffer> frameBuffer;
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final Vector2f screenSize = new Vector2f();
+    private float[] lightDataArray;
 
     public DirectLightingPass(ResourceAllocator allocator) {
         addSockets(geometry, lights, lightContribution, gbufferMap);
@@ -95,9 +97,10 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
         if (!adapter.adaptMaterial(context.getAssetManager(), m, TECHNIQUE)) {
             return;
         }
-        float[] lightData = lights.acquireOrThrow("Light data required.");
-        m.setInt("VXGI_LightDataSize", lightData.length);
-        m.setParam("VXGI_LightData", VarType.FloatArray, lightData);
+        LightBuffer lightData = lights.acquireOrThrow("Light data required.");
+        lightDataArray = lightData.copyDataTo(lightDataArray);
+        m.setInt("VXGI_LightDataSize", lightDataArray.length);
+        m.setParam("VXGI_LightData", VarType.FloatArray, lightDataArray);
         m.setTexture("VXGI_LightContributionMap", lightContribution.acquire());
         m.setVector2("VXGI_ScreenSize", screenSize);
         context.getRenderManager().renderGeometry(g);
@@ -107,7 +110,7 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
         return geometry;
     }
 
-    public PointerSocket<float[]> getLights() {
+    public PointerSocket<LightBuffer> getLights() {
         return lights;
     }
 

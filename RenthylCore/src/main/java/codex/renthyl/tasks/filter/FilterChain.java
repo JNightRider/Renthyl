@@ -10,6 +10,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * Frame which automatically connects {@link PostProcessFilter PostProcessFilters} together into
+ * a standard filter chain.
+ *
+ * @author codex
+ */
 public class FilterChain extends Frame implements PostProcessFilter, Iterable<PostProcessFilter> {
 
     private final TransitiveSocket<Texture2D> color = new TransitiveSocket<>(this);
@@ -42,10 +48,25 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         return filters.iterator();
     }
 
+    /**
+     * Adds the filter to the end of the filter chain.
+     *
+     * @param filter filter to add and connect
+     * @return added filter
+     * @param <T>
+     */
     public <T extends PostProcessFilter> T add(T filter) {
         return add(filters.size(), filter);
     }
 
+    /**
+     * Inserts the filter at {@code i} index in the filter chain.
+     *
+     * @param i position to add the filter to (must be in bounds)
+     * @param filter filter to add and connect
+     * @return added filter
+     * @param <T>
+     */
     public <T extends PostProcessFilter> T add(int i, T filter) {
         if (i > 0) {
             filter.getSceneColor().setUpstream(filters.get(i - 1).getFilterResult());
@@ -62,6 +83,14 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         return filter;
     }
 
+    /**
+     * Inserts {@code filter} in the position just in front of {@code before}.
+     *
+     * @param filter filter to add
+     * @param before filter to add {@code filter} just before
+     * @return added filter
+     * @param <T>
+     */
     public <T extends PostProcessFilter> T addBefore(T filter, PostProcessFilter before) {
         int i = filters.indexOf(before);
         if (i < 0) {
@@ -70,6 +99,14 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         return add(i, filter);
     }
 
+    /**
+     * Inserts {@code filter} in the position just behind {@code after}.
+     *
+     * @param filter filter to add
+     * @param after filter to add {@code filter} just after
+     * @return added filter
+     * @param <T>
+     */
     public <T extends PostProcessFilter> T addAfter(T filter, PostProcessFilter after) {
         int i = filters.indexOf(after);
         if (i < 0) {
@@ -78,6 +115,11 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         return add(i + 1, filter);
     }
 
+    /**
+     * Removes and disconnects {@code filter} from the chain.
+     *
+     * @param filter
+     */
     public void remove(PostProcessFilter filter) {
         int i = filters.indexOf(filter);
         if (i >= 0) {
@@ -94,23 +136,53 @@ public class FilterChain extends Frame implements PostProcessFilter, Iterable<Po
         }
     }
 
+    /**
+     * Clears all filters from this chain.
+     */
     public void clear() {
         filters.clear();
         result.setUpstream(color);
     }
 
+    /**
+     * Gets the filter at the index in the chain.
+     *
+     * @param i index of filter (must be in bounds)
+     * @return filter at the index
+     */
     public PostProcessFilter get(int i) {
         return filters.get(i);
     }
 
+    /**
+     * Gets the filter of {@code type} at the index in the chian.
+     *
+     * @param i index of filter (must be in bounds)
+     * @param type type of filter
+     * @return indexed filter
+     * @param <T>
+     * @throws ClassCastException if the indexed filter is not of {@code type}
+     */
     public <T extends PostProcessFilter> T get(int i, Class<T> type) {
         return type.cast(get(i));
     }
 
+    /**
+     * Returns the first filter in the chain of {@code type}.
+     *
+     * @param type type of filter to find
+     * @return first filter of {@code type}
+     * @param <T>
+     */
     public <T extends PostProcessFilter> T get(Class<T> type) {
-        return filters.stream().filter(f -> type.isAssignableFrom(f.getClass())).map(f -> (T)f).findAny().orElse(null);
+        return filters.stream().filter(f -> type.isAssignableFrom(f.getClass())).map(f -> (T)f).findFirst().orElse(null);
     }
 
+    /**
+     * Returns the number of filters in this chain.
+     *
+     * @return
+     */
     public int size() {
         return filters.size();
     }

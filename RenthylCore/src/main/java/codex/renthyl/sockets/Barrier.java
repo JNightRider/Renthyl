@@ -4,6 +4,12 @@ import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
+/**
+ * Defines a rendering order where the Barrier's renderable task can only run after
+ * the awaited task.
+ *
+ * @author codex
+ */
 public class Barrier implements Socket {
 
     private Renderable await;

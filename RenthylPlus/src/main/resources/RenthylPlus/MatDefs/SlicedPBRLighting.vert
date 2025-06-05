@@ -24,7 +24,7 @@ attribute vec2 inTexCoord;
 attribute vec3 inNormal;
 attribute vec4 inTangent;
 #ifndef GENERATE_SLICES
-    attribute float inTexCoord8;
+    attribute float inTexCoord3;
     uniform float m_StackHeight;
     out float sLayer;
 #endif
@@ -94,7 +94,7 @@ void main(){
     color = m_BaseColor;
 
     #ifndef GENERATE_SLICES
-        sLayer = inTexCoord8;
+        sLayer = inTexCoord3;
         worldPos.xyz += normalize(wNorm) * sLayer * m_StackHeight;
         if (sLayer <= 0.0) {
             sLayer = -1.0;
@@ -108,7 +108,7 @@ void main(){
         color *= inColor;
     #endif
     #ifdef USE_FOG
-        fogdist = distance(g_CameraPosition, TransformWorld(modelSpacePos).xyz);
+        fogdist = distance(g_CameraPosition, worldPos.xyz);
     #endif
 
 }

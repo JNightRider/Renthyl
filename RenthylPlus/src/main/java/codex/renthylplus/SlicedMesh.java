@@ -12,7 +12,7 @@ import java.nio.IntBuffer;
 public class SlicedMesh extends Mesh {
 
     public SlicedMesh(Mesh base, int slices) {
-        this(base, slices, VertexBuffer.Type.TexCoord8);
+        this(base, slices, VertexBuffer.Type.TexCoord3);
     }
 
     public SlicedMesh(Mesh base, int slices, VertexBuffer.Type layerBufferType) {
@@ -32,7 +32,7 @@ public class SlicedMesh extends Mesh {
             }
         }
         layers.flip();
-        setBuffer(VertexBuffer.Type.TexCoord8, 1, VertexBuffer.Format.Float, layers);
+        setBuffer(layerBufferType, 1, VertexBuffer.Format.Float, layers);
         setStatic();
         updateCounts();
         updateBound();
@@ -100,6 +100,21 @@ public class SlicedMesh extends Mesh {
         }
         source.position(0);
         return target;
+    }
+
+    public static Mesh slice(Mesh mesh, int slices) {
+        FloatBuffer data = BufferUtils.createFloatBuffer(slices);
+        for (int i = 0; i < data.capacity(); i++) {
+            data.put(i, (float)i / slices);
+        }
+        data.clear();
+        VertexBuffer instances = new VertexBuffer(VertexBuffer.Type.TexCoord3);
+        instances.setupData(VertexBuffer.Usage.Static, 1, VertexBuffer.Format.Float, data);
+        mesh.setBuffer(instances);
+        instances.setInstanced(true);
+        mesh.updateCounts();
+        mesh.updateBound();
+        return mesh;
     }
 
 }

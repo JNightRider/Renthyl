@@ -4,6 +4,12 @@ import codex.renthyl.definitions.ResourceDef;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.resources.ResourceAllocator;
 
+/**
+ * Allocation socket that contains a parameterized resource definition.
+ *
+ * @param <D>
+ * @param <T>
+ */
 public class DefinedAllocationSocket <D extends ResourceDef<T>, T> extends AllocationSocket<T> {
 
     private final D def;

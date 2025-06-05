@@ -9,6 +9,17 @@ import codex.renthyl.tasks.Frame;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Socket which chooses from a list of possible upstream sockets using an
+ * integer index to treat as upstream.
+ *
+ * <p>Sockets that are not chosen as upstream are not staged, referenced,
+ * acquired, or released, so Multiplexor does not cause those tasks to run.
+ * The index used is attained during staging by an {@link ArgumentMacro}.</p>
+ *
+ * @param <T>
+ * @author codex
+ */
 public class Multiplexor <T> extends Frame implements Socket<T> {
 
     private final List<Socket<? extends T>> upstream = new ArrayList<>();
@@ -88,41 +99,86 @@ public class Multiplexor <T> extends Frame implements Socket<T> {
         return activeRefs;
     }
 
+    /**
+     * Returns the index to use next.
+     *
+     * @param index previous index
+     * @return next index
+     */
     protected int getNextIndex(int index) {
         return indexMacro.preview();
     }
 
+    /**
+     * Returns true if the current upstream index is not a valid index
+     * for the number of possibilities.
+     *
+     * @return
+     */
+    protected boolean isNullIndex() {
+        return index < 0 || index >= upstream.size();
+    }
+
+    /**
+     * Adds the socket to the end of the possible upstream socket list.
+     *
+     * @param upstream
+     * @return
+     */
     public int addUpstream(Socket<? extends T> upstream) {
         assertUnqueued();
         this.upstream.add(upstream);
         return this.upstream.size() - 1;
     }
 
+    /**
+     * Adds the socket at the index of the possible upstream socket list.
+     *
+     * @param i
+     * @param upstream
+     */
     public void addUpstream(int i, Socket<? extends T> upstream) {
         assertUnqueued();
         this.upstream.add(i, upstream);
     }
 
+    /**
+     * Sets the element at the index of the possible upstream socket list.
+     *
+     * @param i
+     * @param upstream
+     */
     public void setUpstream(int i, Socket<? extends T> upstream) {
         assertUnqueued();
         this.upstream.set(i, upstream);
     }
 
+    /**
+     * Removes the socket from the possible upstream socket list.
+     *
+     * @param upstream
+     */
     public void removeUpstream(Socket upstream) {
         assertUnqueued();
         this.upstream.remove(upstream);
     }
 
+    /**
+     * Gets macro determining the upstream index.
+     *
+     * @return
+     */
     public ArgumentMacro<Integer> getIndex() {
         return indexMacro;
     }
 
+    /**
+     * Gets the number of possible upstream sockets.
+     *
+     * @return
+     */
     public int size() {
         return upstream.size();
-    }
-
-    public boolean isNullIndex() {
-        return index < 0 || index >= upstream.size();
     }
 
 }

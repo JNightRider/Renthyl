@@ -1,9 +1,5 @@
 #import "Common/ShaderLib/GLSLCompat.glsllib"
 
-#if defined(DIFFUSE_GBUFFER) && defined(NORMALS_GBUFFER)
-    #define GBUFFER_WRITE 1
-#endif
-
 // enable apis and import PBRLightingUtils
 #define ENABLE_PBRLightingUtils_getWorldPosition 1
 //#define ENABLE_PBRLightingUtils_getLocalPosition 1
@@ -11,10 +7,8 @@
 #define ENABLE_PBRLightingUtils_getWorldTangent 1
 #define ENABLE_PBRLightingUtils_getTexCoord 1
 #define ENABLE_PBRLightingUtils_readPBRSurface 1
-#ifndef GBUFFER_WRITE
-    #define ENABLE_PBRLightingUtils_computeDirectLightContribution 1
-    #define ENABLE_PBRLightingUtils_computeProbesContribution 1
-#endif
+#define ENABLE_PBRLightingUtils_computeDirectLightContribution 1
+#define ENABLE_PBRLightingUtils_computeProbesContribution 1
 
 #import "Common/ShaderLib/module/pbrlighting/PBRLightingUtils.glsllib"
 #import "RenthylPlus/ShaderLib/GBuffers/PBRCompactModel.glsllib"
@@ -67,7 +61,7 @@ float mapRange(float value, float fromMin, float fromMax) {
         gl_FragColor.rgb += surface.directLightContribution;
         gl_FragColor.rgb += surface.envLightContribution;
         gl_FragColor.rgb += surface.emission;
-        gl_FragColor.a = surface.alpha;
+        gl_FragColor.a = surface.alpha; // this line seems to cost about 4ms
 
         #ifdef USE_FOG
             gl_FragColor = MaterialFog_calculateFogColor(vec4(gl_FragColor));
@@ -83,7 +77,9 @@ float mapRange(float value, float fromMin, float fromMax) {
 void main() {
 
     // discard layer fragments
-    float height = mapRange(texture2D(m_DisplacementMap, texCoord).r, m_DisplacementRange.x, m_DisplacementRange.y);
+    float height = texture2D(m_DisplacementMap, texCoord).r;
+    height = mapRange(height, m_DisplacementRange.x, m_DisplacementRange.y);
+    float dist = distance(g_CameraPosition, wPosition);
     if (sliceLayer >= 0.0 && sliceLayer > height) {
         discard;
     }
@@ -97,6 +93,9 @@ void main() {
     // Read surface data from standard PBR matParams. (note: matParams are declared in 'PBRLighting.j3md' and initialized as uniforms in 'PBRLightingUtils.glsllib')
     PBRLightingUtils_readPBRSurface(surface);
 
+    //gl_FragColor.a = 1.0;
+    //surface.alpha = 1.0;
+
     #ifdef GBUFFER_WRITE
         GBufferWrite_writeSurfaceToGBuffers(surface);
     #else
@@ -105,11 +104,18 @@ void main() {
 
     // visualize top and bottom layers for tuning displacement range
     #ifdef LAYER_USAGE_DEBUG
-        if (sliceLayer >= 1.0) {
-            gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+        if (sliceLayer >= 0.9) {
+            gl_FragColor.rgb = vec3(0.0, 1.0, 0.0);
         } else if (sliceLayer <= 0.0) {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            gl_FragColor.rgb = vec3(1.0, 0.0, 0.0);
         }
     #endif
+
+    //gl_FragColor.rgb = vec3(0.1 * NB_LIGHTS);
+
+    //gl_FragColor.rgb = vec3(NB_LIGHTS);
+    //gl_FragColor.a = 0.0;
+
+    //gl_FragColor = vec4(1.0);
 
 }

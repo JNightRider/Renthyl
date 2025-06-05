@@ -96,10 +96,11 @@ void main() {
 
     #ifdef GENERATE_SLICES
         float d = pow(clamp(mapRange(sqrt(getFaceDistanceSqr()), 100.0, 30.0), 0.0, 1.0), 2.0);
+        d = 1.0;
         int slices = int(d * m_NumSlices);
         float height = m_StackHeight * d;
         // spawn higher layers first to reduce overdraw
-        for (int i = slices; i >= 0; i--) {
+        for (int i = slices - 1; i >= 0; i--) {
             createVertex(0, i, slices, height);
             createVertex(1, i, slices, height);
             createVertex(2, i, slices, height);
@@ -111,7 +112,7 @@ void main() {
             sliceLayer = sLayer[i];
             wPosition = wPos[i];
             lPosition = lPos[i];
-            wNormal = wNorm[i];
+            wNormal = wNorm[i] - vec3(1.0, 1.0, 1.0);
             wTangent = wTan[i];
             texCoord = tCoord[i];
             Color = color[i];

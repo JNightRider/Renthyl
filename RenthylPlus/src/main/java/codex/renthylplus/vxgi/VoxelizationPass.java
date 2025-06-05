@@ -21,6 +21,7 @@ import codex.renthyl.sockets.allocation.TemporalSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.RenderTask;
 import codex.renthyl.geometry.GeometryRenderHandler;
+import codex.renthylplus.lights.LightBuffer;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.material.Material;
@@ -49,7 +50,7 @@ import org.lwjgl.opengl.GL45;
 public class VoxelizationPass extends RenderTask implements GeometryRenderHandler {
 
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
-    private final TransitiveSocket<float[]> lights = new TransitiveSocket<>(this);
+    private final TransitiveSocket<LightBuffer> lights = new TransitiveSocket<>(this);
     private final ArgumentSocket<ColorRGBA> ambient = new ArgumentSocket<>(this, ColorRGBA.Black);
     private final TransitiveSocket<Integer> gridSize = new TransitiveSocket<>(this);
     private final TransitiveSocket<BoundingBox> voxelBounds = new TransitiveSocket<>(this);
@@ -69,6 +70,7 @@ public class VoxelizationPass extends RenderTask implements GeometryRenderHandle
     private final HashSet<Integer> mipsGenerated = new HashSet<>();
     private TextureImage voxelImg;
     private Camera camera;
+    private float[] lightDataArray;
 
     public VoxelizationPass(AssetManager assetManager, ResourceAllocator allocator) {
         addSockets(geometry, lights, ambient, gridSize, voxelBounds, lightContribution);
@@ -127,9 +129,10 @@ public class VoxelizationPass extends RenderTask implements GeometryRenderHandle
         clear.execute(new WorkSize(n).shiftToLocal(2));
         
         // setup material
-        float[] lightArray = lights.acquireOrThrow("Lights required.");
-        material.setParam("LightData", VarType.FloatArray, lightArray);
-        material.setInt("LightDataSize", lightArray.length);
+        LightBuffer lightData = lights.acquireOrThrow("Lights required.");
+        lightDataArray = lightData.copyDataTo(lightDataArray);
+        material.setParam("LightData", VarType.FloatArray, lightDataArray);
+        material.setInt("LightDataSize", lightDataArray.length);
         material.setTexture("LightContributionMap", lightContribution.acquire());
         material.setColor("AmbientLight", ambient.acquire(ColorRGBA.Black));
         material.setParam("VoxelMap", VarType.Image3D, voxelImg);
@@ -205,7 +208,7 @@ public class VoxelizationPass extends RenderTask implements GeometryRenderHandle
         return geometry;
     }
 
-    public PointerSocket<float[]> getLights() {
+    public PointerSocket<LightBuffer> getLights() {
         return lights;
     }
 

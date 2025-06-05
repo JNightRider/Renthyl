@@ -12,6 +12,7 @@ import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.tasks.AbstractTask;
 import codex.renthyl.tasks.attributes.Attribute;
+import codex.renthylplus.lights.LightBuffer;
 import codex.renthylplus.shadow.ShadowMap;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
@@ -27,7 +28,7 @@ public class VoxelConeTracer extends AbstractTask {
 
     private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
-    private final TransitiveSocket<float[]> lightBuffer = new TransitiveSocket<>(this);
+    private final TransitiveSocket<LightBuffer> lightBuffer = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> lightContribution = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> result = new TransitiveSocket<>(this);
     
@@ -76,7 +77,7 @@ public class VoxelConeTracer extends AbstractTask {
         return geometry;
     }
 
-    public PointerSocket<float[]> getLightBuffer() {
+    public PointerSocket<LightBuffer> getLightBuffer() {
         return lightBuffer;
     }
 

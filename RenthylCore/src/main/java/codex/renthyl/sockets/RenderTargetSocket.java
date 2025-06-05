@@ -10,6 +10,13 @@ import codex.renthyl.sockets.allocation.AllocationSocket;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
 
+/**
+ * Wraps two {@link AllocationSocket AllocationSockets}, each for a color texture target
+ * and a framebuffer.
+ *
+ * @param <T>
+ * @author codex
+ */
 public class RenderTargetSocket <T extends Texture> implements Socket<T> {
 
     private final AllocationSocket<T> texture;
@@ -18,6 +25,12 @@ public class RenderTargetSocket <T extends Texture> implements Socket<T> {
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private int activeRefs = 0;
 
+    /**
+     *
+     * @param task underlying task
+     * @param allocator resource allocator for the AllocationSockets
+     * @param texDef texture definition for the color texture target
+     */
     public RenderTargetSocket(Renderable task, ResourceAllocator allocator, TextureDef<T> texDef) {
         this.texture = new AllocationSocket<>(task, allocator, texDef);
         this.frameBuffer = new AllocationSocket<>(task, allocator, bufferDef);
@@ -86,18 +99,38 @@ public class RenderTargetSocket <T extends Texture> implements Socket<T> {
         frameBuffer.stage(globals, queue);
     }
 
+    /**
+     * Returns the color texture target socket.
+     *
+     * @return
+     */
     public AllocationSocket<T> getTexture() {
         return texture;
     }
 
+    /**
+     * Returns the framebuffer socket.
+     *
+     * @return
+     */
     public AllocationSocket<FrameBuffer> getFrameBuffer() {
         return frameBuffer;
     }
 
+    /**
+     * Returns the color texture target definition.
+     *
+     * @return
+     */
     public TextureDef<T> getTextureDef() {
         return texDef;
     }
 
+    /**
+     * Returns the framebuffer definition.
+     *
+     * @return
+     */
     public FrameBufferDef getBufferDef() {
         return bufferDef;
     }

@@ -4,12 +4,28 @@ import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
+/**
+ * Macro socket which provides an accessible value outside {@link #acquire()}.
+ *
+ * <p>If an upstream macro is defined, the value held by this macro is overriden.</p>
+ *
+ * @param <T>
+ * @author codex
+ */
 public class ArgumentMacro<T> implements Socket<T>, PointerMacro<T> {
 
     private Macro<? extends T> upstream;
     private T value;
 
+    /**
+     * Assigns this macro's value as null.
+     */
     public ArgumentMacro() {}
+
+    /**
+     *
+     * @param value value to be held by this macro
+     */
     public ArgumentMacro(T value) {
         this.value = value;
     }
@@ -69,10 +85,20 @@ public class ArgumentMacro<T> implements Socket<T>, PointerMacro<T> {
         return upstream;
     }
 
+    /**
+     * Sets the value of this macro returned by {@link #preview()}.
+     *
+     * @param value
+     */
     public void setValue(T value) {
         this.value = value;
     }
 
+    /**
+     * Gets the value of this macro as returned by {@link #preview()}.
+     *
+     * @return this macro's value
+     */
     public T getValue() {
         return value;
     }

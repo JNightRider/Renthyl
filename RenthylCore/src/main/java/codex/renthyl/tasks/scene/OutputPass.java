@@ -34,8 +34,7 @@ import codex.renthyl.tasks.RenderTask;
 import com.jme3.texture.Texture2D;
 
 /**
- * Renders a add of color and depth textures on a fullscreen quad to the
- * viewport's output framebuffer.
+ * Renders color and depth textures on a fullscreen quad to the viewport's output framebuffer.
  * 
  * @author codex
  */
@@ -61,10 +60,20 @@ public class OutputPass extends RenderTask {
         context.renderTextures(color.acquire(), depth.acquire());
     }
 
+    /**
+     * Gets socket for color texture to render to viewport's framebuffer (input, optional).
+     *
+     * @return
+     */
     public PointerSocket<Texture2D> getColor() {
         return color;
     }
 
+    /**
+     * Gets socket for depth texture to render to viewport's framebuffer (input, optional).
+     *
+     * @return
+     */
     public PointerSocket<Texture2D> getDepth() {
         return depth;
     }

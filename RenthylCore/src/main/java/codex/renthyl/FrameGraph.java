@@ -34,6 +34,7 @@ import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.tasks.attributes.SynchronizedAttribute;
+import codex.renthyl.util.Stopwatch;
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.pipeline.RenderPipeline;
@@ -42,6 +43,27 @@ import com.jme3.renderer.ViewPort;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 
+/**
+ * Rendering pipeline which renders from a graph of {@link Renderable renderable tasks} connected by
+ * {@link Socket sockets}.
+ *
+ * <p>The FrameGraph pipeline is divided into several distinct steps during rendering. First, all tasks,
+ * starting from the tasks directly attached to the FrameGraph, are recursively staged. That is, they are
+ * added to a {@link RenderingQueue} for further processing <em>and</em> any other tasks they depend on.
+ * This means that tasks not directly attached to the FrameGraph may still be staged for rendering by the
+ * FrameGraph</p>
+ *
+ * <p>The next rendering step is updating, during which all staged tasks (and the sockets they contain)
+ * are updated. Then the preparation step occurs, where tasks reference the resources they intend on
+ * using.</p>
+ *
+ * <p>Finally, all staged tasks are rendered. The precise order in which tasks are rendered depends on
+ * precise the {@link RenderingQueue} implementation. However, if only a single thread is used, tasks are
+ * rendered more or less in the order they were staged.</p>
+ *
+ * <p>After rendering, all staged tasks (and the sockets they contain) are reset in preparation for the next
+ * render frame.</p>
+ */
 public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<FrameGraphContext> {
 
     private final AssetManager assetManager;
@@ -106,29 +128,44 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
         rendered = false;
     }
 
+    /**
+     * Adds a task to this FrameGraph and returns it.
+     *
+     * <p>Note that adding a task to the FrameGraph multiple times should have
+     * no visible impact.</p>
+     *
+     * @param task task to add
+     * @return
+     * @param <T>
+     */
     public <T extends Renderable> T addTask(T task) {
         add(task);
         return task;
     }
 
-    public <T extends ContextRenderer> T addContextTask(T task) {
-        task.setContext(contextAttr);
-        return addTask(task);
-    }
-
-    public <T extends ContextRenderer> T connectContextTask(T task) {
-        task.setContext(contextAttr);
-        return task;
-    }
-
+    /**
+     * Sets the number of workers used during render.
+     *
+     * @param numWorkers number of workers (must be positive)
+     */
     public void setNumWorkers(int numWorkers) {
         this.numWorkers = numWorkers;
     }
 
+    /**
+     * Gets the number of workers used during render.
+     *
+     * @return
+     */
     public int getNumWorkers() {
         return numWorkers;
     }
 
+    /**
+     * Gets the socket that shares the {@link FrameGraphContext} instance.
+     *
+     * @return
+     */
     public Socket<FrameGraphContext> getContext() {
         return contextAttr;
     }

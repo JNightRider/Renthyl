@@ -9,6 +9,12 @@ import codex.renthyl.sockets.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Contains and manages a list of internal sockets.
+ *
+ * @param <T> type of internal socket
+ * @param <R> type of resource
+ */
 public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements PointerSocket<List<R>> {
 
     protected final Renderable task;
@@ -17,6 +23,10 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
     private int activeRefs = 0;
     private boolean staged = false;
 
+    /**
+     *
+     * @param task underlying task
+     */
     public SocketList(Renderable task) {
         this.task = task;
     }
@@ -113,6 +123,15 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
         return usage;
     }
 
+    /**
+     * Acquires a list of resources.
+     *
+     * <p>If an internal socket returns null on {@link #acquire()}, {@code orElse}
+     * is inserted into the resulting list instead.</p>
+     *
+     * @param orElse element used when an internal socket returns null on acquire
+     * @return list of accumulated resources
+     */
     public List<R> acquireOrElse(R orElse) {
         if (upstream != null && isEmpty()) {
             return upstream.acquire();

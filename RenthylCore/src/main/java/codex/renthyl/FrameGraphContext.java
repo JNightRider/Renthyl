@@ -86,6 +86,7 @@ public class FrameGraphContext implements PipelineContext {
     private final RenderSetting<Boolean> passDrawBufferId = new RenderSetting<>(RenderManager::setPassDrawBufferTargetIdToShaders, RenderManager::getPassDrawBufferTargetIdToShaders);
     private final RenderSetting<TechniqueDef.LightMode> lightMode = new RenderSetting<>(RenderManager::setPreferredLightMode, RenderManager::getPreferredLightMode);
     private final RenderSetting<Integer> lightBatchSize = new RenderSetting<>(RenderManager::setSinglePassLightBatchSize, RenderManager::getSinglePassLightBatchSize);
+    private final RenderSetting<Boolean> alphaToCoverage = new RenderSetting<>((rm, alpha) -> rm.getRenderer().setAlphaToCoverage(alpha), rm -> rm.getRenderer().getAlphaToCoverage());
     private final CameraSetting camera = new CameraSetting();
 
     private final GlobalAttributes globals = new GlobalAttributes();
@@ -243,6 +244,10 @@ public class FrameGraphContext implements PipelineContext {
 
     public RenderSetting<Integer> getLightBatchSize() {
         return lightBatchSize;
+    }
+
+    public RenderSetting<Boolean> getAlphaToCoverage() {
+        return alphaToCoverage;
     }
 
     public CameraSetting getCamera() {

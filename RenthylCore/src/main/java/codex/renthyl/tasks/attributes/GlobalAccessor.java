@@ -5,6 +5,12 @@ import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.tasks.Frame;
 
+/**
+ * Acquires resources from {@link GlobalAttributes} by name.
+ *
+ * @param <T>
+ * @author codex
+ */
 public class GlobalAccessor <T> extends Frame implements Socket<T> {
 
     private final String name;
@@ -55,6 +61,9 @@ public class GlobalAccessor <T> extends Frame implements Socket<T> {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
+        if (upstream != null) {
+            upstream.release(queuePosition);
+        }
     }
 
     @Override
@@ -63,14 +72,22 @@ public class GlobalAccessor <T> extends Frame implements Socket<T> {
     }
 
     @Override
-    protected void stageSockets(GlobalAttributes globals, RenderingQueue queue) {
-        super.stageSockets(globals, queue);
-        upstream = globals.get(name);
-        if (upstream != null) {
-            upstream.stage(globals, queue);
+    public void stage(GlobalAttributes globals, RenderingQueue queue) {
+        if (position < QUEUING) {
+            position = QUEUING;
+            upstream = globals.get(name);
+            if (upstream != null) {
+                upstream.stage(globals, queue);
+            }
+            position = queue.stage(this);
         }
     }
 
+    /**
+     * Gets the name of the global attribute.
+     *
+     * @return
+     */
     public String getName() {
         return name;
     }

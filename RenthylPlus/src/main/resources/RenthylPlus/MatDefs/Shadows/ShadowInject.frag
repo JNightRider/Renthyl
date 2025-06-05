@@ -15,9 +15,9 @@ void main() {
     vec4 color = texture2D(m_Texture, texCoord);
     float shadowIntensity = clamp(m_Intensity, 0.0, 1.0) / m_NumLights;
     float factor = 0f;
-    int mask = int(texture2D(m_LightContribution, texCoord).r);
+    uint mask = uint(texture2D(m_LightContribution, texCoord).r);
     for (int i = 0; i < m_NumLights; i++) {
-        if (mask == 0 /*|| (mask & (1 << i)) == 0*/) {
+        if ((mask & uint(1 << i)) == 0u) {
             factor += shadowIntensity;
         }
     }

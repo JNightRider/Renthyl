@@ -3,6 +3,7 @@ package codex.renthyl.tasks;
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.RenderWorker;
 import codex.renthyl.render.queue.RenderingQueue;
+import codex.renthyl.sockets.Socket;
 
 public class Frame extends AbstractTask {
 
@@ -21,7 +22,7 @@ public class Frame extends AbstractTask {
     }
 
     @Override
-    public final boolean claim(RenderWorker worker) {
+    public final boolean ready(RenderWorker worker) {
         throw new UnsupportedOperationException("Does not directly support rendering.");
     }
 

@@ -45,19 +45,11 @@ import com.jme3.texture.Texture2D;
 import java.util.List;
 
 /**
- * Renders a queue bucket to a add of color and depth textures.
- * <p>
- * Inputs:
- * <ul>
- *   <li>Geometry ({@link GeometryQueue}): queue of geometries to render.</li>
- *   <li>Color ({@link Texture2D}): Color texture to combine (by depth comparison) with the result of this render (optional).</li>
- *   <li>Depth ({@link Texture2D}): Depth texture to combine (by depth comparison) with the result of this render (optional).</li>
- * </ul>
- * Outputs:
- * <ul>
- *   <li>Color ({@link Texture2D}): Resulting color texture.</li>
- *   <li>Depth ({@link Texture2D}): Resulting depth texture.</li>
- * </ul>
+ * Renders geometry to a color texture and a depth texture.
+ *
+ * <p>Optionally, input color and depth textures may be provided, and the geometry
+ * will be rendered along side them. This can be used to essentially split rendering
+ * among multiple GeometryPasses.</p>
  * 
  * @author codex
  */
@@ -115,42 +107,92 @@ public class GeometryPass extends RenderTask {
 
     }
 
+    /**
+     * Sets the environment used when rendering.
+     *
+     * @param env
+     */
     public void setEnvironment(RenderEnvironment env) {
         this.env = env;
     }
 
+    /**
+     * Sets the handler responsible for rendering.
+     *
+     * @param geometryHandler
+     */
     public void setGeometryHandler(GeometryRenderHandler geometryHandler) {
         this.geometryHandler = geometryHandler;
     }
-    
+
+    /**
+     * Gets the color texture resource definition.
+     *
+     * @return
+     */
     public TextureDef<Texture2D> getColorDef() {
         return colorDef;
     }
 
+    /**
+     * Gets the depth texture resource definition.
+     *
+     * @return
+     */
     public TextureDef<Texture2D> getDepthDef() {
         return depthDef;
     }
-    
+
+    /**
+     * Gets the handler responsible for rendering.
+     *
+     * @return
+     */
     public GeometryRenderHandler getGeometryHandler() {
         return geometryHandler;
     }
 
+    /**
+     * Gets socket accepting geometry queues to render (input).
+     *
+     * @return
+     */
     public CollectorSocket<GeometryQueue> getGeometry() {
         return geometry;
     }
 
+    /**
+     * Gets socket for resulting color texture (output).
+     *
+     * @return
+     */
     public Socket<Texture2D> getOutColor() {
         return outColor;
     }
 
+    /**
+     * Gets socket for resulting depth texture (output).
+     *
+     * @return
+     */
     public Socket<Texture2D> getOutDepth() {
         return outDepth;
     }
 
+    /**
+     * Gets socket for overlayed color texture (input, optional).
+     *
+     * @return
+     */
     public PointerSocket<Texture2D> getInColor() {
         return inColor;
     }
 
+    /**
+     * Gets socket for overlayed depth texture (input, optional).
+     *
+     * @return
+     */
     public PointerSocket<Texture2D> getInDepth() {
         return inDepth;
     }

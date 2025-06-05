@@ -11,6 +11,10 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/**
+ * Basic rendering queue which can perform basic multithreading given
+ * an {@link Executor} to handle the worker threads.
+ */
 public class BasicRenderingQueue implements RenderingQueue {
 
     private final Executor service;
@@ -30,8 +34,8 @@ public class BasicRenderingQueue implements RenderingQueue {
     }
 
     @Override
-    public int stage(Renderable r) {
-        staged.add(r);
+    public int stage(Renderable task) {
+        staged.add(task);
         return staged.size() - 1;
     }
 
@@ -155,6 +159,9 @@ public class BasicRenderingQueue implements RenderingQueue {
         lock.unlock();
     }
 
+    /**
+     * Runnable worker which renders tasks from the queue until none remain.
+     */
     public class Worker implements Runnable, RenderWorker {
 
         private final int index;
@@ -179,7 +186,7 @@ public class BasicRenderingQueue implements RenderingQueue {
         }
 
         public boolean submit(Renderable task) {
-            if (this.task != null || !task.claim(this)) {
+            if (this.task != null || !task.ready(this)) {
                 return false;
             }
             this.task = task;

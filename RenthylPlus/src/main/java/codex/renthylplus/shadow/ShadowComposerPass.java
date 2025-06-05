@@ -4,9 +4,11 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.definitions.FrameBufferDef;
+import codex.jmecompute.WorkSize;
+import codex.jmecompute.assets.UniversalShaderLoader;
+import codex.jmecompute.opengl.GLComputeShader;
+import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
@@ -17,14 +19,8 @@ import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
 import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
-import com.jme3.material.Material;
-import com.jme3.material.RenderState;
 import com.jme3.math.Vector2f;
-import com.jme3.renderer.Camera;
-import com.jme3.texture.FrameBuffer;
-import com.jme3.texture.Image;
-import com.jme3.texture.Texture;
-import com.jme3.texture.Texture2D;
+import com.jme3.texture.*;
 
 import java.util.List;
 
@@ -39,27 +35,30 @@ public class ShadowComposerPass extends RenderTask {
     private final TransitiveSocket<Texture2D> sceneDepth = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> sceneNormals = new TransitiveSocket<>(this);
     private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
-    private final AllocationSocket<Texture2D> lightContributions;
-    private final AllocationSocket<FrameBuffer> frameBuffer;
+    private final ArgumentSocket<String> readNormalsLambda = new ArgumentSocket<>(this);
+    private final AllocationSocket<Texture2D> lightContribution;
     private final ValueSocket<Light[]> lightShadowIndices = new ValueSocket<>(this);
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
-    private final FrameBufferDef bufferDef = new FrameBufferDef();
-    private final RenderState renderState = new RenderState();
-    private final Material material;
-    private final Vector2f tempInvRange = new Vector2f();
-    private final CameraState camera = new CameraState(new Camera(1024, 1024), true);
+    private final GLComputeShader shader;
+    private final WorkSize work = new WorkSize();
+    private TextureImage resultImage;
 
     public ShadowComposerPass(AssetManager assetManager, ResourceAllocator allocator) {
         addSockets(sceneDepth, sceneNormals, shadowMaps, lightShadowIndices);
-        lightContributions = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
-        frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
+        lightContribution = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
         contributionDef.setFormat(Image.Format.R32F);
-        contributionDef.setMagFilter(Texture.MagFilter.Nearest);
-        contributionDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
-        renderState.setBlendMode(RenderState.BlendMode.Off);
-        renderState.setDepthTest(false);
-        renderState.setDepthWrite(false);
-        material = new Material(assetManager, "RenthylPlus/MatDefs/Shadows/ShadowCompose.j3md");
+        shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylPlus/MatDefs/Shadows/ShadowCompose.glsl");
+        shader.uniformTexture("SceneDepthMap");
+        shader.uniformTexture("SceneNormalsMap");
+        shader.uniformTexture("ShadowMap");
+        shader.uniformMatrix4("CamViewProjectionInverse");
+        shader.uniformMatrix4("LightViewProjectionMatrix");
+        shader.uniformInt("LightType");
+        shader.uniformInt("LightIndex");
+        shader.uniformVector2("LightRange");
+        shader.uniformVector3("LightPosition");
+        shader.uniformBoolean("Overwrite");
+        shader.uniformImage("Contribution");
     }
 
     @Override
@@ -70,20 +69,33 @@ public class ShadowComposerPass extends RenderTask {
         int h = depth.getImage().getHeight();
         contributionDef.setSize(w, h);
 
-        camera.resize(w, h, false);
-        context.getCamera().pushValue(camera);
+        // normals
+        Texture2D normals = sceneNormals.acquire();
+        shader.set("SceneNormalsMap", normals);
+        shader.define("NORMALS", normals != null); // workaround for uniform defines being broken
+        if (normals != null) {
+            shader.define("READ_NORMALS_LAMBDA", readNormalsLambda.acquire());
+        }
 
-        bufferDef.setColorTargets(lightContributions.acquire());
-        FrameBuffer fbo = frameBuffer.acquire();
-        context.getFrameBuffer().pushValue(fbo);
-        context.clearBuffers();
+        shader.set("SceneDepthMap", depth);
+        shader.set("CamViewProjectionInverse", context.getViewPort().getCamera().getViewProjectionMatrix().invert());
+        shader.set("Contribution", lightContribution.acquire());
+        shader.set("Overwrite", true);
 
-        context.getForcedState().pushValue(renderState);
-        material.setTexture("SceneDepthMap", depth);
-        material.setMatrix4("CamViewProjectionInverse", context.getViewPort().getCamera().getViewProjectionMatrix().invert());
-        boolean normals = sceneNormals.acquireToMaterial(material, "SceneNormalsMap") != null;
-        
-        // fullscreen render for each shadow map
+        // work size
+        work.clear().setGlobal(w, h, 1).shiftToLocal(2).clearZ();
+        shader.define("LOCAL_X", work.getLocalX());
+        shader.define("LOCAL_Y", work.getLocalY());
+
+        // result image
+        if (resultImage == null) {
+            resultImage = new TextureImage(lightContribution.acquire(), TextureImage.Access.ReadWrite);
+        } else {
+            resultImage.setTexture(lightContribution.acquire());
+        }
+        shader.set("Contribution", resultImage);
+
+        // render each shadow map to the composed image
         int nextIndex = 0;
         List<ShadowMap> maps = shadowMaps.acquire();
         Light[] indexMap = new Light[Math.min(maps.size(), MAX_SHADOW_LIGHTS)];
@@ -98,35 +110,34 @@ public class ShadowComposerPass extends RenderTask {
                 indexMap[i] = m.getLight();
             }
             if (i >= 0) {
-                material.setTexture("ShadowMap", m.getMap());
-                material.setMatrix4("LightViewProjectionMatrix", m.getProjection());
-                material.setInt("LightType", m.getLight().getType().getId());
-                material.setInt("LightIndex", i);
-                material.setVector2("LightRange", m.getRange());
-                if (normals) {
-                    switch (m.getLight().getType()) {
-                        case Directional: {
-                            material.setVector3("LightPosition", ((DirectionalLight)m.getLight()).getDirection());
-                        } break;
-                        case Point: {
-                            material.setVector3("LightPosition", ((PointLight)m.getLight()).getPosition());
-                        } break;
-                        case Spot: {
-                            material.setVector3("LightPosition", ((SpotLight)m.getLight()).getPosition());
-                        } break;
-                        default: throw new UnsupportedOperationException("Shadows for " + m.getLight() + " are not supported.");
-                    }
+                shader.set("ShadowMap", m.getMap());
+                shader.set("LightViewProjectionMatrix", m.getProjection());
+                shader.set("LightType", m.getLight().getType().getId());
+                shader.set("LightIndex", i);
+                shader.set("LightRange", m.getRange());
+                if (normals != null) {
+                    uploadLightPosition(m.getLight());
                 }
-                context.renderFullscreen(material);
-                renderState.setBlendMode(RenderState.BlendMode.Additive);
+                shader.execute(work);
+                shader.set("Overwrite", false);
             }
         }
-        renderState.setBlendMode(RenderState.BlendMode.Off);
-
-        context.getForcedState().pop();
-        context.getFrameBuffer().pop();
-        context.getCamera().pop();
         
+    }
+
+    private void uploadLightPosition(Light l) {
+        switch (l.getType()) {
+            case Directional: {
+                shader.set("LightPosition", ((DirectionalLight)l).getDirection());
+            } break;
+            case Point: {
+                shader.set("LightPosition", ((PointLight)l).getPosition());
+            } break;
+            case Spot: {
+                shader.set("LightPosition", ((SpotLight)l).getPosition());
+            } break;
+            default: throw new UnsupportedOperationException("Shadows for " + l.getType() + " lights are not supported.");
+        }
     }
     
     private static int indexOf(Object[] array, Object obj) {
@@ -150,8 +161,12 @@ public class ShadowComposerPass extends RenderTask {
         return shadowMaps;
     }
 
+    public ArgumentSocket<String> getReadNormalsLambda() {
+        return readNormalsLambda;
+    }
+
     public Socket<Texture2D> getLightContribution() {
-        return lightContributions;
+        return lightContribution;
     }
 
 }

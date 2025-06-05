@@ -49,7 +49,7 @@ public abstract class AbstractTask implements Renderable {
     }
 
     @Override
-    public boolean claim(RenderWorker worker) {
+    public boolean ready(RenderWorker worker) {
         return sockets.stream().allMatch(socket -> socket.isUpstreamAvailable(getPosition())) && !claimed.getAndSet(true);
     }
 
