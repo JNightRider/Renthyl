@@ -69,8 +69,6 @@ import java.util.Collection;
 
 public class TestSlicedMaterial extends SimpleApplication implements ActionListener {
 
-    private final int extent = 20;
-    private final float size = 10f;
     private Node scene;
     private boolean usingSliced = false;
 
@@ -160,6 +158,8 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
         scene = new Node();
         rootNode.attachChild(scene);
 
+        int extent = 20;
+        float size = 10f;
         if (!usingSliced) {
             Node floors = new Node("floors");
             floors.setLocalTranslation(-extent * size * 0.5f, 0f, -extent * size * 0.5f);
