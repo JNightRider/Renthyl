@@ -269,7 +269,7 @@ void main(){
         vec4 lightColor = readLightData(i);
         int lightType = int(lightColor.w);
         #ifdef VXGI_SHADOWS
-            int shadowIndex = extractShadowIndex(lightType);
+            uint shadowIndex = uint(extractShadowIndex(lightType));
             if (!isExposedToLight(shadowIndex, m_VXGI_LightContributionMap, screenUv)) {
                 continue;
             }

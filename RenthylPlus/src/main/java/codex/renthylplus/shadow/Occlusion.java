@@ -17,8 +17,6 @@ public interface Occlusion <T extends Light> extends Renderable {
 
     PointerSocket<GeometryQueue> getReceivers();
 
-    ArgumentSocket<Float> getMaxDistance();
-
     Socket<? extends Collection<ShadowMap>> getShadowMaps();
 
 }

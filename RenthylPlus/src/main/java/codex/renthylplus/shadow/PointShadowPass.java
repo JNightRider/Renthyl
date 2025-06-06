@@ -8,65 +8,116 @@ import codex.renthyl.FrameGraphContext;
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.*;
+import codex.renthyl.sockets.collections.SocketList;
+import codex.renthyl.tasks.RenderTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.Light;
 import com.jme3.light.PointLight;
+import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.texture.FrameBuffer;
+
+import java.util.Collection;
 
 /**
  *
  * @author codex
  */
-public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
-    
-    private static final int NUM_CAMS = 6;
-    
-    private final Camera[] shadowCams = new Camera[NUM_CAMS];
-    private final float[] radii = new float[NUM_CAMS];
+public class PointShadowPass extends RenderTask implements Occlusion<PointLight> {
+
+    private static final Vector3f[] DIRECTIONS = {Vector3f.UNIT_X, Vector3f.UNIT_Y, Vector3f.UNIT_Z,
+            Vector3f.UNIT_X.negate(), Vector3f.UNIT_Y.negate(), Vector3f.UNIT_Z.negate()};
+    private static final Vector3f[] UPS = {Vector3f.UNIT_Y, Vector3f.UNIT_Z, Vector3f.UNIT_Y,
+            Vector3f.UNIT_Y, Vector3f.UNIT_Z, Vector3f.UNIT_Y};
+
+    private final ArgumentSocket<PointLight> light = new ArgumentSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> occluders = new TransitiveSocket<>(this);
+    private final TransitiveSocket<GeometryQueue> receivers = new OptionalSocket<>(this, false);
+    private final SocketList<ShadowMapSocket, ShadowMap> shadowMaps = new SocketList<>(this);
+    private final CameraState[] cameras = new CameraState[DIRECTIONS.length];
+    private final Material backupMat;
+    private final RenderState state = new RenderState();
     
     public PointShadowPass(AssetManager assetManager, ResourceAllocator allocator, int size) {
-        super(assetManager, allocator, Light.Type.Point, NUM_CAMS, size);
-        for (int i = 0; i < shadowCams.length; i++) {
-            shadowCams[i] = new Camera(shadowMapDef.getMapDef().getWidth(), shadowMapDef.getMapDef().getHeight());
-            //c.setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y.mult(-1f));
-            radii[i] = -1;
+        addSockets(light, occluders, receivers, shadowMaps);
+        for (int i = 0; i < DIRECTIONS.length; i++) {
+            shadowMaps.addSocket(new ShadowMapSocket(this, allocator)).setSize(size, size);
+            Camera c = (cameras[i] = new CameraState(new Camera(size, size), false)).getCamera();
+            c.lookAtDirection(DIRECTIONS[i], UPS[i]);
+            c.setFrustumPerspective(90f, 1f, 1f, 2f);
         }
-        //bottom
-        shadowCams[2].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y.mult(-1f));
-        //top
-        shadowCams[1].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z, Vector3f.UNIT_Y);
-        //forward
-        shadowCams[0].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Y, Vector3f.UNIT_Z.mult(-1f));
-        //backward
-        shadowCams[3].setAxes(Vector3f.UNIT_X, Vector3f.UNIT_Y, Vector3f.UNIT_Z);
-        //left
-        shadowCams[4].setAxes(Vector3f.UNIT_Z, Vector3f.UNIT_Y, Vector3f.UNIT_X.mult(-1f));
-        //right
-        shadowCams[5].setAxes(Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y, Vector3f.UNIT_X);
-    }
-
-    protected Camera getShadowCamera(FrameGraphContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, PointLight light, int index) {
-        Camera c = shadowCams[index];
-        if (radii[index] != light.getRadius() || !c.getLocation().equals(light.getPosition())) {
-            radii[index] = light.getRadius();
-            c.setFrustumPerspective(90, 1, 0.1f, light.getRadius());
-            c.setLocation(light.getPosition().clone());
-            c.update();
-            c.updateViewProjection();
-        }
-        return c;
+        backupMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
+        state.setColorWrite(false);
+        state.setDepthWrite(true);
+        state.setDepthTest(true);
     }
 
     @Override
-    protected boolean lightSourceInsideFrustum(Camera cam, PointLight light) {
-        return ShadowOcclusionPass.pointInsideFrustum(cam, light.getPosition());
+    protected void renderTask() {
+
+        PointLight pl = light.acquireOrThrow("Light required.");
+
+        context.getFrameBuffer().push();
+        context.getCamera().push();
+        context.getForcedTechnique().pushValue("PreShadow");
+        context.getForcedMaterial().pushValue(backupMat);
+        context.getForcedState().pushValue(state);
+
+        int i = 0;
+        for (ShadowMapSocket socket : shadowMaps) {
+
+            CameraState cam = cameras[i++];
+            if (!cam.getCamera().getLocation().equals(pl.getPosition()) || cam.getCamera().getFrustumFar() != pl.getRadius()) {
+                cam.getCamera().setLocation(pl.getPosition());
+                cam.getCamera().setFrustumFar(pl.getRadius());
+                cam.getCamera().update();
+                cam.getCamera().updateViewProjection();
+            }
+            context.getCamera().setValue(cam);
+
+            ShadowMap map = socket.acquire();
+            map.setLight(pl);
+            map.setProjection(cam.getCamera().getViewProjectionMatrix());
+            map.setRange(cam.getCamera().getFrustumNear(), cam.getCamera().getFrustumFar());
+            socket.setTargetDepth(map.getMap());
+
+            FrameBuffer fbo = socket.getFrameBuffer().acquire();
+            context.getFrameBuffer().setValue(fbo);
+            context.clearBuffers();
+
+            occluders.acquireOrThrow("Occluder queue required.").render(context);
+
+        }
+
+        context.getFrameBuffer().pop();
+        context.getCamera().pop();
+        context.getForcedTechnique().pop();
+        context.getForcedMaterial().pop();
+        context.getForcedState().pop();
+
     }
 
     @Override
-    protected CameraState getShadowCamera(FrameGraphContext context, CameraState viewCam, GeometryQueue occluders, GeometryQueue receivers, PointLight light, int index) {
-        return null;
+    public ArgumentSocket<PointLight> getLight() {
+        return light;
+    }
+
+    @Override
+    public PointerSocket<GeometryQueue> getOccluders() {
+        return occluders;
+    }
+
+    @Override
+    public PointerSocket<GeometryQueue> getReceivers() {
+        return receivers;
+    }
+
+    @Override
+    public Socket<? extends Collection<ShadowMap>> getShadowMaps() {
+        return shadowMaps;
     }
 
 }

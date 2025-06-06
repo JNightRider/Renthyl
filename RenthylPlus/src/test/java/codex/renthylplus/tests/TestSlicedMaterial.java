@@ -111,7 +111,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
         rootNode.addLight(dl);
 
         viewPort.setBackgroundColor(ColorRGBA.Blue);
-        //viewPort.setPipeline(createPipeline(allocator, dl));
+        viewPort.setPipeline(createPipeline(allocator, dl));
         flyCam.setMoveSpeed(10f);
 
         createScene();
@@ -182,7 +182,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
             }
             scene.attachChild(floors);
         } else {
-            Mesh floorMesh = new SlicedMesh(new NormalQuad(Vector3f.UNIT_Y, Vector3f.UNIT_Z, size * extent, size * extent, 0.5f, 0.5f), 16);
+            Mesh floorMesh = new SlicedMesh(new NormalQuad(Vector3f.UNIT_Y, Vector3f.UNIT_Z, size * extent, size * extent, 0.5f, 0.5f), 1);
             floorMesh.scaleTextureCoordinates(new Vector2f(extent, extent));
             MikktspaceTangentGenerator.generate(floorMesh);
             Geometry largeFloor = new Geometry("large_floor", floorMesh);
@@ -241,7 +241,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
 
         // forward pipeline
         GeometryPass geometry = new GeometryPass(allocator);
-        geometry.getColorDef().setFormat(Image.Format.RGBA8);
+        geometry.getColorDef().setFormat(Image.Format.RGBA32F);
         geometry.getColorDef().setFormatFlexible(false);
         //NormalPass normals = new NormalPass(assetManager, allocator);
 
@@ -381,7 +381,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
         //mat.getAdditionalRenderState().setBlendMode(RenderState.BlendMode.Alpha);
         //mat.getAdditionalRenderState().setDepthTest(false);
         //mat.getAdditionalRenderState().setDepthWrite(false);
-        //mat.setBoolean("GenerateSlices", true);
+        mat.setBoolean("GenerateSlices", true);
         //mat.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Back);
         return mat;
     }

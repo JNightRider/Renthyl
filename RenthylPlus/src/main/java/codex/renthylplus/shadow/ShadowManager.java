@@ -12,6 +12,8 @@ import codex.renthyl.tasks.Frame;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
+import com.jme3.light.PointLight;
+import com.jme3.light.SpotLight;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,19 +54,19 @@ public class ShadowManager extends Frame {
         return dsp;
     }
 
-//    public PointShadowPass addPointLightSource(Socket<PointLight> socket, int size) {
-//        PointShadowPass psp = new PointShadowPass(assetManager, allocator, size);
-//        psp.getLight().setUpstream(socket);
-//        addOcclusion(psp);
-//        return psp;
-//    }
-//
-//    public SpotShadowPass addSpotLightSource(Socket<SpotLight> socket, int size) {
-//        SpotShadowPass ssp = new SpotShadowPass(assetManager, allocator, size);
-//        ssp.getLight().setUpstream(socket);
-//        addOcclusion(ssp);
-//        return ssp;
-//    }
+    public PointShadowPass addPointLightSource(Socket<PointLight> socket, int size) {
+        PointShadowPass psp = new PointShadowPass(assetManager, allocator, size);
+        psp.getLight().setUpstream(socket);
+        addOcclusion(psp);
+        return psp;
+    }
+
+    public SpotShadowPass addSpotLightSource(Socket<SpotLight> socket, int size) {
+        SpotShadowPass ssp = new SpotShadowPass(assetManager, allocator, size);
+        ssp.getLight().setUpstream(socket);
+        addOcclusion(ssp);
+        return ssp;
+    }
 
     public void removeLightSource(Socket socket) {
         for (Iterator<Occlusion> it = occluders.iterator(); it.hasNext();) {

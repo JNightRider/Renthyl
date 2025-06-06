@@ -12,6 +12,8 @@ layout (triangles) in;
 uniform vec3 g_CameraPosition;
 uniform int m_NumSlices;
 uniform float m_StackHeight;
+uniform vec2 m_DetailRange;
+uniform float m_DetailFalloff;
 
 #ifndef GENERATE_SLICES
     in float sLayer[];
@@ -50,7 +52,7 @@ out vec4 Color;
 #endif
 
 #ifdef GENERATE_SLICES
-    float distSqr(vec3 v1, vec3 v2) {
+    float distSqr(in vec3 v1, in vec3 v2) {
         v1 -= v2;
         return v1.x * v1.x + v1.y * v1.y;
     }
@@ -95,10 +97,14 @@ out vec4 Color;
 void main() {
 
     #ifdef GENERATE_SLICES
-        float d = pow(clamp(mapRange(sqrt(getFaceDistanceSqr()), 100.0, 30.0), 0.0, 1.0), 2.0);
-        d = 1.0;
-        int slices = int(d * m_NumSlices);
-        float height = m_StackHeight * d;
+        #ifdef LOD_SLICES
+            float d = pow(clamp(mapRange(sqrt(getFaceDistanceSqr()), m_DetailRange.y, m_DetailRange.x), 0.0, 1.0), m_DetailFalloff);
+            int slices = int(d * m_NumSlices);
+            float height = m_StackHeight * d;
+        #else
+            int slices = m_NumSlices;
+            float height = m_StackHeight;
+        #endif
         // spawn higher layers first to reduce overdraw
         for (int i = slices - 1; i >= 0; i--) {
             createVertex(0, i, slices, height);

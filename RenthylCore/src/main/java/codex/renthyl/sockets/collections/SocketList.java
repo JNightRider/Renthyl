@@ -150,4 +150,16 @@ public class SocketList <T extends Socket<R>, R> extends ArrayList<T> implements
         return resourceList;
     }
 
+    /**
+     * Adds the socket to the end of this list.
+     *
+     * @param socket
+     * @return added socket
+     * @param <E>
+     */
+    public <E extends T> E addSocket(E socket) {
+        add(socket);
+        return socket;
+    }
+
 }

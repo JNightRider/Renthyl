@@ -11,6 +11,7 @@ import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.tasks.AbstractTask;
+import codex.renthyl.tasks.Frame;
 import codex.renthyl.tasks.attributes.Attribute;
 import codex.renthylplus.lights.LightBuffer;
 import codex.renthylplus.shadow.ShadowMap;
@@ -24,7 +25,7 @@ import com.jme3.texture.Texture2D;
  * @author codex
  */
 @SuppressWarnings("FieldCanBeLocal")
-public class VoxelConeTracer extends AbstractTask {
+public class VoxelConeTracer extends Frame {
 
     private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
@@ -65,9 +66,6 @@ public class VoxelConeTracer extends AbstractTask {
         result.setUpstream(indirect.getResult());
 
     }
-
-    @Override
-    protected void renderTask() {}
 
     public CollectorSocket<ShadowMap> getShadowMaps() {
         return shadowMaps;

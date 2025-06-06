@@ -30,14 +30,14 @@ import java.util.Collection;
  *
  * @author codex
  */
-public class DirectionalShadowPass extends RenderTask implements Occlusion<DirectionalLight>, GeometryRenderHandler {
+public class DirectionalShadowPass extends RenderTask implements Occlusion<DirectionalLight> {
 
     private static final float MIN_FRUSTUM = .5f;
 
     private final int baseMapSize;
     private final ArgumentSocket<DirectionalLight> light = new ArgumentSocket<>(this);
     private final TransitiveSocket<GeometryQueue> occluders = new TransitiveSocket<>(this);
-    private final TransitiveSocket<GeometryQueue> receivers = new TransitiveSocket<>(this);
+    private final OptionalSocket<GeometryQueue> receivers = new OptionalSocket<>(this, false);
     private final ArgumentSocket<Float> maxDistance = new ArgumentSocket<>(this, 1000f);
     private final SocketList<ShadowMapSocket, ShadowMap> shadowMaps = new SocketList<>(this);
     private final CameraState camera = new CameraState(new Camera(1024, 1024), false);
@@ -76,7 +76,6 @@ public class DirectionalShadowPass extends RenderTask implements Occlusion<Direc
         float nearFrustum = MIN_FRUSTUM;
         float farFrustum = maxDistance.acquireOrThrow("Maximum render distance required.");
         GeometryQueue occluderQueue = occluders.acquireOrThrow("Occluder geometry required.");
-        GeometryQueue receiverQueue = receivers.acquireOrThrow("Receiver geometry required.");
         BoundingBox occluderBB = new BoundingBox();
         for (Geometry g : occluderQueue) {
             g.updateGeometricState();
@@ -152,43 +151,12 @@ public class DirectionalShadowPass extends RenderTask implements Occlusion<Direc
     }
 
     @Override
-    public ArgumentSocket<Float> getMaxDistance() {
-        return maxDistance;
-    }
-
-    @Override
     public Socket<? extends Collection<ShadowMap>> getShadowMaps() {
         return shadowMaps;
     }
 
-    private Vector3f min(Vector3f v1, Vector3f v2, Vector3f store) {
-        if (store == null) {
-            store = new Vector3f();
-        }
-        store.x = Math.min(v1.x, v2.x);
-        store.y = Math.min(v1.y, v2.y);
-        store.z = Math.min(v1.z, v2.z);
-        return store;
-    }
-
-    private Vector3f max(Vector3f v1, Vector3f v2, Vector3f store) {
-        if (store == null) {
-            store = new Vector3f();
-        }
-        store.x = Math.max(v1.x, v2.x);
-        store.y = Math.max(v1.y, v2.y);
-        store.z = Math.max(v1.z, v2.z);
-        return store;
-    }
-
-    @Override
-    public void renderGeometry(FrameGraphContext context, Geometry geometry) {
-        context.getRenderManager().renderGeometry(geometry);
-    }
-
-    @Override
-    public Visibility evaluateSpatialCulling(CameraState camera, Spatial spatial) {
-        return Visibility.Inside;
+    public ArgumentSocket<Float> getMaxDistance() {
+        return maxDistance;
     }
 
 }

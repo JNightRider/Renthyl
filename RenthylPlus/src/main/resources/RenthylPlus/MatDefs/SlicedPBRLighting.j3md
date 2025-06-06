@@ -8,6 +8,8 @@ MaterialDef SlicedPBRLighting {
         Vector2 DisplacementRange : 0.7 0.75
         Int NumSlices : 15
         Float StackHeight : 0.15
+        Vector2 DetailRange : 30.0 100.0
+        Float DetailFalloff
         Boolean GenerateSlices
         Boolean DebugLayerUsage : false
 
@@ -137,7 +139,7 @@ MaterialDef SlicedPBRLighting {
         LightMode SinglePassAndImageBased
 
         VertexShader GLSL450:   RenthylPlus/MatDefs/SlicedPBRLighting.vert
-            //GeometryShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.geom
+        GeometryShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.geom
         FragmentShader GLSL450: RenthylPlus/MatDefs/SlicedPBRLighting.frag
 
         WorldParameters {
@@ -153,6 +155,7 @@ MaterialDef SlicedPBRLighting {
 
             GENERATE_SLICES : GenerateSlices
             NUM_SLICES : NumSlices
+            LOD_SLICES : DetailFalloff
             LAYER_USAGE_DEBUG : DebugLayerUsage
 
             GBUFFER_WRITE : UseGBuffers

@@ -78,8 +78,10 @@ public class IndirectLightingPass extends RenderTask {
 
     @Override
     protected void renderTask() {
-        
-        Texture2D inColor = gbufferMap.get("Color").acquireOrThrow();
+
+        Map<String, Texture2D> gbuffers = gbufferMap.acquire();
+
+        Texture2D inColor = gbuffers.get("Color");
         int w = inColor.getImage().getWidth();
         int h = inColor.getImage().getHeight();
         resultDef.setSize(w, h);
@@ -97,19 +99,19 @@ public class IndirectLightingPass extends RenderTask {
         }
         
         shader.set("ColorMap", inColor);
-        shader.set("DepthMap", gbufferMap.get("Depth").acquireOrThrow());
-        shader.set("DiffuseMap", gbufferMap.get("Diffuse").acquireOrThrow());
-        shader.set("PositionMap", gbufferMap.get("Position").acquireOrThrow());
-        shader.set("NormalMap", gbufferMap.get("Normals").acquireOrThrow());
-        shader.set("MaterialMap", gbufferMap.get("Material").acquireOrThrow());
-        shader.set("VoxelMap", voxels.acquireOrThrow());
+        shader.set("DepthMap", gbuffers.get("Depth"));
+        shader.set("DiffuseMap", gbuffers.get("Diffuse"));
+        shader.set("PositionMap", gbuffers.get("Position"));
+        shader.set("NormalMap", gbuffers.get("Normals"));
+        shader.set("MaterialMap", gbuffers.get("Material"));
+        shader.set("VoxelMap", voxels.acquireOrThrow("Voxel map required."));
         shader.set("CameraMatrixInverse", camInverse);
         shader.set("CameraPosition", cam.getLocation());
         shader.set("GridMin", gridMin);
         shader.set("GridMax", gridMax);
-        shader.set("GridSize", gridSize.acquireOrThrow());
-        shader.set("TraceQuality", traceQuality.acquireOrThrow());
-        shader.set("SpecularAngleRange", specularAngleRange.acquireOrThrow());
+        shader.set("GridSize", gridSize.acquireOrThrow("Grid size required."));
+        shader.set("TraceQuality", traceQuality.acquireOrThrow("Trace quality required."));
+        shader.set("SpecularAngleRange", specularAngleRange.acquireOrThrow("Specular range required."));
         shader.set("IndirectFactor", 2.0f);
         shader.set("Target", resultImg);
         shader.set("Time", time);

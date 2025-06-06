@@ -20,10 +20,10 @@ float linearizeDepth(float depth, vec2 lightRangeInverse) {
 
 // Checks if the screenspace pixel is exposed to the current light
 // by looking up the light's screenspace contribution in the contribution map.
-bool isExposedToLight(int shadowIndex, sampler2D contributionMap, vec2 uv) {
+bool isExposedToLight(uint shadowIndex, sampler2D contributionMap, vec2 uv) {
     if (shadowIndex >= 0) {
-        int table = int(texture(contributionMap, uv).r);
-        return ((table >> shadowIndex) & 1) == 1;
+        uint table = floatBitsToUint(texture(contributionMap, uv).r);
+        return ((table >> shadowIndex) & 1u) == 1;
     }
     return true;
 }

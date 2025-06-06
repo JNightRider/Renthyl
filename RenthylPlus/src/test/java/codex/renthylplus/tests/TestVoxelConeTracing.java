@@ -4,32 +4,43 @@
  */
 package codex.renthylplus.tests;
 
+import codex.boost.material.ImmediateShader;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.resources.ResourceAllocationState;
+import codex.renthyl.tasks.attributes.Attribute;
 import codex.renthyl.tasks.scene.ControlRenderPass;
 import codex.renthyl.tasks.scene.OutputPass;
 import codex.renthyl.tasks.scene.GeometryDepthPass;
 import codex.renthyl.tasks.scene.SceneEnqueuePass;
+import codex.renthyl.tasks.utils.Derivative;
+import codex.renthyl.tasks.utils.InputToggledMux;
+import codex.renthyl.tasks.utils.Multiplexor;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
 import codex.renthylplus.lights.LightBufferPass;
 import codex.renthylplus.lights.LightGatherPass;
+import codex.renthylplus.shadow.ShadowMap;
+import codex.renthylplus.shadow.ShadowMapViewer;
 import codex.renthylplus.vxgi.VoxelConeTracer;
-import com.github.stephengold.wrench.LwjglAssetLoader;
 import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.AnalogListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.light.DirectionalLight;
 import com.jme3.light.SpotLight;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
 import com.jme3.system.AppSettings;
+import com.jme3.texture.Texture2D;
+
+import java.util.Collection;
 
 /**
  *
@@ -56,10 +67,11 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
 
         GLRenderUtils.initialize(this);
         UniversalShaderLoader.register(assetManager);
+        assetManager.registerLocator("", ImmediateShader.class);
         
-        assetManager.registerLoader(LwjglAssetLoader.class,
-                "3ds", "3mf", "blend", "bvh", "dae", "fbx", "glb", "gltf",
-                "lwo", "meshxml", "mesh.xml", "obj", "ply", "stl");
+        //assetManager.registerLoader(LwjglAssetLoader.class,
+        //        "3ds", "3mf", "blend", "bvh", "dae", "fbx", "glb", "gltf",
+        //        "lwo", "meshxml", "mesh.xml", "obj", "ply", "stl");
         
         Spatial scene = assetManager.loadModel("Models/gi-test.gltf");
         rootNode.attachChild(scene);
@@ -78,6 +90,10 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
             throw new NullPointerException("Could not locate mesh light.");
         }
 
+        for (Spatial s : new SceneGraphIterator(scene)) {
+            s.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        }
+
         SpotLight spot = new SpotLight();
         spot.setPosition(new Vector3f(100, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
@@ -86,6 +102,9 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         spot.setSpotOuterAngle(FastMath.PI*0.25f);
         spot.setSpotInnerAngle(FastMath.PI*0.05f);
         rootNode.addLight(spot);
+
+        DirectionalLight dl = new DirectionalLight(new Vector3f(1f, -1f, 1f));
+        rootNode.addLight(dl);
         
         stateManager.attach(new DetailedProfilerState());
         
@@ -104,16 +123,13 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         SceneEnqueuePass enqueuePass = SceneEnqueuePass.withLegacyQueues();
         GeometryDepthPass geometryDepth = new GeometryDepthPass(allocator);
         ShadowManager shadows = new ShadowManager(assetManager, allocator);
+        //shadows.addSpotLightSource(new Attribute<>(spot), 1024);
+        shadows.addDirectionalLightSource(new Attribute<>(dl), 1024, 1);
         ShadowComposerPass composer = new ShadowComposerPass(assetManager, allocator);
         LightGatherPass lightGatherPass = new LightGatherPass();
         LightBufferPass lightBufferPass = new LightBufferPass(allocator);
         VoxelConeTracer vct = new VoxelConeTracer(assetManager, allocator);
         OutputPass out = fg.addTask(new OutputPass());
-
-        geometryDepth.setContext(fg.getContext());
-        composer.setContext(fg.getContext());
-        lightGatherPass.setContext(fg.getContext());
-        out.setContext(fg.getContext());
 
         geometryDepth.getGeometry().addMapSource(enqueuePass.getQueues());
         shadows.getGeometry().addMapSource(enqueuePass.getQueues());
@@ -124,7 +140,22 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         vct.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
         vct.getLightBuffer().setUpstream(lightBufferPass.getLightData());
         vct.getLightContribution().setUpstream(composer.getLightContribution());
-        out.getColor().setUpstream(vct.getResult());
+
+        Derivative<Collection<ShadowMap>, ShadowMap> shadowExtractor = new Derivative<>() {
+            @Override
+            public ShadowMap apply(Collection<ShadowMap> shadowMaps) {
+                return shadowMaps.stream().findFirst().orElseThrow();
+            }
+        };
+        ShadowMapViewer shadowViewer = new ShadowMapViewer(allocator);
+        shadowExtractor.setUpstream(shadows.getShadowMaps());
+        shadowViewer.getShadowMap().setUpstream(shadowExtractor);
+
+        InputToggledMux<Texture2D> outChannel = new InputToggledMux<>();
+        outChannel.addUpstream(vct.getResult());
+        outChannel.addUpstream(composer.getLightContribution());
+        outChannel.addUpstream(shadowViewer.getResult());
+        out.getColor().setUpstream(outChannel);
         
         inputManager.addMapping("x+", new KeyTrigger(KeyInput.KEY_LEFT));
         inputManager.addMapping("x-", new KeyTrigger(KeyInput.KEY_RIGHT));
@@ -132,7 +163,9 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         inputManager.addMapping("y-", new KeyTrigger(KeyInput.KEY_RCONTROL));
         inputManager.addMapping("z+", new KeyTrigger(KeyInput.KEY_UP));
         inputManager.addMapping("z-", new KeyTrigger(KeyInput.KEY_DOWN));
+        inputManager.addMapping("out_channel", new KeyTrigger(KeyInput.KEY_SPACE));
         inputManager.addListener(this, "x+,x-,y+,y-,z+,z-".split(","));
+        inputManager.addListener(outChannel, "out_channel");
         
     }
     @Override
