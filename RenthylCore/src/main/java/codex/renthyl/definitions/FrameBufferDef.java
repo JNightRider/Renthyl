@@ -5,6 +5,12 @@ import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 
+/**
+ * Resource definition for FrameBuffers. Only approves FrameBuffers which have the correct size
+ * and samples, as well as the exact color targets and depth target.
+ *
+ * @author codex
+ */
 public class FrameBufferDef implements ResourceDef<FrameBuffer> {
 
     private int width, height, samples;

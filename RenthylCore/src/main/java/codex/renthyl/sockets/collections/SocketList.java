@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Contains and manages a list of internal sockets.
+ * Contains and manages a list of internal sockets in order.
  *
  * @param <T> type of internal socket
  * @param <R> type of resource

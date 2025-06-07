@@ -31,7 +31,7 @@ package codex.renthyl;
 import codex.boost.render.DepthRange;
 import codex.renthyl.render.CameraState;
 import codex.renthyl.render.ContextSetting;
-import codex.renthyl.util.FullScreenQuad;
+import codex.renthyl.utils.FullScreenQuad;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.LightFilter;
 import com.jme3.material.Material;
@@ -45,8 +45,6 @@ import com.jme3.renderer.pipeline.PipelineContext;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
-import com.jme3.scene.Mesh;
-import com.jme3.scene.instancing.InstancedGeometry;
 
 import java.util.Objects;
 import java.util.Stack;
@@ -111,6 +109,12 @@ public class FrameGraphContext implements PipelineContext {
     @Override
     public void endContextRenderFrame(RenderManager rm) {}
 
+    /**
+     * Targets this context to the viewport.
+     *
+     * @param vp
+     * @param tpf
+     */
     public void target(ViewPort vp, float tpf) {
         this.viewPort = vp;
         this.tpf = tpf;
@@ -128,27 +132,27 @@ public class FrameGraphContext implements PipelineContext {
         height = viewPort.getCamera().getHeight();
     }
 
+    /**
+     * Clears all render buffers using the {@link #getRenderer() renderer}.
+     */
     public void clearBuffers() {
         clearBuffers(true, true, true);
     }
 
+    /**
+     * Clears select render buffers using the {@link #getRenderer() renderer}.
+     *
+     * @param color
+     * @param depth
+     * @param stencil
+     */
     public void clearBuffers(boolean color, boolean depth, boolean stencil) {
         getRenderer().clearBuffers(color, depth, stencil);
     }
 
-    public void popAllRenderSettings() {
-        frameBuffer.pop();
-        forcedTechnique.pop();
-        forcedMaterial.pop();
-        forcedState.pop();
-        geometryFilter.pop();
-        lightFilter.pop();
-        passDrawBufferId.pop();
-        lightMode.pop();
-        lightBatchSize.pop();
-        camera.pop();
-    }
-
+    /**
+     * {@link RenderSetting#reset() Resets} all render settings to their original values.
+     */
     public void resetAllRenderSettings() {
         frameBuffer.reset();
         forcedTechnique.reset();
@@ -162,115 +166,222 @@ public class FrameGraphContext implements PipelineContext {
         camera.reset();
     }
 
+    /**
+     * Renders a {@link FullScreenQuad} using the material.
+     *
+     * @param mat
+     */
     public void renderFullscreen(Material mat) {
         screen.render(renderManager, mat);
     }
 
+    /**
+     * Renders textures to the current framebuffer.
+     *
+     * @param color color texture, influences color of the framebuffer (may be null)
+     * @param depth depth texture, influences depth of the framebuffer (may be null)
+     */
     public void renderTextures(Texture2D color, Texture2D depth) {
         screen.render(renderManager, color, depth);
     }
 
+    /**
+     * Gets global attributes.
+     *
+     * @return
+     */
     public GlobalAttributes getGlobals() {
         return globals;
     }
 
+    /**
+     * Gets the AssetManager.
+     *
+     * @return
+     */
     public AssetManager getAssetManager() {
         return assetManager;
     }
 
+    /**
+     * Gets the RenderManager.
+     *
+     * @return
+     */
     public RenderManager getRenderManager() {
         return renderManager;
     }
 
+    /**
+     * Gets the ViewPort this context is currently {@link #target(ViewPort, float) targeted} to.
+     *
+     * @return
+     */
     public ViewPort getViewPort() {
         return viewPort;
     }
 
+    /**
+     * Gets the renderer from the RenderManager.
+     *
+     * @return
+     */
     public Renderer getRenderer() {
         return renderManager.getRenderer();
     }
 
+    /**
+     * Gets the fullscreen quad used for screen space rendering.
+     *
+     * @return
+     */
     public FullScreenQuad getScreen() {
         return screen;
     }
 
+    /**
+     * Gets the time per frame as set from {@link #target(ViewPort, float)}.
+     *
+     * @return
+     */
     public float getTpf() {
         return tpf;
     }
 
+    /**
+     * Gets the width of the ViewPort's camera when the pipeline started.
+     *
+     * @return
+     */
     public int getWidth() {
         return width;
     }
 
+    /**
+     * Gets the height of the ViewPort's camera when the pipeline started.
+     *
+     * @return
+     */
     public int getHeight() {
         return height;
     }
 
+    /**
+     * Gets the {@link Renderer#setFrameBuffer(FrameBuffer) framebuffer} render setting.
+     *
+     * @return
+     */
     public RenderSetting<FrameBuffer> getFrameBuffer() {
         return frameBuffer;
     }
 
+    /**
+     * Gets the {@link RenderManager#setForcedTechnique(String) forced technique} render setting.
+     *
+     * @return
+     */
     public RenderSetting<String> getForcedTechnique() {
         return forcedTechnique;
     }
 
+    /**
+     * Gets the {@link RenderManager#setForcedMaterial(Material) forced material} render setting.
+     *
+     * @return
+     */
     public RenderSetting<Material> getForcedMaterial() {
         return forcedMaterial;
     }
 
+    /**
+     * Gets the {@link RenderManager#setForcedRenderState(RenderState) forced render state} render setting.
+     *
+     * @return
+     */
     public RenderSetting<RenderState> getForcedState() {
         return forcedState;
     }
 
+    /**
+     * Gets the {@link RenderManager#setRenderFilter(Predicate) geometry filter} render setting.
+     *
+     * @return
+     */
     public RenderSetting<Predicate<Geometry>> getGeometryFilter() {
         return geometryFilter;
     }
 
+    /**
+     * Gets the {@link RenderManager#setLightFilter(LightFilter) light filter} render setting.
+     *
+     * @return
+     */
     public RenderSetting<LightFilter> getLightFilter() {
         return lightFilter;
     }
 
+    /**
+     * Gets the {@link Renderer#setDepthRange(float, float) depth range} render setting.
+     *
+     * @return
+     */
     public RenderSetting<DepthRange> getDepthRange() {
         return depthRange;
     }
 
+    /**
+     * Gets the {@link RenderManager#setPassDrawBufferTargetIdToShaders(boolean) pass draw buffer ID} render setting.
+     *
+     * @return
+     */
     public RenderSetting<Boolean> getPassDrawBufferId() {
         return passDrawBufferId;
     }
 
+    /**
+     * Gets the {@link RenderManager#setPreferredLightMode(TechniqueDef.LightMode) preferred light mode} render setting.
+     *
+     * @return
+     */
     public RenderSetting<TechniqueDef.LightMode> getLightMode() {
         return lightMode;
     }
 
+    /**
+     * Gets the {@link RenderManager#setSinglePassLightBatchSize(int) light batch size} render setting
+     * for single pass techniques.
+     *
+     * @return
+     */
     public RenderSetting<Integer> getLightBatchSize() {
         return lightBatchSize;
     }
 
+    /**
+     * Gets the {@link Renderer#setAlphaToCoverage(boolean) alpha to coverage} render setting.
+     *
+     * @return
+     */
     public RenderSetting<Boolean> getAlphaToCoverage() {
         return alphaToCoverage;
     }
 
+    /**
+     * Gets the render setting controlling the {@link RenderManager#setCamera(Camera, boolean) current camera}.
+     * Directly calling {@link RenderManager#setCamera(Camera, boolean)} can cause this setting to lose track
+     * of the current camera.
+     *
+     * @return
+     */
     public CameraSetting getCamera() {
         return camera;
     }
 
-    public static void renderMeshFromGeometry(Renderer renderer, Geometry geometry) {
-        /*
-         * Copyright (c) 2009-2024 jMonkeyEngine
-         * All rights reserved.
-         */
-        Mesh mesh = geometry.getMesh();
-        int lodLevel = geometry.getLodLevel();
-        if (geometry instanceof InstancedGeometry instGeom) {
-            int numVisibleInstances = instGeom.getNumVisibleInstances();
-            if (numVisibleInstances > 0) {
-                renderer.renderMesh(mesh, lodLevel, numVisibleInstances, instGeom.getAllInstanceData());
-            }
-        } else {
-            renderer.renderMesh(mesh, lodLevel, 1, null);
-        }
-    }
-
+    /**
+     * Basic context setting implementation.
+     *
+     * @param <T>
+     */
     public final class RenderSetting<T> implements ContextSetting<T> {
 
         private final BiConsumer<RenderManager, T> setter;
@@ -314,6 +425,12 @@ public class FrameGraphContext implements PipelineContext {
 
     }
 
+    /**
+     * Context setting implementation which specifically tracks the current camera.
+     * Is unable to extract the exact camera settings being used, so this setting
+     * can lose track if {@link RenderManager#setCamera(Camera, boolean)} is called
+     * directly.
+     */
     public final class CameraSetting implements ContextSetting<CameraState> {
 
         private final Stack<CameraState> cameras = new Stack<>();

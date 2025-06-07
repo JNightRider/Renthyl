@@ -16,12 +16,30 @@ import com.jme3.util.ListSort;
 import java.io.IOException;
 import java.util.*;
 
+/**
+ * Basic GeometryQueue implementation that sorts geometries according to {@link GeometryComparator
+ * GeometryComparators} depending on the current camera's view.
+ *
+ * <p>Geometries are "sorted" by creating an array of Integers corresponding to the index of each
+ * geometry in the main queue. Sorters therefore sort Integers using a Comparator rather than sorting
+ * the Geometries directly. Sorted views are cached until the next {@link #clear()} call in case the
+ * scene is rendered from the same view again.</p>
+ *
+ * @author codex
+ */
 public class BasicGeometryQueue implements GeometryQueue {
 
     private static final GeometryComparator NULL_COMPARATOR = new NullComparator();
 
+    /**
+     * Sorter using the TimSort algorithm.
+     */
     public static final Sorter<Integer> TIM_SORT = (a, i, c) -> Arrays.sort(a, 0, i, c);
 
+    /**
+     * Sorter using JMonkeyEngine's {@link ListSort} class, which is a variation of TimeSort that
+     * is generally faster for a reasonable number of geometries.
+     */
     public static final Sorter<Integer> JME_SORT = new Sorter<>() {
         private final ListSort<Integer> sort = new ListSort<>();
         @Override
@@ -38,15 +56,37 @@ public class BasicGeometryQueue implements GeometryQueue {
     private final Sorter<Integer> sorter;
     private final IndexComparator comparator;
 
+    /**
+     * Creates a BasicGeometryQueue using {@link #JME_SORT} and a {@link NullComparator}.
+     */
     public BasicGeometryQueue() {
         this(JME_SORT, NULL_COMPARATOR);
     }
+
+    /**
+     * Creates a BasicGeometryQueue using the sorter and a {@link NullComparator}.
+     *
+     * @param sorter
+     */
     public BasicGeometryQueue(Sorter<Integer> sorter) {
         this(sorter, NULL_COMPARATOR);
     }
+
+    /**
+     * Creates a BasicGeometryQueue using {@link #JME_SORT} and the comparator.
+     *
+     * @param comparator
+     */
     public BasicGeometryQueue(GeometryComparator comparator) {
         this(JME_SORT, comparator);
     }
+
+    /**
+     * Creates a BasicGeometryQueue using the sorter and comparator.
+     *
+     * @param sorter
+     * @param comparator
+     */
     public BasicGeometryQueue(Sorter<Integer> sorter, GeometryComparator comparator) {
         this.sorter = sorter;
         this.comparator = new IndexComparator(comparator);
@@ -213,6 +253,11 @@ public class BasicGeometryQueue implements GeometryQueue {
 
     }
 
+    /**
+     * Efficiently evaluates the {@link Visibility} of spatials.
+     *
+     * <p>Cannot be used in multithreaded situations.</p>
+     */
     public static class CullTag implements Savable {
 
         public static final String TAG_USERDATA = CullTag.class.getName() + ":userdata";

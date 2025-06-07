@@ -15,10 +15,14 @@ import codex.renthyl.tasks.RenderTask;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.renderer.Camera;
+import com.jme3.renderer.opengl.GL4;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
+import com.jme3.texture.image.ColorSpace;
+import org.lwjgl.opengl.GL40;
+import org.lwjgl.opengl.GL45;
 
 public class GBufferPass extends RenderTask implements GeometryRenderHandler {
 
@@ -33,12 +37,14 @@ public class GBufferPass extends RenderTask implements GeometryRenderHandler {
     private final AllocationSocket<FrameBuffer> frameBuffer;
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private final FrameBufferDef bufferDef = new FrameBufferDef();
+    private final RenderState forcedState = new RenderState();
 
     public GBufferPass(ResourceAllocator allocator) {
         this.allocator = allocator;
         addSockets(geometry, camera, gbuffers);
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         depth = addSocket(new DefinedAllocationSocket<>(this, allocator, depthDef));
+        forcedState.setBlendMode(RenderState.BlendMode.Off);
     }
 
     @Override
@@ -65,6 +71,11 @@ public class GBufferPass extends RenderTask implements GeometryRenderHandler {
         context.getFrameBuffer().pushValue(fbo);
         context.clearBuffers();
 
+        context.getAlphaToCoverage().setValue(false);
+        context.getForcedState().pushValue(forcedState);
+        GL40.glDisable(GL40.GL_ALPHA_TEST);
+        GL40.glDisable(GL40.GL_SAMPLE_ALPHA_TO_ONE);
+
         for (GeometryQueue q : geometry.acquire()) {
             q.applySettings(context);
             q.render(context, this);
@@ -73,6 +84,9 @@ public class GBufferPass extends RenderTask implements GeometryRenderHandler {
 
         context.getCamera().pop();
         context.getFrameBuffer().pop();
+        context.getAlphaToCoverage().pop();
+        context.getForcedState().pop();
+        GL40.glEnable(GL40.GL_ALPHA_TEST);
 
     }
 
@@ -91,6 +105,7 @@ public class GBufferPass extends RenderTask implements GeometryRenderHandler {
 
     public void addBuffer(TextureDef<Texture2D> def) {
         gbuffers.add(new DefinedAllocationSocket<>(this, allocator, def));
+        def.setColorSpace(ColorSpace.Linear);
     }
 
     public CollectorSocket<GeometryQueue> getGeometry() {

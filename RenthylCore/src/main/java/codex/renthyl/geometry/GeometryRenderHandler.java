@@ -34,23 +34,33 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 
 /**
- * Interface for handling rendering aspects, especially for rendering
- * of geometry and visibility checking.
+ * Handles rendering of geometries.
  * 
  * @author codex
  */
 public interface GeometryRenderHandler {
-    
+
+    /**
+     * Default handler which uses {@link com.jme3.renderer.RenderManager#renderGeometry(Geometry)} to render
+     * the geometry. Spatial culling evaluation is unchanged.
+     */
     GeometryRenderHandler DEFAULT = (context, geom) -> context.getRenderManager().renderGeometry(geom);
     
     /**
-     * Renders the given geometry.
+     * Renders the geometry.
      * 
      * @param context
      * @param geometry geometry to render
      */
     void renderGeometry(FrameGraphContext context, Geometry geometry);
 
+    /**
+     * Evaluates the {@link Visibility} of the spatial in relation to the camera.
+     *
+     * @param camera
+     * @param spatial
+     * @return
+     */
     default Visibility evaluateSpatialCulling(CameraState camera, Spatial spatial) {
         return camera.visible(spatial.getWorldBound());
     }

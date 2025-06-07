@@ -24,6 +24,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.system.CustomBuffer;
 
 /**
+ * Resource definition for Java {@link Buffer Buffers}.
  *
  * @author codex
  * @param <T>

@@ -46,18 +46,22 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * General resource definition for textures.
- * <p>
- * Able to indirectly reallocate any object that contains a locatable {@link Image} that
- * matches the properties given in this definition.
+ * General resource definition for {@link Texture Textures}.
  * 
  * @author codex
  * @param <T>
  */
 public class TextureDef <T extends Texture> implements ResourceDef<T> {
-    
-    public static final Function<Image, Texture2D> TEXTURE_2D = img -> new Texture2D(img);
-    public static final Function<Image, Texture3D> TEXTURE_3D = img -> new Texture3D(img);
+
+    /**
+     * Function creating a new Texture2D from an image.
+     */
+    public static final Function<Image, Texture2D> TEXTURE_2D = Texture2D::new;
+
+    /**
+     * Function creating a new Texture3D from an image.
+     */
+    public static final Function<Image, Texture3D> TEXTURE_3D = Texture3D::new;
     
     private final Class<T> type;
     private Function<Image, T> textureBuilder;
@@ -75,18 +79,19 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
     private boolean colorSpaceFlexible = false;
     
     /**
-     * 
-     * @param type
-     * @param textureBuilder 
+     *
+     * @param type type of texture
+     * @param textureBuilder creates new textures from images
      */
     public TextureDef(Class<T> type, Function<Image, T> textureBuilder) {
         this(type, textureBuilder, Image.Format.RGBA8);
     }
+
     /**
      * 
-     * @param type
-     * @param textureBuilder
-     * @param format 
+     * @param type type of texture
+     * @param textureBuilder creates new textures from images
+     * @param format value for format parameter
      */
     public TextureDef(Class<T> type, Function<Image, T> textureBuilder, Image.Format format) {
         Objects.requireNonNull(type);
@@ -111,6 +116,7 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
         }
         return createTexture(img);
     }
+
     @Override
     public Float evaluateResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
@@ -129,6 +135,7 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
         }
         return null;
     }
+
     @Override
     public T conformResource(Object resource) {
         if (type.isAssignableFrom(resource.getClass())) {
@@ -148,6 +155,7 @@ public class TextureDef <T extends Texture> implements ResourceDef<T> {
         setupTexture(tex);
         return tex;
     }
+
     @Override
     public void dispose(T texture) {
         texture.getImage().dispose();

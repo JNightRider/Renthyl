@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package codex.renthylplus.vxgi;
+package codex.renthylplus.illumination.vxgi;
 
 import codex.boost.material.MaterialAdapter;
 import codex.renthyl.FrameGraphContext;
@@ -13,7 +13,7 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.geometry.GeometryRenderHandler;
 import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
-import codex.renthyl.sockets.collections.AllocationSocketMap;
+import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyl.tasks.RenderTask;
@@ -45,7 +45,7 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
     private final TransitiveSocket<LightBuffer> lights = new TransitiveSocket<>(this);
     private final TransitiveSocket<Texture2D> lightContribution = new TransitiveSocket<>(this);
-    private final AllocationSocketMap<String, TextureDef<Texture2D>, Texture2D> gbufferMap = new AllocationSocketMap<>(this);
+    private final SocketMap<String, DefinedAllocationSocket<TextureDef<Texture2D>, Texture2D>, Texture2D> gbufferMap = new SocketMap<>(this);
     private final AllocationSocket<FrameBuffer> frameBuffer;
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private final Vector2f screenSize = new Vector2f();
@@ -54,12 +54,12 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
     public DirectLightingPass(ResourceAllocator allocator) {
         addSockets(geometry, lights, lightContribution, gbufferMap);
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
-        gbufferMap.put("Color", allocator, TextureDef.texture2D(Image.Format.RGBA16F));
-        gbufferMap.put("Depth", allocator, TextureDef.texture2D(Image.Format.Depth16));
-        gbufferMap.put("Diffuse", allocator, TextureDef.texture2D(Image.Format.RGBA16F));
-        gbufferMap.put("Position", allocator, TextureDef.texture2D(Image.Format.RGBA16F));
-        gbufferMap.put("Normals", allocator, TextureDef.texture2D(Image.Format.RGBA16F));
-        gbufferMap.put("Material", allocator, TextureDef.texture2D(Image.Format.RGBA32F));
+        gbufferMap.put("Color", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.RGBA16F)));
+        gbufferMap.put("Depth", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.Depth16)));
+        gbufferMap.put("Diffuse", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.RGBA16F)));
+        gbufferMap.put("Position", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.RGBA16F)));
+        gbufferMap.put("Normals", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.RGBA16F)));
+        gbufferMap.put("Material", new DefinedAllocationSocket<>(this, allocator, TextureDef.texture2D(Image.Format.RGBA32F)));
     }
 
     @Override
@@ -67,8 +67,8 @@ public class DirectLightingPass extends RenderTask implements GeometryRenderHand
 
         // configure definitions
         screenSize.set(context.getWidth(), context.getHeight());
-        for (TextureDef<Texture2D> d : gbufferMap.getDefs().values()) {
-            d.setSize(context.getWidth(), context.getHeight());
+        for (DefinedAllocationSocket<TextureDef<Texture2D>, Texture2D> d : gbufferMap.values()) {
+            d.getDef().setSize(context.getWidth(), context.getHeight());
         }
 
         // configure framebuffer

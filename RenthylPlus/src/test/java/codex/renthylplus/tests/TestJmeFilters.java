@@ -94,7 +94,7 @@ public class TestJmeFilters extends SimpleApplication {
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
         
-        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
+        fg.addTask(new ControlRenderPass());
         SceneEnqueuePass enqueue = SceneEnqueuePass.withLegacyQueues();
         geometry = new GeometryPass(allocator);
         NormalPass normals = new NormalPass(assetManager, allocator);

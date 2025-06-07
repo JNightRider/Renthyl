@@ -26,7 +26,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.util;
+package codex.renthyl.utils;
 
 import com.jme3.scene.Spatial;
 import java.util.function.Function;
@@ -42,15 +42,6 @@ public abstract class SpatialWorldParam <T> {
     protected final String userdata;
     protected final T start;
     protected final T inherit;
-    
-    /**
-     * 
-     * @param start
-     * @param inherit 
-     */
-    public SpatialWorldParam(T start, T inherit) {
-        this(null, start, inherit);
-    }
     
     /**
      * 

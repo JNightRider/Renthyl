@@ -28,13 +28,11 @@
  */
 package codex.renthyl;
 
-import codex.renthyl.render.ContextRenderer;
 import codex.renthyl.render.queue.BasicRenderingQueue;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.tasks.attributes.SynchronizedAttribute;
-import codex.renthyl.util.Stopwatch;
 import com.jme3.asset.AssetManager;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.pipeline.RenderPipeline;
@@ -63,6 +61,8 @@ import java.util.concurrent.Executor;
  *
  * <p>After rendering, all staged tasks (and the sockets they contain) are reset in preparation for the next
  * render frame.</p>
+ *
+ * @author codex
  */
 public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<FrameGraphContext> {
 
@@ -72,14 +72,31 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
     private boolean rendered = false;
     private int numWorkers = 1;
 
+    /**
+     * Creates a FrameGraph using a {@link BasicRenderingQueue} without an {@link Executor}.
+     *
+     * @param assetManager
+     */
     public FrameGraph(AssetManager assetManager) {
         this(assetManager, new BasicRenderingQueue());
     }
 
+    /**
+     * Creates a FrameGraph using a {@link BasicRenderingQueue} with an executor for multithreading.
+     *
+     * @param assetManager
+     * @param service
+     */
     public FrameGraph(AssetManager assetManager, Executor service) {
         this(assetManager, new BasicRenderingQueue(service));
     }
 
+    /**
+     * Creates a FrameGraph using the rendering queue.
+     *
+     * @param assetManager
+     * @param queue
+     */
     public FrameGraph(AssetManager assetManager, RenderingQueue queue) {
         this.assetManager = assetManager;
         this.queue = queue;
@@ -159,15 +176,6 @@ public class FrameGraph extends ArrayList<Renderable> implements RenderPipeline<
      */
     public int getNumWorkers() {
         return numWorkers;
-    }
-
-    /**
-     * Gets the socket that shares the {@link FrameGraphContext} instance.
-     *
-     * @return
-     */
-    public Socket<FrameGraphContext> getContext() {
-        return contextAttr;
     }
 
 }

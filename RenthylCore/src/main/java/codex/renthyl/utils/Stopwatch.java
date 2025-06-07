@@ -1,4 +1,4 @@
-package codex.renthyl.util;
+package codex.renthyl.utils;
 
 import java.util.Stack;
 

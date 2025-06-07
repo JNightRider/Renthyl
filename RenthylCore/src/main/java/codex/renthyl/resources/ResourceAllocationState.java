@@ -50,12 +50,12 @@ public class ResourceAllocationState extends BaseAppState implements ResourceAll
         for (AllocatedResource res : resources.values()) {
             if (res.isAvailable(start, end)) {
                 Float eval = def.evaluateResource(res.get());
-                if (eval == null) {
+                if (eval == null) { // resource is completely unsuited
                     continue;
                 }
                 selections++;
-                if (def.isPerfectEvaluation(eval)) {
-                    if (!res.acquire(start, end)) {
+                if (ResourceDef.isPerfectEvaluation(eval)) {
+                    if (!res.acquire(start, end)) { // resource is already acquired
                         continue;
                     }
                     return res;
@@ -73,7 +73,7 @@ public class ResourceAllocationState extends BaseAppState implements ResourceAll
         }
         target = new AllocatedResource(nextId++, timeoutLength, def.createResource(), def);
         if (!target.acquire(start, end)) {
-            throw new IllegalStateException("Expected new resource to be acquired.");
+            throw new IllegalStateException("Expected new resource to be acquirable.");
         }
         resources.put(target.getId(), target);
         return target;

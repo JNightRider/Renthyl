@@ -40,17 +40,13 @@ public final class Renthyl {
         
         FrameGraph fg = new FrameGraph(assetManager);
         
-        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
+        fg.addTask(new ControlRenderPass());
         OutputPass out = fg.addTask(new OutputPass());
 
         SceneEnqueuePass enqueue = SceneEnqueuePass.withLegacyQueues();
         MapToListPass<String, GeometryQueue> mapToList = new MapToListPass<>(new String[] {
                 SceneEnqueuePass.OPAQUE, SceneEnqueuePass.SKY, SceneEnqueuePass.TRANSPARENT, SceneEnqueuePass.GUI, SceneEnqueuePass.TRANSLUCENT});
         GeometryPass geometry = new GeometryPass(allocator);
-
-        enqueue.setContext(fg.getContext());
-        geometry.setContext(fg.getContext());
-        out.setContext(fg.getContext());
 
         mapToList.getMap().setUpstream(enqueue.getQueues());
         geometry.getGeometry().addCollectionSource(mapToList.getList());

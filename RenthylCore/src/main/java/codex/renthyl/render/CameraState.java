@@ -7,6 +7,11 @@ import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
 
+/**
+ * Camera wrapper containing an orthogonal property for {@link RenderManager#setCamera(Camera, boolean)}.
+ *
+ * @author codex
+ */
 public class CameraState {
 
     private final Camera camera;

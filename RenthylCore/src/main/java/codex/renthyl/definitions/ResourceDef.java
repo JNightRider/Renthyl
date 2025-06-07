@@ -31,8 +31,8 @@ package codex.renthyl.definitions;
 import codex.renthyl.resources.Disposer;
 
 /**
- * Manages the behavior of an allocated resource, especially for creation,
- * reallocation, and disposal of related raw resources.
+ * Manages the behavior of an allocated resource, especially for creation, reallocation,
+ * and disposal of resources.
  * 
  * @author codex
  * @param <T>
@@ -40,7 +40,7 @@ import codex.renthyl.resources.Disposer;
 public interface ResourceDef <T> extends Disposer<T> {
     
     /**
-     * Creates a new resources from scratch.
+     * Creates a new resources.
      * 
      * @return 
      */
@@ -48,6 +48,15 @@ public interface ResourceDef <T> extends Disposer<T> {
     
     /**
      * Checks if the resource can be allocated.
+     *
+     * <p>The returned Float indicates how suited the resource is to the parameters
+     * of the definition, where lower values represent better matches. Once all resources
+     * have been evaluated (or another terminating condition occurs), the resource with the
+     * lowest score is {@link #conformResource(Object) conformed} and used.</p>
+     *
+     * <p>{@code 0f} or lower means the resource is perfect for the current parameters (thus
+     * terminating further evaluations). {@code null} means the resource is completely unsuited,
+     * and should not be considered further.</p>
      * 
      * @param resource
      * @return evaluation score of the resource
@@ -55,20 +64,20 @@ public interface ResourceDef <T> extends Disposer<T> {
     Float evaluateResource(Object resource);
 
     /**
-     * Configures the resource for allocation once it has been chosen.
+     * Configures the resource according to the definition's parameters.
      *
-     * @param resource
+     * @param resource conformed resource
      */
     T conformResource(Object resource);
 
     /**
-     * Tests if the evaluation score is final; that is, the corresponding
-     * resource is perfect according to this definition.
+     * Tests if the evaluation score is perfect, meaning that further resource evalutions
+     * are unnecessary and should be terminated.
      *
      * @param score
      * @return
      */
-    default boolean isPerfectEvaluation(Float score) {
+    static boolean isPerfectEvaluation(Float score) {
         return score != null && score <= 0f;
     }
     

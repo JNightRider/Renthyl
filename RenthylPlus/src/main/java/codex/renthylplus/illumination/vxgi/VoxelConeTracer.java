@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package codex.renthylplus.vxgi;
+package codex.renthylplus.illumination.vxgi;
 
 import codex.renthyl.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
@@ -10,7 +10,6 @@ import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyl.tasks.AbstractTask;
 import codex.renthyl.tasks.Frame;
 import codex.renthyl.tasks.attributes.Attribute;
 import codex.renthylplus.lights.LightBuffer;

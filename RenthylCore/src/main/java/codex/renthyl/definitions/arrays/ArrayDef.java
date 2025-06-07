@@ -13,9 +13,10 @@ import java.io.IOException;
 import java.lang.reflect.Array;
 
 /**
+ * Resource definition for object arrays.
  *
  * @author codex
- * @param <T>
+ * @param <T> array component type
  */
 public class ArrayDef <T> extends AbstractArrayDef<T[]> {
     
@@ -62,6 +63,11 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
         type = SavableObject.readClass(in, "componentType", Float.class);
     }
 
+    /**
+     * Gets the component type of arrays.
+     *
+     * @return
+     */
     public Class<T> getType() {
         return type;
     }

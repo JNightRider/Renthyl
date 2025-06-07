@@ -1,7 +1,7 @@
 package codex.renthyl.render;
 
 /**
- * Worker that performs rendering on a thread.
+ * Worker that performs rendering tasks on a thread.
  */
 public interface RenderWorker {
 

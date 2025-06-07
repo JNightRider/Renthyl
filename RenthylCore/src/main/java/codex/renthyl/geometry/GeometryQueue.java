@@ -32,16 +32,56 @@ import codex.renthyl.FrameGraphContext;
 import codex.renthyl.render.RenderEnvironment;
 import com.jme3.scene.Geometry;
 
+/**
+ * Queue of geometries for rendering.
+ *
+ * <p>Implementations are free to render and iterate geometries in any order. Most commonly,
+ * geometries are rendered in an order determined by a {@link com.jme3.renderer.queue.GeometryComparator},
+ * and iterated in the order they were added.</p>
+ *
+ * @author codex
+ */
 public interface GeometryQueue extends RenderEnvironment, Iterable<Geometry> {
 
+    /**
+     * Adds the geometry to somewhere in the queue.
+     *
+     * @param g
+     */
     void add(Geometry g);
 
+    /**
+     * Renders geometries from the queue.
+     *
+     * <p>Not all geometries are guaranteed to be rendered due to culling. Culling is evaluated
+     * using {@code handler}.</p>
+     *
+     * @param context
+     * @param handler rendering handler (not null)
+     * @return number of geometries rendered
+     */
     int render(FrameGraphContext context, GeometryRenderHandler handler);
 
+    /**
+     * Gets the number of geometries in this queue.
+     *
+     * @return
+     */
     int size();
 
+    /**
+     * Clears all geometries from this queue and performs any other
+     * implementation-specific reseting.
+     */
     void clear();
 
+    /**
+     * Renders geometries from the queue using the {@link GeometryRenderHandler#DEFAULT default}
+     * handler.
+     *
+     * @param context
+     * @return number of geometries rendered
+     */
     default int render(FrameGraphContext context) {
         return render(context, GeometryRenderHandler.DEFAULT);
     }

@@ -13,9 +13,10 @@ import com.jme3.export.Savable;
 import java.io.IOException;
 
 /**
+ * Resource definition for arrays.
  *
  * @author codex
- * @param <T>
+ * @param <T> array type (i.e. {@code Integer[]})
  */
 public abstract class AbstractArrayDef <T> implements ResourceDef<T>, Savable {
 
@@ -45,13 +46,24 @@ public abstract class AbstractArrayDef <T> implements ResourceDef<T>, Savable {
         size = in.readInt("size", 1);
         padding = in.readInt("padding", 0);
     }
-    
+
+    /**
+     * Sets the minimum size for arrays.
+     *
+     * @param size
+     */
     public void setSize(int size) {
         if (size <= 0) {
             throw new IllegalArgumentException("Array size must be greater than zero.");
         }
         this.size = size;
     }
+
+    /**
+     * Sets the length above {@link #getSize() size} at which arrays should be created.
+     *
+     * @param padding
+     */
     public void setPadding(int padding) {
         if (padding < 0) {
             throw new IllegalArgumentException("Array padding cannot be less than zero.");
@@ -59,9 +71,20 @@ public abstract class AbstractArrayDef <T> implements ResourceDef<T>, Savable {
         this.padding = padding;
     }
 
+    /**
+     * Gets the minimum size for arrays.
+     *
+     * @return
+     */
     public int getSize() {
         return size;
     }
+
+    /**
+     * Gets the length above {@link #getSize() size} at which arrays should be created.
+     *
+     * @return
+     */
     public int getPadding() {
         return padding;
     }

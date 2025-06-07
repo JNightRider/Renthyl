@@ -5,6 +5,7 @@
 package codex.renthyl.definitions.arrays;
 
 /**
+ * Resource definition for float primitive arrays.
  *
  * @author codex
  */

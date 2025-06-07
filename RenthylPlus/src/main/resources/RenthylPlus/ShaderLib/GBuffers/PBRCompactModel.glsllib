@@ -8,6 +8,7 @@
 
     void GBufferWrite_writeSurfaceToGBuffers(inout PBRSurface surface) {
         outGBuffer1.rgb = surface.albedo * surface.ao;
+        outGBuffer1.a = surface.position.x;
         outGBuffer2.xy = surface.normal.xz;
         outGBuffer2.z = surface.metallic;
     }

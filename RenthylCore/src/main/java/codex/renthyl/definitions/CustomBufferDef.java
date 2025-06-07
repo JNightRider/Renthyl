@@ -19,6 +19,7 @@ import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.CustomBuffer;
 
 /**
+ * Resource definition for LWJGL CustomBuffers.
  *
  * @author codex
  * @param <T>

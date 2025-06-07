@@ -1,4 +1,4 @@
-package codex.renthyl.util;
+package codex.renthyl.utils;
 
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;

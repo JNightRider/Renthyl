@@ -16,14 +16,13 @@ import codex.renthyl.tasks.scene.GeometryDepthPass;
 import codex.renthyl.tasks.scene.SceneEnqueuePass;
 import codex.renthyl.tasks.utils.Derivative;
 import codex.renthyl.tasks.utils.InputToggledMux;
-import codex.renthyl.tasks.utils.Multiplexor;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowManager;
 import codex.renthylplus.lights.LightBufferPass;
 import codex.renthylplus.lights.LightGatherPass;
 import codex.renthylplus.shadow.ShadowMap;
 import codex.renthylplus.shadow.ShadowMapViewer;
-import codex.renthylplus.vxgi.VoxelConeTracer;
+import codex.renthylplus.illumination.vxgi.VoxelConeTracer;
 import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
@@ -119,7 +118,7 @@ public class TestVoxelConeTracing extends SimpleApplication implements AnalogLis
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
 
-        fg.addTask(new ControlRenderPass()).setContext(fg.getContext());
+        fg.addTask(new ControlRenderPass());
         SceneEnqueuePass enqueuePass = SceneEnqueuePass.withLegacyQueues();
         GeometryDepthPass geometryDepth = new GeometryDepthPass(allocator);
         ShadowManager shadows = new ShadowManager(assetManager, allocator);

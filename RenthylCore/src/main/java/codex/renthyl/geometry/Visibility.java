@@ -7,6 +7,7 @@ package codex.renthyl.geometry;
 import com.jme3.renderer.Camera;
 
 /**
+ * Spatial visibility states.
  *
  * @author codex
  */
@@ -41,19 +42,42 @@ public enum Visibility {
         this.partial = partial;
         this.intersect = intersect;
     }
-    
+
+    /**
+     * Returns true if the enumeration indicates that an object is inside the view.
+     *
+     * @return
+     */
     public boolean isInside() {
         return inside;
     }
 
+    /**
+     * Returns true if the enumeration cannot be directly applied to descendents of the object.
+     *
+     * @return
+     */
     public boolean isPartial() {
         return partial;
     }
 
+    /**
+     * Gets the corresponding {@link com.jme3.renderer.Camera.FrustumIntersect frustum intersect} enumeration
+     * of this enumeration.
+     *
+     * @return
+     */
     public Camera.FrustumIntersect getFrustumIntersect() {
         return intersect;
     }
-    
+
+    /**
+     * Gets the Visibility enumeration corresponding to the properties.
+     *
+     * @param inside inside property
+     * @param partial partial property
+     * @return corresponding enum
+     */
     public static Visibility get(boolean inside, boolean partial) {
         if (!inside && !partial) return Visibility.Outside;
         else if (!inside) return Visibility.OutsidePartial;
@@ -61,6 +85,14 @@ public enum Visibility {
         else return Visibility.InsidePartial;
     }
 
+    /**
+     * Returns the corresponding enumeration for the {@link com.jme3.renderer.Camera.FrustumIntersect intersection}
+     * enumeration.
+     *
+     * @param intersect
+     * @return corresponding Visibility enum
+     * @throws UnsupportedOperationException if {@code intersect} has no corresponding Visibility enum
+     */
     public static Visibility fromFrustumIntersect(Camera.FrustumIntersect intersect) {
         switch (intersect) {
             case Outside: return Visibility.Outside;
