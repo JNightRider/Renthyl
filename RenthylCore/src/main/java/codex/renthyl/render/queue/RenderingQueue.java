@@ -2,9 +2,6 @@ package codex.renthyl.render.queue;
 
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.Renderable;
-import com.jme3.profile.AppProfiler;
-
-import java.util.Collection;
 
 /**
  * Processes and renders staged {@link Renderable tasks}.
