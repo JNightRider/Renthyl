@@ -4,9 +4,8 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.Frame;
 import com.jme3.asset.AssetManager;

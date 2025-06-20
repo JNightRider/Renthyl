@@ -124,7 +124,7 @@ public abstract class TestApplication extends SimpleApplication {
     protected Geometry loadDepthViewer(float x, float y, float w, float h) {
         Geometry g = new Geometry("DepthViewer", new Quad(w, h));
         g.setLocalTranslation(x, y, 0);
-        Material m = new Material(assetManager, "RenthylPlus/MatDefs/Debug/Depth.j3md");
+        Material m = new Material(assetManager, "RenthylJme/MatDefs/Debug/Depth.j3md");
         g.setMaterial(m);
         guiNode.attachChild(g);
         return g;

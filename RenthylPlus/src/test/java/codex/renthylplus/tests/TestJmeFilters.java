@@ -6,21 +6,20 @@ package codex.renthylplus.tests;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.FrameGraphContext;
+import codex.renthyljme.FrameGraphContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.render.RenderEnvironment;
-import codex.renthyl.resources.ResourceAllocationState;
+import codex.renthyljme.resources.ResourceAllocationState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyl.tasks.*;
-import codex.renthyl.tasks.filter.FilterChain;
-import codex.renthyl.tasks.filter.PostProcessFilter;
-import codex.renthyl.tasks.scene.ControlRenderPass;
-import codex.renthyl.tasks.scene.GeometryPass;
-import codex.renthyl.tasks.scene.OutputPass;
-import codex.renthyl.tasks.scene.SceneEnqueuePass;
+import codex.renthyljme.tasks.filter.FilterChain;
+import codex.renthyljme.tasks.filter.PostProcessFilter;
+import codex.renthyljme.tasks.scene.ControlRenderPass;
+import codex.renthyljme.tasks.scene.GeometryPass;
+import codex.renthyljme.tasks.scene.OutputPass;
+import codex.renthyljme.tasks.scene.SceneEnqueuePass;
 import codex.renthyl.tasks.utils.Multiplexor;
 import codex.renthylplus.effects.ports.*;
 import com.jme3.app.SimpleApplication;
@@ -89,6 +88,7 @@ public class TestJmeFilters extends SimpleApplication {
         assetManager.registerLocator("", ImmediateShader.class);
 
         ResourceAllocationState allocator = new ResourceAllocationState();
+        allocator.capture(cap -> cap.print(System.err, 20));
         stateManager.attach(allocator);
 
         FrameGraph fg = new FrameGraph(assetManager);
@@ -101,6 +101,16 @@ public class TestJmeFilters extends SimpleApplication {
         cycle = new FilterCycle();
         channels = new Multiplexor<>();
         OutputPass out = fg.addTask(new OutputPass());
+
+        // test chaining filters together
+        FilterChain chain = cycle.add(new FilterChain());
+        CartoonEdgePass cartoon2 = chain.add(new CartoonEdgePass(assetManager, allocator));
+        cartoon2.getEdgeColor().setValue(ColorRGBA.Green);
+        cartoon2.getNormals().setUpstream(normals.getOutColor());
+        chain.add(new FXAAPass(assetManager, allocator));
+        chain.add(new ContrastAdjustmentPass(assetManager, allocator));
+        chain.add(new DepthOfFieldPass(assetManager, allocator));
+        chain.add(new FogPass(assetManager, allocator));
 
         // screenspace reflections
         SSRPass ssr = cycle.add(new SSRPass(assetManager, allocator));
@@ -148,13 +158,6 @@ public class TestJmeFilters extends SimpleApplication {
 
         // tonemapping
         FilmicToneMapPass toneMap = cycle.add(new FilmicToneMapPass(assetManager, allocator, new Vector3f(0.5f, 0.5f, 0.5f)));
-
-        // test chaining filters together
-        FilterChain chain = cycle.add(new FilterChain());
-        CartoonEdgePass cartoon2 = chain.add(new CartoonEdgePass(assetManager, allocator));
-        cartoon2.getEdgeColor().setValue(ColorRGBA.Green);
-        cartoon2.getNormals().setUpstream(normals.getOutColor());
-        chain.add(new FXAAPass(assetManager, allocator));
 
         geometry.getGeometry().addMapSource(enqueue.getQueues());
         normals.getGeometry().addMapSource(enqueue.getQueues());

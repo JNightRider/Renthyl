@@ -17,7 +17,7 @@ public class ShadowInjectionPass extends AbstractFilterTask {
     private final ArgumentSocket<ColorRGBA> shadowColor = new ArgumentSocket<>(this, ColorRGBA.Black.clone());
 
     public ShadowInjectionPass(AssetManager assetManager, ResourceAllocator allocator) {
-        super(allocator, new Material(assetManager, "RenthylPlus/MatDefs/Shadows/ShadowInject.j3md"), false);
+        super(allocator, new Material(assetManager, "RenthylJme/MatDefs/Shadows/ShadowInject.j3md"), false);
         addSockets(contribution, numLights, intensity, shadowColor);
     }
 

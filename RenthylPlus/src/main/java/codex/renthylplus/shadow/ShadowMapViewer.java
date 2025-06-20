@@ -3,12 +3,12 @@ package codex.renthylplus.shadow;
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.RenderTargetSocket;
+import codex.renthyljme.sockets.RenderTargetSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.renderer.Camera;
@@ -17,7 +17,7 @@ import com.jme3.shader.VarType;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
 
-public class ShadowMapViewer extends RenderTask {
+public class ShadowMapViewer extends RasterTask {
 
     private static ImmediateMatDef matdef;
 
@@ -72,7 +72,7 @@ public class ShadowMapViewer extends RenderTask {
                     .addParam(VarType.Texture2D, "ShadowMap");
             matdef.createTechnique()
                     .setVersions(450, 330, 150)
-                    .setVertexShader("RenthylCore/MatDefs/Fullscreen/Screen.vert")
+                    .setVertexShader("RenthylJme/MatDefs/Fullscreen/Screen.vert")
                     .setShader(frag)
                     .add();
         }

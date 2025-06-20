@@ -6,7 +6,6 @@ package codex.renthylplus.lights;
 
 import codex.renthyl.definitions.arrays.FloatArrayDef;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.AbstractTask;

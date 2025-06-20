@@ -5,13 +5,13 @@
 package codex.renthylplus.shadow;
 
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.geometry.BasicGeometryQueue;
-import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyljme.geometry.BasicGeometryQueue;
+import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.ValueSocket;
 import codex.renthyl.tasks.AbstractTask;
-import codex.renthyl.utils.SpatialWorldParam;
+import codex.renthyljme.utils.SpatialWorldParam;
 import com.jme3.renderer.queue.OpaqueComparator;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.renderer.queue.RenderQueue.ShadowMode;

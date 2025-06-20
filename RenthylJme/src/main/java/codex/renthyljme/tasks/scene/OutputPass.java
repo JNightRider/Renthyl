@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) 2024, codex
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package codex.renthyljme.tasks.scene;
+
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyljme.tasks.RasterTask;
+import com.jme3.texture.Texture2D;
+
+/**
+ * Renders color and depth textures on a fullscreen quad to the viewport's output framebuffer.
+ * 
+ * @author codex
+ */
+public class OutputPass extends RasterTask {
+
+    private final PointerSocket<Texture2D> color = new TransitiveSocket<>(this);
+    private final PointerSocket<Texture2D> depth = new TransitiveSocket<>(this);
+    private final Float alphaDiscard;
+
+    public OutputPass() {
+        this(null);
+    }
+    public OutputPass(Float alphaDiscard) {
+        this.alphaDiscard = alphaDiscard;
+        addSockets(color, depth);
+    }
+
+    @Override
+    protected void renderTask() {
+        if (alphaDiscard != null) {
+            context.getScreen().setAlphaDiscard(alphaDiscard);
+        }
+        context.renderTextures(color.acquire(), depth.acquire());
+    }
+
+    /**
+     * Gets socket for color texture to render to viewport's framebuffer (input, optional).
+     *
+     * @return
+     */
+    public PointerSocket<Texture2D> getColor() {
+        return color;
+    }
+
+    /**
+     * Gets socket for depth texture to render to viewport's framebuffer (input, optional).
+     *
+     * @return
+     */
+    public PointerSocket<Texture2D> getDepth() {
+        return depth;
+    }
+
+}

@@ -7,19 +7,16 @@ package codex.renthylplus.shadow;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
 import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
-import com.jme3.math.Vector2f;
 import com.jme3.texture.*;
 
 import java.util.List;
@@ -28,7 +25,7 @@ import java.util.List;
  *
  * @author gary
  */
-public class ShadowComposerPass extends RenderTask {
+public class ShadowComposerPass extends RasterTask {
     
     private static final int MAX_SHADOW_LIGHTS = 32;
 
@@ -47,7 +44,7 @@ public class ShadowComposerPass extends RenderTask {
         addSockets(sceneDepth, sceneNormals, shadowMaps, lightShadowIndices);
         lightContribution = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
         contributionDef.setFormat(Image.Format.R32F);
-        shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylPlus/MatDefs/Shadows/ShadowCompose.glsl");
+        shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylJme/MatDefs/Shadows/ShadowCompose.glsl");
         shader.uniformTexture("SceneDepthMap");
         shader.uniformTexture("SceneNormalsMap");
         shader.uniformTexture("ShadowMap");

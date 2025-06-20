@@ -1,30 +1,27 @@
 package codex.renthylplus.gbuffer;
 
-import codex.renthyl.FrameGraphContext;
+import codex.renthyljme.FrameGraphContext;
 import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.geometry.GeometryRenderHandler;
+import codex.renthyljme.geometry.GeometryQueue;
+import codex.renthyljme.geometry.GeometryRenderHandler;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.renderer.Camera;
-import com.jme3.renderer.opengl.GL4;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 import com.jme3.texture.image.ColorSpace;
 import org.lwjgl.opengl.GL40;
-import org.lwjgl.opengl.GL45;
 
-public class GBufferPass extends RenderTask implements GeometryRenderHandler {
+public class GBufferPass extends RasterTask implements GeometryRenderHandler {
 
     public static final String TECHNIQUE = "GBuffer";
     public static final String DEPTH = "DepthGBuffer";

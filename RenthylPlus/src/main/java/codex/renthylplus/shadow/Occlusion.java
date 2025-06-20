@@ -1,6 +1,6 @@
 package codex.renthylplus.shadow;
 
-import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;

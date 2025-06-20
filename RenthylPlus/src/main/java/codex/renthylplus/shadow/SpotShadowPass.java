@@ -4,25 +4,18 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.geometry.GeometryQueue;
+import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
-import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.asset.AssetManager;
-import com.jme3.light.Light;
-import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.FastMath;
-import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.texture.FrameBuffer;
-import com.jme3.texture.Texture2D;
 
 import java.util.Collection;
 
@@ -30,7 +23,7 @@ import java.util.Collection;
  *
  * @author codex
  */
-public class SpotShadowPass extends RenderTask implements Occlusion<SpotLight> {
+public class SpotShadowPass extends RasterTask implements Occlusion<SpotLight> {
 
     private final ArgumentSocket<SpotLight> light = new ArgumentSocket<>(this);
     private final TransitiveSocket<GeometryQueue> occluders = new TransitiveSocket<>(this);

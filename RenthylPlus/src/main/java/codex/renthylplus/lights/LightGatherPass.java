@@ -5,7 +5,7 @@
 package codex.renthylplus.lights;
 
 import codex.renthyl.sockets.ValueSocket;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.light.Light;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
@@ -17,7 +17,7 @@ import java.util.Collection;
  *
  * @author codex
  */
-public class LightGatherPass extends RenderTask {
+public class LightGatherPass extends RasterTask {
 
     private final ValueSocket<Collection<Light>> lights = new ValueSocket<>(this, new ArrayList<>());
 

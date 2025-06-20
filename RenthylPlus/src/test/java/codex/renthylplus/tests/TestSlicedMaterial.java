@@ -6,25 +6,21 @@ import codex.boost.material.ImmediateShader;
 import codex.boost.mesh.NormalQuad;
 import codex.jmecompute.opengl.GLRenderUtils;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.FrameGraphContext;
+import codex.renthyljme.FrameGraphContext;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.geometry.GeometryQueue;
+import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyl.render.RenderEnvironment;
-import codex.renthyl.resources.ResourceAllocationState;
+import codex.renthyljme.resources.ResourceAllocationState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.OptionalSocket;
-import codex.renthyl.sockets.Socket;
-import codex.renthyl.sockets.macros.ArgumentMacro;
-import codex.renthyl.sockets.macros.InputToggledMacro;
+import codex.renthyljme.sockets.macros.InputToggledMacro;
 import codex.renthyl.sockets.macros.Macro;
 import codex.renthyl.tasks.attributes.Attribute;
 import codex.renthyl.tasks.attributes.GlobalAccessor;
-import codex.renthyl.tasks.filter.FilterChain;
-import codex.renthyl.tasks.scene.ControlRenderPass;
-import codex.renthyl.tasks.scene.GeometryPass;
-import codex.renthyl.tasks.scene.OutputPass;
-import codex.renthyl.tasks.scene.SceneEnqueuePass;
-import codex.renthyl.tasks.utils.*;
+import codex.renthyljme.tasks.filter.FilterChain;
+import codex.renthyljme.tasks.scene.ControlRenderPass;
+import codex.renthyljme.tasks.scene.GeometryPass;
+import codex.renthyljme.tasks.scene.OutputPass;
+import codex.renthyljme.tasks.scene.SceneEnqueuePass;
 import codex.renthylplus.SlicedMesh;
 import codex.renthylplus.effects.ports.FXAAPass;
 import codex.renthylplus.gbuffer.GBufferLightingPass;
@@ -45,7 +41,6 @@ import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.PointLight;
 import com.jme3.material.Material;
-import com.jme3.material.RenderState;
 import com.jme3.math.*;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
@@ -202,7 +197,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
             sofa = assetManager.loadModel("Models/Sofa/SofaReversiReplica001_Blender_Cycles.gltf");
             System.out.println("Model loaded from gltf");
             try {
-                BinaryExporter.getInstance().save(sofa, new File("/home/codex/java/projects/Renthyl/RenthylPlus/src/test/resources/Models/Sofa/SofaReversiReplica001_Blender_Cycles.j3o"));
+                BinaryExporter.getInstance().save(sofa, new File("/home/codex/java/projects/Renthyl/RenthylJme/src/test/resources/Models/Sofa/SofaReversiReplica001_Blender_Cycles.j3o"));
                 System.out.println("  Model successfully cached to j3o");
             } catch (IOException e) {
                 System.out.println("  Failed to cache model to j3o");
@@ -227,7 +222,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
 
         // geoemtry queuing
         SceneEnqueuePass enqueue = SceneEnqueuePass.withLegacyQueues();
-        MapToListPass<String, GeometryQueue> queuesToList = new MapToListPass<>(new String[] {
+        MapToList<String, GeometryQueue> queuesToList = new MapToList<>(new String[] {
                 SceneEnqueuePass.OPAQUE, SceneEnqueuePass.SKY, SceneEnqueuePass.TRANSPARENT, SceneEnqueuePass.GUI, SceneEnqueuePass.TRANSLUCENT});
 
         // deferred pipeline
@@ -353,7 +348,7 @@ public class TestSlicedMaterial extends SimpleApplication implements ActionListe
     }
 
     private Material createSlicedMaterial() {
-        Material mat = new Material(assetManager, "RenthylPlus/MatDefs/SlicedPBRLighting.j3md");
+        Material mat = new Material(assetManager, "RenthylJme/MatDefs/SlicedPBRLighting.j3md");
         Texture diffuse = assetManager.loadTexture(new TextureKey("Textures/Brick/Brick_Diffuse.jpg", true));
         diffuse.setWrap(Texture.WrapMode.Repeat);
         diffuse.setMinFilter(Texture.MinFilter.Trilinear);

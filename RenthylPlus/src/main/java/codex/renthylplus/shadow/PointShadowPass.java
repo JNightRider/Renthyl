@@ -4,15 +4,12 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.geometry.GeometryQueue;
+import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.asset.AssetManager;
-import com.jme3.light.Light;
 import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -26,7 +23,7 @@ import java.util.Collection;
  *
  * @author codex
  */
-public class PointShadowPass extends RenderTask implements Occlusion<PointLight> {
+public class PointShadowPass extends RasterTask implements Occlusion<PointLight> {
 
     private static final Vector3f[] DIRECTIONS = {Vector3f.UNIT_X, Vector3f.UNIT_Y, Vector3f.UNIT_Z,
             Vector3f.UNIT_X.negate(), Vector3f.UNIT_Y.negate(), Vector3f.UNIT_Z.negate()};

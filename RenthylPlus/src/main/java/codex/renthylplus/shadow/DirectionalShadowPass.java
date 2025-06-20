@@ -4,24 +4,18 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.FrameGraphContext;
-import codex.renthyl.geometry.GeometryQueue;
-import codex.renthyl.geometry.GeometryRenderHandler;
-import codex.renthyl.geometry.Visibility;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.geometry.GeometryQueue;
+import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyl.tasks.RenderTask;
+import codex.renthyljme.tasks.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
-import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Spatial;
 import com.jme3.texture.FrameBuffer;
 
 import java.util.Collection;
@@ -30,7 +24,7 @@ import java.util.Collection;
  *
  * @author codex
  */
-public class DirectionalShadowPass extends RenderTask implements Occlusion<DirectionalLight> {
+public class DirectionalShadowPass extends RasterTask implements Occlusion<DirectionalLight> {
 
     private static final float MIN_FRUSTUM = .5f;
 

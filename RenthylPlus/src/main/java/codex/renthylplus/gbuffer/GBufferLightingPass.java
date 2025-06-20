@@ -9,7 +9,6 @@ import codex.jmecompute.opengl.uniforms.buffers.FloatArrayUniform;
 import codex.jmecompute.opengl.uniforms.buffers.FloatBufferUniform;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
-import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.SocketList;
 import codex.renthyl.tasks.AbstractTask;
@@ -41,7 +40,7 @@ public class GBufferLightingPass extends AbstractTask {
     public GBufferLightingPass(AssetManager assetManager, ResourceAllocator allocator) {
         addSockets(gbuffers, depth, camera, lightData);
         result = addSocket(new AllocationSocket<>(this, allocator, resultDef));
-        shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylPlus/MatDefs/GBuffers/GBufferPBR.glsl");
+        shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylJme/MatDefs/GBuffers/GBufferPBR.glsl");
         shader.uniformMatrix4("ViewProjectionInverse");
         shader.uniformVector3("CameraPosition");
         shader.uniform(new FloatBufferUniform("LightData", Stride.Vec4));
