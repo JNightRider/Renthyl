@@ -5,6 +5,7 @@
 package codex.renthyljme.definitions;
 
 import codex.boost.export.SavableObject;
+import codex.renthyl.definitions.ResourceDef;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;

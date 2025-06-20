@@ -1,12 +1,12 @@
 package codex.renthyljme.shadow;
 
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.definitions.FrameBufferDef;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.Socket;
+import codex.renthyljme.definitions.FrameBufferDef;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
 

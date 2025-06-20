@@ -1,13 +1,13 @@
 package codex.renthyljme.sockets;
 
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.allocation.AllocationSocket;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
 

@@ -1,7 +1,7 @@
 package codex.renthyljme.gi;
 
 import codex.renthyl.definitions.ResourceDef;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyljme.definitions.TextureDef;
 import com.jme3.math.Matrix4f;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;

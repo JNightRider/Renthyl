@@ -29,7 +29,7 @@
 package codex.renthyljme.geometry;
 
 import codex.renthyljme.FrameGraphContext;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.render.CameraState;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 

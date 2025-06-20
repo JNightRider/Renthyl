@@ -1,8 +1,10 @@
 package codex.renthyljme.gbuffer;
 
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyljme.FrameGraphContext;
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyljme.geometry.GeometryRenderHandler;
 import codex.renthyl.resources.ResourceAllocator;

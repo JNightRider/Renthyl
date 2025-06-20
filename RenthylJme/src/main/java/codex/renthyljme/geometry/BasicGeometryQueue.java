@@ -1,7 +1,7 @@
 package codex.renthyljme.geometry;
 
 import codex.renthyljme.FrameGraphContext;
-import codex.renthyl.render.CameraState;
+import codex.renthyljme.render.CameraState;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.Savable;

@@ -1,5 +1,5 @@
 
-@dynamic_local_size
+layout (local_size_x = LOCAL_X, local_size_y = LOCAL_Y, local_size_z = LOCAL_z) in;
 
 #import "RenthylPlus/ShaderLib/Projection.glsllib"
 #import "RenthylPlus/MatDefs/VXGI/gbufferCompression.glsllib"

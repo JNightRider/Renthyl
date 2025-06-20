@@ -5,18 +5,21 @@
 package codex.renthyljme.gi.vct;
 
 import codex.boost.material.MaterialAdapter;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyljme.FrameGraphContext;
-import codex.renthyl.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.geometry.GeometryQueue;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyljme.geometry.GeometryRenderHandler;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketMap;
+import codex.renthyljme.lights.LightBuffer;
 import codex.renthyljme.tasks.RasterTask;
-import codex.renthylplus.lights.LightBuffer;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
 import com.jme3.scene.Geometry;

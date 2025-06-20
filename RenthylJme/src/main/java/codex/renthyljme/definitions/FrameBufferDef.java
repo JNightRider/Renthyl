@@ -1,5 +1,6 @@
 package codex.renthyljme.definitions;
 
+import codex.renthyl.definitions.ResourceDef;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;

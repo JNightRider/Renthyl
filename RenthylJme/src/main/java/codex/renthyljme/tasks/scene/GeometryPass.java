@@ -28,11 +28,14 @@
  */
 package codex.renthyljme.tasks.scene;
 
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyljme.geometry.GeometryRenderHandler;
-import codex.renthyl.render.RenderEnvironment;
+import codex.renthyljme.render.RenderEnvironment;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;

@@ -2,7 +2,7 @@ package codex.renthyljme.shadow;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyljme.sockets.RenderTargetSocket;

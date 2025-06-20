@@ -21,7 +21,6 @@
           <set>
             <option value="$PROJECT_DIR$/../JMECompute/JMECompute" />
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/RenthylC" />
             <option value="$PROJECT_DIR$/RenthylCore" />
             <option value="$PROJECT_DIR$/RenthylJme" />
             <option value="$PROJECT_DIR$/buildSrc" />

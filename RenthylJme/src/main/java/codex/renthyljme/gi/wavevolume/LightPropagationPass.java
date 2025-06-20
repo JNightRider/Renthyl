@@ -2,10 +2,10 @@ package codex.renthyljme.gi.wavevolume;
 
 import codex.jmecompute.assets.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeShader;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.TemporalSocket;
 import codex.renthyl.tasks.AbstractTask;
+import codex.renthyljme.definitions.TextureDef;
 import com.jme3.asset.AssetManager;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture3D;

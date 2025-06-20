@@ -4,6 +4,8 @@
  */
 package codex.renthyljme.shadow;
 
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.ValueSocket;
 import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.collections.CollectorSocket;

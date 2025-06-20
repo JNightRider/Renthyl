@@ -33,7 +33,7 @@ package codex.renthyljme.effects.ports;
 
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
-import codex.renthylplus.effects.AbstractFilterTask;
+import codex.renthyljme.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 

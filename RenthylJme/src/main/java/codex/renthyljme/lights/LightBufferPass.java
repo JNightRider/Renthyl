@@ -6,6 +6,9 @@ package codex.renthyljme.lights;
 
 import codex.renthyl.definitions.arrays.FloatArrayDef;
 import codex.renthyl.resources.ResourceAllocator;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.tasks.AbstractTask;

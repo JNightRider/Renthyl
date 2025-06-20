@@ -4,9 +4,9 @@
  */
 package codex.renthyljme.gi.vct;
 
-import codex.renthyl.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.geometry.GeometryQueue;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.TransitiveSocket;

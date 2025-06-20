@@ -30,8 +30,8 @@ package codex.renthyljme;
 
 import codex.boost.render.DepthRange;
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.render.CameraState;
 import codex.renthyl.render.ContextSetting;
+import codex.renthyljme.render.CameraState;
 import codex.renthyljme.utils.FullScreenQuad;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.LightFilter;

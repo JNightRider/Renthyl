@@ -1,7 +1,10 @@
 package codex.renthyljme.effects;
 
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.sockets.OptionalSocket;
+import codex.renthyl.sockets.PointerSocket;
+import codex.renthyl.sockets.Socket;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;

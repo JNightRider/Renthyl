@@ -1,6 +1,6 @@
-package codex.renthyl.render;
+package codex.renthyljme.render;
 
-import codex.renthyl.FrameGraphContext;
+import codex.renthyljme.FrameGraphContext;
 
 /**
  * Sets up the rendering context.

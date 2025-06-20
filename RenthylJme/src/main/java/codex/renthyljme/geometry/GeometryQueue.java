@@ -29,7 +29,7 @@
 package codex.renthyljme.geometry;
 
 import codex.renthyljme.FrameGraphContext;
-import codex.renthyl.render.RenderEnvironment;
+import codex.renthyljme.render.RenderEnvironment;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.scene.Geometry;
 

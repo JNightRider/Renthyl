@@ -32,8 +32,10 @@
 package codex.renthyljme.effects.ports;
 
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.sockets.*;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
+import codex.renthyljme.effects.AbstractFilterTask;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
@@ -41,7 +43,6 @@ import codex.renthyl.sockets.macros.ArgumentMacro;
 import codex.renthyl.tasks.Frame;
 import codex.renthyljme.tasks.filter.PostProcessFilter;
 import codex.renthyljme.tasks.RasterTask;
-import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;

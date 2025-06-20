@@ -4,6 +4,7 @@
  */
 package codex.renthyljme.shadow;
 
+import codex.renthyl.sockets.*;
 import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;

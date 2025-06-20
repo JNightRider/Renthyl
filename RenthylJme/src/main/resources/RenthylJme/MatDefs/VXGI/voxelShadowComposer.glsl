@@ -1,6 +1,5 @@
 
-@dynamic_local_size
-//layout (local_size_x = 1, local_size_y = 1) in;
+layout (local_size_x = LOCAL_X, local_size_y = LOCAL_Y, local_size_z = LOCAL_z) in;
 
 //#import "Common/ShaderLib/GLSLCompat.glsllib"
 //#import "RenthylJme/ShaderLib/Shadows.glsllib"

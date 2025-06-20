@@ -32,16 +32,16 @@
 package codex.renthyljme.effects.ports;
 
 import codex.renthyl.GlobalAttributes;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.macros.ArgumentMacro;
+import codex.renthyljme.definitions.TextureDef;
+import codex.renthyljme.effects.AbstractFilterTask;
 import codex.renthyljme.tasks.filter.PostProcessFilter;
 import codex.renthyl.tasks.Frame;
-import codex.renthylplus.effects.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;

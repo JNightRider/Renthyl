@@ -6,11 +6,11 @@ package codex.renthyljme.gi.vct;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;
-import codex.renthyl.definitions.FrameBufferDef;
-import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyljme.definitions.FrameBufferDef;
+import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.tasks.RasterTask;
 import com.jme3.material.Material;
 import com.jme3.shader.Shader;
