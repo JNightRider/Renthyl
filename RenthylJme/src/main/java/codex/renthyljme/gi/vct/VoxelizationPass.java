@@ -23,7 +23,7 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.allocation.TemporalSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import codex.renthyljme.geometry.GeometryRenderHandler;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;

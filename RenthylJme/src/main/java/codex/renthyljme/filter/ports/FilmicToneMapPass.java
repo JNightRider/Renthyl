@@ -29,54 +29,40 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.effects.ports;
+package codex.renthyljme.filter.ports;
 
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
-import codex.renthyljme.effects.AbstractFilterTask;
+import codex.renthyljme.filter.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
+import com.jme3.math.Vector3f;
 
 /**
  *
  * @author codex
  */
-public class PosterizationPass extends AbstractFilterTask {
+public class FilmicToneMapPass extends AbstractFilterTask {
+    
+    private static final Vector3f DEFAULT_WHITEPOINT = new Vector3f(11.2f, 11.2f, 11.2f);
 
-    private final ArgumentSocket<Integer> colors = new ArgumentSocket<>(this);
-    private final ArgumentSocket<Float> gamma = new ArgumentSocket<>(this);
-    private final ArgumentSocket<Float> strength = new ArgumentSocket<>(this, 1.0f);
+    private final ArgumentSocket<Vector3f> whitePoint = new ArgumentSocket<>(this);
 
-    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator) {
-        this(assetManager, allocator, 8);
+    public FilmicToneMapPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, DEFAULT_WHITEPOINT);
     }
-    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors) {
-        this(assetManager, allocator, colors, 0.6f);
-    }
-    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors, float gamma) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Posterization.j3md"), false);
-        addSocket(this.colors).setValue(colors);
-        addSocket(this.gamma).setValue(gamma);
-        addSocket(strength);
+    public FilmicToneMapPass(AssetManager assetManager, ResourceAllocator allocator, Vector3f whitePoint) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/ToneMap.j3md"), false);
+        addSocket(this.whitePoint).setValue(whitePoint.clone());
     }
 
     @Override
     protected void configureMaterial(Material material) {
-        colors.acquireToMaterial(material, "NumColors");
-        gamma.acquireToMaterial(material, "Gamma");
-        strength.acquireToMaterial(material, "Strength");
+        whitePoint.acquireToMaterial(material, "WhitePoint");
     }
 
-    public ArgumentSocket<Integer> getColors() {
-        return colors;
-    }
-
-    public ArgumentSocket<Float> getGamma() {
-        return gamma;
-    }
-
-    public ArgumentSocket<Float> getStrength() {
-        return strength;
+    public ArgumentSocket<Vector3f> getWhitePoint() {
+        return whitePoint;
     }
 
 }

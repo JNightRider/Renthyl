@@ -1,4 +1,4 @@
-package codex.renthyljme.tasks.filter;
+package codex.renthyljme.filter;
 
 import codex.renthyl.render.Renderable;
 import codex.renthyl.sockets.PointerSocket;
@@ -6,7 +6,7 @@ import codex.renthyl.sockets.Socket;
 import com.jme3.texture.Texture2D;
 
 /**
- * Renderable task designed to perform post-processing effects.
+ * Renderable task designed to perform post-processing filter.
  *
  * @author codex
  */

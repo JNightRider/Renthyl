@@ -17,7 +17,7 @@ import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyljme.definitions.TextureDef;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.math.FastMath;

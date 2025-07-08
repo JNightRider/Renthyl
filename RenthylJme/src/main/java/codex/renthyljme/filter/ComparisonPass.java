@@ -1,4 +1,4 @@
-package codex.renthyljme.effects;
+package codex.renthyljme.filter;
 
 import codex.boost.material.ImmediateMatDef;
 import codex.boost.material.ImmediateShader;

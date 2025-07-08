@@ -3,7 +3,7 @@ package codex.renthyljme.shadow;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyljme.effects.AbstractFilterTask;
+import codex.renthyljme.filter.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;

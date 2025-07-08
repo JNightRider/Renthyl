@@ -1,4 +1,4 @@
-package codex.renthyljme.tasks.scene;
+package codex.renthyljme.scene;
 
 import codex.renthyljme.definitions.FrameBufferDef;
 import codex.renthyljme.definitions.TextureDef;
@@ -7,7 +7,7 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.Socket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.material.RenderState;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
@@ -38,17 +38,21 @@ public class GeometryDepthPass extends RasterTask {
     protected void renderTask() {
 
         depthDef.setSize(context.getWidth(), context.getHeight());
+        bufferDef.clearColorTargets();
         bufferDef.setDepthTarget(depth.acquire());
         FrameBuffer fbo = frameBuffer.acquire();
         context.getFrameBuffer().pushValue(fbo);
         context.clearBuffers();
 
         context.getForcedState().pushValue(forcedState);
+        context.getForcedTechnique().pushValue("Depth");
+
         for (GeometryQueue q : geometry.acquire()) {
             q.render(context);
         }
 
         context.getForcedState().pop();
+        context.getForcedTechnique().pop();
         context.getFrameBuffer().pop();
 
     }

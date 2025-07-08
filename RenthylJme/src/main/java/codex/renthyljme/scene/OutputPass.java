@@ -26,11 +26,11 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.tasks.scene;
+package codex.renthyljme.scene;
 
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.texture.Texture2D;
 
 /**

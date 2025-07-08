@@ -26,7 +26,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.tasks.scene;
+package codex.renthyljme.scene;
 
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
@@ -42,9 +42,8 @@ import codex.renthyljme.render.RenderEnvironment;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import codex.renthyljme.utils.MaterialUtils;
-import com.jme3.material.Material;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
@@ -52,7 +51,6 @@ import com.jme3.texture.Texture2D;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Renders geometry to a color texture and a depth texture.
@@ -95,7 +93,7 @@ public class GeometryPass extends RasterTask implements GeometryRenderHandler {
         // configure definitions
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(context.getWidth(), context.getHeight());
-        bufferDef.setColorTargets(outColor.acquire());
+        bufferDef.setColorTarget(outColor.acquire());
         bufferDef.setDepthTarget(outDepth.acquire());
 
         FrameBuffer fb = frameBuffer.acquire();
@@ -121,13 +119,7 @@ public class GeometryPass extends RasterTask implements GeometryRenderHandler {
 
     @Override
     public void renderGeometry(FrameGraphContext context, Geometry geometry) {
-        Material mat = geometry.getMaterial();
-        if (!parameterMap.isEmpty()) for (Map.Entry<String, Object> e : parameterMap.entrySet()) {
-            if (MaterialUtils.parameterExists(mat, e.getKey())) {
-                System.out.println("update " + e.getKey() + " material parameter.");
-                mat.setParam(e.getKey(), e.getValue());
-            }
-        }
+        MaterialUtils.setParameters(geometry.getMaterial(), parameterMap, o -> o);
         context.getRenderManager().renderGeometry(geometry);
     }
 

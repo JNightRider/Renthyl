@@ -3,7 +3,7 @@ MaterialDef PBR Lighting {
     MaterialParameters {
         Int BoundDrawBuffer
 
-        Texture2D LightContributionMap -LINEAR
+        Texture2D ShadowMask -LINEAR
         FloatArray LightData
         Int NumLights
 
@@ -157,7 +157,7 @@ MaterialDef PBR Lighting {
         }
 
         Defines {
-            LIGHT_CONTRIBUTION : LightContributionMap
+            SHADOW_MASK : ShadowMask
             NUM_LIGHTS : NumLights
             BOUND_DRAW_BUFFER: BoundDrawBuffer
             BASECOLORMAP : BaseColorMap
@@ -203,6 +203,29 @@ MaterialDef PBR Lighting {
         }
     }
 
+    Technique Depth {
+
+        VertexShader GLSL450 GLSL400 GLSL330 : Common/MatDefs/Light/PBRLighting.vert
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            CameraPosition
+            WorldMatrix
+            WorldNormalMatrix
+            ViewProjectionMatrix
+            ViewMatrix
+        }
+
+        Defines {
+            BOUND_DRAW_BUFFER : BoundDrawBuffer
+            SEPARATE_TEXCOORD : SeparateTexCoord
+            NUM_BONES : NumberOfBones
+            INSTANCING : UseInstancing
+            NUM_MORPH_TARGETS : NumberOfMorphTargets
+            NUM_TARGETS_BUFFERS : NumberOfTargetsBuffers
+        }
+
+    }
 
     Technique PreShadow {
 

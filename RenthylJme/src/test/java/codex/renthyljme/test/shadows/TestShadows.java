@@ -9,11 +9,11 @@ import codex.renthyljme.lights.LightBuffer;
 import codex.renthyljme.lights.LightBufferPass;
 import codex.renthyljme.lights.LightGatherPass;
 import codex.renthyljme.resources.ResourceAllocationState;
+import codex.renthyljme.scene.*;
 import codex.renthyljme.shadow.ShadowComposerPass;
 import codex.renthyljme.shadow.ShadowManager;
 import codex.renthyljme.shadow.ShadowMap;
-import codex.renthyljme.tasks.InputToggledMux;
-import codex.renthyljme.tasks.scene.*;
+import codex.renthyljme.utils.InputToggledMux;
 import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
@@ -33,7 +33,6 @@ import com.jme3.scene.shape.Box;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture2D;
 
-import java.nio.FloatBuffer;
 import java.util.Collection;
 
 public class TestShadows extends SimpleApplication {
@@ -102,19 +101,16 @@ public class TestShadows extends SimpleApplication {
         LightGatherPass lightGather = new LightGatherPass();
         LightBufferPass lightBuffer = new LightBufferPass(allocator);
         lightBuffer.getLights().addCollectionSource(lightGather.getLights());
-        lightBuffer.getLightShadowMapping().setUpstream(shadowComposer.getLightShadowIndices());
+        lightBuffer.getLightShadowMapping().setUpstream(shadowComposer.getLightShadowMapping());
 
         GeometryPass geometry = new GeometryPass(allocator);
         geometry.getGeometry().addMapSource(enqueue.getQueues());
-        geometry.getParameter("LightContributionMap").setUpstream(shadowComposer.getLightContribution());
+        geometry.getParameter("ShadowMask").setUpstream(shadowComposer.getShadowMask());
         geometry.getParameter("LightData").setUpstream(new Derivative<LightBuffer, float[]>() {
             private float[] array;
             @Override
-            public float[] apply(LightBuffer lightBuffer) {
-                if (array == null || array.length != lightBuffer.getData().limit()) {
-                    array = new float[lightBuffer.getData().limit()];
-                }
-                return lightBuffer.copyDataTo(array);
+            public float[] apply(LightBuffer buf) {
+                return (array = buf.copyDataTo(array));
             }
         }.setUpstream(lightBuffer.getLightData()));
         geometry.getParameter("NumLights").setUpstream(new Derivative<Collection<Light>, Integer>() {
@@ -126,7 +122,7 @@ public class TestShadows extends SimpleApplication {
 
         InputToggledMux<Texture2D> outChannel = new InputToggledMux<>();
         outChannel.addUpstream(geometry.getOutColor());
-        outChannel.addUpstream(shadowComposer.getLightContribution());
+        outChannel.addUpstream(shadowComposer.getShadowMask());
         outChannel.addUpstream(new Derivative<Collection<ShadowMap>, Texture2D>() {
             @Override
             public Texture2D apply(Collection<ShadowMap> shadowMaps) {

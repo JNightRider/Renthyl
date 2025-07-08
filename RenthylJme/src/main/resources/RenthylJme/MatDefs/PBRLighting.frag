@@ -13,7 +13,7 @@
 #import "RenthylJme/ShaderLib/Shadows.glsllib"
 
 #ifdef DEBUG_VALUES_MODE
-uniform int m_DebugValuesMode;
+    uniform int m_DebugValuesMode;
 #endif
 
 #ifdef NUM_LIGHTS
@@ -26,8 +26,8 @@ uniform vec3 g_CameraPosition;
 #import "Common/ShaderLib/MaterialFog.glsllib"
 #endif
 
-#ifdef LIGHT_CONTRIBUTION
-    uniform sampler2D m_LightContributionMap;
+#ifdef SHADOW_MASK
+    uniform sampler2D m_ShadowMask;
 #endif
 
 void main() {
@@ -44,15 +44,15 @@ void main() {
     PBRLightingUtils_calculatePreLightingValues(surface);
 
     // Calculate direct lights
-    //#ifdef NUM_LIGHTS
+    #ifdef NUM_LIGHTS
     for (int i = 0; i < m_NumLights; i += 3) {
         vec4 lightData0 = m_LightData[i];
         int type = int(lightData0.x);
-        #ifdef LIGHT_CONTRIBUTION
+        #ifdef SHADOW_MASK
             int shadow = extractShadowIndex(type);
             if (shadow >= 0) {
-                vec2 uv = vec2(gl_FragCoord.xy) / textureSize(m_LightContributionMap, 0);
-                uint mask = uint(texture(m_LightContributionMap, uv).r);
+                vec2 uv = vec2(gl_FragCoord.xy) / textureSize(m_ShadowMask, 0);
+                uint mask = uint(texture(m_ShadowMask, uv).r);
                 if ((mask & (1u << shadow)) == 0u) {
                     //continue;
                 }
@@ -69,7 +69,7 @@ void main() {
             surface
         );
     }
-    //#endif
+    #endif
 
 
     // Calculate env probes

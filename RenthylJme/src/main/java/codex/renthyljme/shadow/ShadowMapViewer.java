@@ -8,7 +8,7 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyljme.sockets.RenderTargetSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.renderer.Camera;

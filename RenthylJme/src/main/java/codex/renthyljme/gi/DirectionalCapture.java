@@ -13,7 +13,7 @@ import codex.renthyl.resources.ResourceWrapper;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.allocation.TemporalSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingSphere;
 import com.jme3.math.Vector3f;

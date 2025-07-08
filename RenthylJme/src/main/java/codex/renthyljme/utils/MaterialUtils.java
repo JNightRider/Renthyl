@@ -9,6 +9,8 @@ import com.jme3.scene.Spatial;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -75,6 +77,32 @@ public class MaterialUtils {
      */
     public static boolean parameterExists(Material material, String parameter) {
         return material.getMaterialDef().getMaterialParam(parameter) != null;
+    }
+
+    /**
+     * Sets material parameters according to the elements in {@code parameters} by name.
+     * Parameters not defined in {@code parameters} are left untouched.
+     *
+     * @param material
+     * @param parameters
+     * @param extract extracts the parameter to apply from the Object returned from {@code parameters}
+     * @return the number of parameters set by this method
+     */
+    public static <T> int setParameters(Material material, Map<String, ? extends T> parameters, Function<T, Object> extract) {
+        int count = 0;
+        if (parameters.size() <= material.getMaterialDef().getMaterialParams().size()) {
+            for (Map.Entry<String, ? extends T> p : parameters.entrySet()) if (parameterExists(material, p.getKey())) {
+                material.setParam(p.getKey(), extract.apply(p.getValue()));
+                count++;
+            }
+        } else for (MatParam m : material.getMaterialDef().getMaterialParams()) {
+            T p = parameters.get(m.getName());
+            if (p != null) {
+                material.setParam(m.getName(), extract.apply(p));
+                count++;
+            }
+        }
+        return count;
     }
 
 }

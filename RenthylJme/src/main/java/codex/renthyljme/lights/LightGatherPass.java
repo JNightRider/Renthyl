@@ -5,7 +5,7 @@
 package codex.renthyljme.lights;
 
 import codex.renthyl.sockets.ValueSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.light.Light;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;

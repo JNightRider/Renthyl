@@ -1,4 +1,4 @@
-package codex.renthyljme.effects;
+package codex.renthyljme.filter;
 
 import codex.renthyl.sockets.OptionalSocket;
 import codex.renthyl.sockets.PointerSocket;
@@ -8,8 +8,7 @@ import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
-import codex.renthyljme.tasks.filter.PostProcessFilter;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.renderer.Camera;

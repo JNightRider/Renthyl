@@ -1,9 +1,8 @@
-package codex.renthyljme.tasks;
+package codex.renthyljme;
 
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyl.tasks.AbstractTask;
-import codex.renthyljme.FrameGraphContext;
 
 public abstract class RasterTask extends AbstractTask {
 

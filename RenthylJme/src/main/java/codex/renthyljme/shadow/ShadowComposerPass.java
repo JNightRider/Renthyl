@@ -12,7 +12,7 @@ import codex.renthyl.sockets.*;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyljme.definitions.TextureDef;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
@@ -34,7 +34,7 @@ public class ShadowComposerPass extends RasterTask {
     private final TransitiveSocket<Texture2D> sceneNormals = new TransitiveSocket<>(this);
     private final CollectorSocket<ShadowMap> shadowMaps = new CollectorSocket<>(this);
     private final ArgumentSocket<String> readNormalsLambda = new ArgumentSocket<>(this);
-    private final AllocationSocket<Texture2D> lightContribution;
+    private final AllocationSocket<Texture2D> shadowMask;
     private final ValueSocket<Light[]> lightShadowIndices = new ValueSocket<>(this);
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
     private final GLComputeShader shader;
@@ -43,7 +43,7 @@ public class ShadowComposerPass extends RasterTask {
 
     public ShadowComposerPass(AssetManager assetManager, ResourceAllocator allocator) {
         addSockets(sceneDepth, sceneNormals, shadowMaps, lightShadowIndices);
-        lightContribution = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
+        shadowMask = addSocket(new AllocationSocket<>(this, allocator, contributionDef));
         contributionDef.setFormat(Image.Format.R32F);
         shader = UniversalShaderLoader.loadComputeShader(assetManager, "RenthylJme/MatDefs/Shadows/ShadowCompose.glsl");
         shader.uniformTexture("SceneDepthMap");
@@ -77,7 +77,7 @@ public class ShadowComposerPass extends RasterTask {
 
         shader.set("SceneDepthMap", depth);
         shader.set("CamViewProjectionInverse", context.getViewPort().getCamera().getViewProjectionMatrix().invert());
-        shader.set("Contribution", lightContribution.acquire());
+        shader.set("Contribution", shadowMask.acquire());
         shader.set("Overwrite", true);
 
         // work size
@@ -85,9 +85,9 @@ public class ShadowComposerPass extends RasterTask {
 
         // result image
         if (resultImage == null) {
-            resultImage = new TextureImage(lightContribution.acquire(), TextureImage.Access.ReadWrite);
+            resultImage = new TextureImage(shadowMask.acquire(), TextureImage.Access.ReadWrite);
         } else {
-            resultImage.setTexture(lightContribution.acquire());
+            resultImage.setTexture(shadowMask.acquire());
         }
         shader.set("Contribution", resultImage);
 
@@ -160,11 +160,11 @@ public class ShadowComposerPass extends RasterTask {
         return readNormalsLambda;
     }
 
-    public Socket<Texture2D> getLightContribution() {
-        return lightContribution;
+    public Socket<Texture2D> getShadowMask() {
+        return shadowMask;
     }
 
-    public Socket<Light[]> getLightShadowIndices() {
+    public Socket<Light[]> getLightShadowMapping() {
         return lightShadowIndices;
     }
 

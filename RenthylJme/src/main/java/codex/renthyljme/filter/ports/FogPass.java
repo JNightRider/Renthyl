@@ -29,40 +29,62 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.effects.ports;
+package codex.renthyljme.filter.ports;
 
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
-import codex.renthyljme.effects.AbstractFilterTask;
+import codex.renthyljme.filter.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
-import com.jme3.math.Vector3f;
+import com.jme3.math.ColorRGBA;
 
 /**
  *
  * @author codex
  */
-public class FilmicToneMapPass extends AbstractFilterTask {
-    
-    private static final Vector3f DEFAULT_WHITEPOINT = new Vector3f(11.2f, 11.2f, 11.2f);
+public class FogPass extends AbstractFilterTask {
 
-    private final ArgumentSocket<Vector3f> whitePoint = new ArgumentSocket<>(this);
+    private final ArgumentSocket<ColorRGBA> color = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> density = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> distance = new ArgumentSocket<>(this);
 
-    public FilmicToneMapPass(AssetManager assetManager, ResourceAllocator allocator) {
-        this(assetManager, allocator, DEFAULT_WHITEPOINT);
+    /**
+     * Creates a FogFilter
+     */
+    public FogPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, ColorRGBA.White.clone(), 0.7f, 1000f);
     }
-    public FilmicToneMapPass(AssetManager assetManager, ResourceAllocator allocator, Vector3f whitePoint) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/ToneMap.j3md"), false);
-        addSocket(this.whitePoint).setValue(whitePoint.clone());
+
+    /**
+     * Create a fog filter 
+     * @param color the color of the fog (default is white)
+     * @param density the density of the fog (default is 0.7)
+     * @param distance the distance of the fog (default is 1000)
+     */
+    public FogPass(AssetManager assetManager, ResourceAllocator allocator, ColorRGBA color, float density, float distance) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Fog.j3md"), true);
+        addSocket(this.color).setValue(color);
+        addSocket(this.density).setValue(density);
+        addSocket(this.distance).setValue(distance);
     }
 
     @Override
     protected void configureMaterial(Material material) {
-        whitePoint.acquireToMaterial(material, "WhitePoint");
+        color.acquireToMaterial(material, "FogColor");
+        density.acquireToMaterial(material, "FogDensity");
+        distance.acquireToMaterial(material, "FogDistance");
     }
 
-    public ArgumentSocket<Vector3f> getWhitePoint() {
-        return whitePoint;
+    public ArgumentSocket<ColorRGBA> getColor() {
+        return color;
+    }
+
+    public ArgumentSocket<Float> getDensity() {
+        return density;
+    }
+
+    public ArgumentSocket<Float> getDistance() {
+        return distance;
     }
 
 }

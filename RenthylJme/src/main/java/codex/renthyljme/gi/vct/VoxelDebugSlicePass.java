@@ -11,7 +11,7 @@ import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyljme.definitions.FrameBufferDef;
 import codex.renthyljme.definitions.TextureDef;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.material.Material;
 import com.jme3.shader.Shader;
 import com.jme3.shader.VarType;

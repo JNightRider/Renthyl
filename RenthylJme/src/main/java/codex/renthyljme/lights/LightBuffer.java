@@ -106,9 +106,7 @@ public class LightBuffer {
         if (array == null || data.limit() != array.length) {
             array = new float[data.limit()];
         }
-        if (data.hasArray() && !data.isReadOnly()) {
-            System.arraycopy(data.array(), 0, array, 0, array.length);
-        } else for (int i = 0; i < array.length; i++) {
+        for (int i = 0; i < array.length; i++) {
             array[i] = data.get(i);
         }
         return array;

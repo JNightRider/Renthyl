@@ -42,13 +42,11 @@ public class FrameBufferDef implements ResourceDef<FrameBuffer> {
         if (depthTarget != depth) {
             return null;
         }
-        if ((colorTargets == null || colorTargets.length == 0) && fbo.getNumColorTargets() == 0) {
-            return 0f;
-        }
-        if (colorTargets == null || colorTargets.length != fbo.getNumColorTargets()) {
+        int colors = colorTargets != null ? colorTargets.length : 0;
+        if (colors != fbo.getNumColorTargets()) {
             return null;
         }
-        for (int i = 0; i < colorTargets.length; i++) {
+        for (int i = 0; i < colors; i++) {
             if (i >= fbo.getNumColorTargets()) {
                 return null;
             }

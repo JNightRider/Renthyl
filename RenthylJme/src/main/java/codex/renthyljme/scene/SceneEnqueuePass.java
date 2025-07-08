@@ -26,7 +26,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.tasks.scene;
+package codex.renthyljme.scene;
 
 import codex.renthyljme.FrameGraphContext;
 import codex.renthyljme.geometry.BasicGeometryQueue;
@@ -35,7 +35,7 @@ import codex.boost.render.DepthRange;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyl.sockets.ValueSocket;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.renderer.queue.*;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Node;

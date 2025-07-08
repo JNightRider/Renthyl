@@ -9,7 +9,7 @@ import codex.renthyljme.geometry.GeometryQueue;
 import codex.renthyljme.render.CameraState;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.light.PointLight;
 import com.jme3.material.Material;

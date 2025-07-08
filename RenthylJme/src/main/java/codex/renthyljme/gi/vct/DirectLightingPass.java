@@ -19,7 +19,7 @@ import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyljme.lights.LightBuffer;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
 import com.jme3.scene.Geometry;

@@ -29,11 +29,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.effects.ports;
+package codex.renthyljme.filter.ports;
 
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
-import codex.renthyljme.effects.AbstractFilterTask;
+import codex.renthyljme.filter.AbstractFilterTask;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -41,40 +41,42 @@ import com.jme3.material.Material;
  *
  * @author codex
  */
-public class FXAAPass extends AbstractFilterTask {
+public class PosterizationPass extends AbstractFilterTask {
 
-    private final ArgumentSocket<Float> subPixelShift = new ArgumentSocket<>(this, 1.0f / 4.0f);
-    private final ArgumentSocket<Float> vxOffset = new ArgumentSocket<>(this, 0.0f);
-    private final ArgumentSocket<Float> spanMax = new ArgumentSocket<>(this, 8.0f);
-    private final ArgumentSocket<Float> reduceMul = new ArgumentSocket<>(this, 1.0f / 8.0f);
+    private final ArgumentSocket<Integer> colors = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> gamma = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> strength = new ArgumentSocket<>(this, 1.0f);
 
-    public FXAAPass(AssetManager assetManager, ResourceAllocator allocator) {
-        super(allocator, new Material(assetManager, "Common/MatDefs/Post/FXAA.j3md"), false);
-        addSockets(subPixelShift, vxOffset, spanMax, reduceMul);
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator) {
+        this(assetManager, allocator, 8);
+    }
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors) {
+        this(assetManager, allocator, colors, 0.6f);
+    }
+    public PosterizationPass(AssetManager assetManager, ResourceAllocator allocator, int colors, float gamma) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Post/Posterization.j3md"), false);
+        addSocket(this.colors).setValue(colors);
+        addSocket(this.gamma).setValue(gamma);
+        addSocket(strength);
     }
 
     @Override
     protected void configureMaterial(Material material) {
-        subPixelShift.acquireToMaterial(material, "SubPixelShift");
-        vxOffset.acquireToMaterial(material, "VxOffset");
-        spanMax.acquireToMaterial(material, "SpanMax");
-        reduceMul.acquireToMaterial(material, "ReduceMul");
+        colors.acquireToMaterial(material, "NumColors");
+        gamma.acquireToMaterial(material, "Gamma");
+        strength.acquireToMaterial(material, "Strength");
     }
 
-    public ArgumentSocket<Float> getSubPixelShift() {
-        return subPixelShift;
+    public ArgumentSocket<Integer> getColors() {
+        return colors;
     }
 
-    public ArgumentSocket<Float> getVxOffset() {
-        return vxOffset;
+    public ArgumentSocket<Float> getGamma() {
+        return gamma;
     }
 
-    public ArgumentSocket<Float> getSpanMax() {
-        return spanMax;
-    }
-
-    public ArgumentSocket<Float> getReduceMul() {
-        return reduceMul;
+    public ArgumentSocket<Float> getStrength() {
+        return strength;
     }
 
 }

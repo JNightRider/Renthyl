@@ -1,4 +1,4 @@
-package codex.renthyljme.tasks.filter;
+package codex.renthyljme.filter;
 
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;

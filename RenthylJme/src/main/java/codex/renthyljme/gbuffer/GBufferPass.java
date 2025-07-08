@@ -12,7 +12,7 @@ import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketList;
-import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.RasterTask;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.renderer.Camera;

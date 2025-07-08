@@ -1,4 +1,4 @@
-package codex.renthyljme.tasks;
+package codex.renthyljme.utils;
 
 import codex.renthyl.tasks.utils.Multiplexor;
 import com.jme3.input.controls.ActionListener;

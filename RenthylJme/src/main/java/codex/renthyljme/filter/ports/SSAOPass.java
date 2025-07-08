@@ -29,14 +29,14 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyljme.effects.ports;
+package codex.renthyljme.filter.ports;
 
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.*;
 import codex.renthyl.tasks.Frame;
 import codex.renthyljme.definitions.TextureDef;
-import codex.renthyljme.effects.AbstractFilterTask;
-import codex.renthyljme.tasks.filter.PostProcessFilter;
+import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.filter.PostProcessFilter;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
