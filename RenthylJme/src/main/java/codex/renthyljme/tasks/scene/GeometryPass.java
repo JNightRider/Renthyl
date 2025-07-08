@@ -28,9 +28,12 @@
  */
 package codex.renthyljme.tasks.scene;
 
+import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.sockets.collections.SocketMap;
+import codex.renthyljme.FrameGraphContext;
 import codex.renthyljme.definitions.FrameBufferDef;
 import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.geometry.GeometryQueue;
@@ -40,11 +43,16 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.allocation.AllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyljme.tasks.RasterTask;
+import codex.renthyljme.utils.MaterialUtils;
+import com.jme3.material.Material;
+import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Renders geometry to a color texture and a depth texture.
@@ -55,24 +63,25 @@ import java.util.List;
  * 
  * @author codex
  */
-public class GeometryPass extends RasterTask {
+public class GeometryPass extends RasterTask implements GeometryRenderHandler {
 
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
     private final Socket<Texture2D> outColor, outDepth;
     private final Socket<FrameBuffer> frameBuffer;
     private final PointerSocket<Texture2D> inColor = new TransitiveSocket<>(this);
     private final PointerSocket<Texture2D> inDepth = new TransitiveSocket<>(this);
+    private final HashMap<String, Object> parameterMap = new HashMap<>();
+    private final SocketMap<String, ArgumentSocket<Object>, Object> parameters = new SocketMap<>(this, parameterMap);
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private final FrameBufferDef bufferDef = new FrameBufferDef();
     private RenderEnvironment env;
-    private GeometryRenderHandler geometryHandler = GeometryRenderHandler.DEFAULT;
 
     public GeometryPass(ResourceAllocator allocator) {
         this(allocator, null);
     }
     public GeometryPass(ResourceAllocator allocator, RenderEnvironment env) {
-        addSockets(geometry, inColor, inDepth);
+        addSockets(geometry, inColor, inDepth, parameters);
         outColor = addSocket(new AllocationSocket<>(this, allocator, colorDef));
         outDepth = addSocket(new AllocationSocket<>(this, allocator, depthDef));
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
@@ -96,10 +105,11 @@ public class GeometryPass extends RasterTask {
         if (env != null) {
             env.applySettings(context);
         }
+        parameters.acquire();
         List<GeometryQueue> queues = geometry.acquire();
         for (GeometryQueue q : queues) {
             q.applySettings(context);
-            q.render(context, geometryHandler);
+            q.render(context, this);
             q.restoreSettings(context);
         }
         if (env != null) {
@@ -109,6 +119,18 @@ public class GeometryPass extends RasterTask {
 
     }
 
+    @Override
+    public void renderGeometry(FrameGraphContext context, Geometry geometry) {
+        Material mat = geometry.getMaterial();
+        if (!parameterMap.isEmpty()) for (Map.Entry<String, Object> e : parameterMap.entrySet()) {
+            if (MaterialUtils.parameterExists(mat, e.getKey())) {
+                System.out.println("update " + e.getKey() + " material parameter.");
+                mat.setParam(e.getKey(), e.getValue());
+            }
+        }
+        context.getRenderManager().renderGeometry(geometry);
+    }
+
     /**
      * Sets the environment used when rendering.
      *
@@ -116,15 +138,6 @@ public class GeometryPass extends RasterTask {
      */
     public void setEnvironment(RenderEnvironment env) {
         this.env = env;
-    }
-
-    /**
-     * Sets the handler responsible for rendering.
-     *
-     * @param geometryHandler
-     */
-    public void setGeometryHandler(GeometryRenderHandler geometryHandler) {
-        this.geometryHandler = geometryHandler;
     }
 
     /**
@@ -143,15 +156,6 @@ public class GeometryPass extends RasterTask {
      */
     public TextureDef<Texture2D> getDepthDef() {
         return depthDef;
-    }
-
-    /**
-     * Gets the handler responsible for rendering.
-     *
-     * @return
-     */
-    public GeometryRenderHandler getGeometryHandler() {
-        return geometryHandler;
     }
 
     /**
@@ -197,6 +201,17 @@ public class GeometryPass extends RasterTask {
      */
     public PointerSocket<Texture2D> getInDepth() {
         return inDepth;
+    }
+
+    /**
+     * Gets a material parameter socket by name. If no parameter exists for {@code name}
+     * then a new parameter socket is created.
+     *
+     * @param name
+     * @return
+     */
+    public ArgumentSocket<Object> getParameter(String name) {
+        return parameters.computeIfAbsent(name, k -> new ArgumentSocket<>(this));
     }
 
 }

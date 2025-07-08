@@ -11,8 +11,8 @@ MaterialDef TextureTransfer {
 
     Technique {
 
-        VertexShader GLSL310 GLSL300 GLSL100 GLSL150:   RenthylCore/MatDefs/Fullscreen/Screen.vert
-        FragmentShader GLSL310 GLSL300 GLSL100 GLSL150: RenthylCore/MatDefs/Fullscreen/TextureTransfer.frag
+        VertexShader   GLSL310 GLSL300 GLSL100 GLSL150: RenthylJme/MatDefs/Fullscreen/Screen.vert
+        FragmentShader GLSL310 GLSL300 GLSL100 GLSL150: RenthylJme/MatDefs/Fullscreen/TextureTransfer.frag
 
         WorldParameters {
             CameraPosition

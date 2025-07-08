@@ -82,8 +82,6 @@ public class ShadowComposerPass extends RasterTask {
 
         // work size
         work.clear().setGlobal(w, h, 1).shiftToLocal(2).clearZ();
-        shader.define("LOCAL_X", work.getLocalX());
-        shader.define("LOCAL_Y", work.getLocalY());
 
         // result image
         if (resultImage == null) {
@@ -104,8 +102,7 @@ public class ShadowComposerPass extends RasterTask {
             }
             int i = indexOf(indexMap, m.getLight());
             if (i < 0 && nextIndex < MAX_SHADOW_LIGHTS) {
-                i = nextIndex++;
-                indexMap[i] = m.getLight();
+                indexMap[i = nextIndex++] = m.getLight();
             }
             if (i >= 0) {
                 shader.set("ShadowMap", m.getMap());
@@ -165,6 +162,10 @@ public class ShadowComposerPass extends RasterTask {
 
     public Socket<Texture2D> getLightContribution() {
         return lightContribution;
+    }
+
+    public Socket<Light[]> getLightShadowIndices() {
+        return lightShadowIndices;
     }
 
 }

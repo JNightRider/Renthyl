@@ -1,8 +1,8 @@
 
-layout (local_size_x = LOCAL_X, local_size_y = LOCAL_Y, local_size_z = 1) in;
+layout (local_size_x = LOCAL_SIZE_X, local_size_y = LOCAL_SIZE_Y, local_size_z = 1) in;
 
-#import "RenthylPlus/ShaderLib/Projection.glsllib"
-#import "RenthylPlus/ShaderLib/Shadows.glsllib"
+#import "RenthylJme/ShaderLib/Projection.glsllib"
+#import "RenthylJme/ShaderLib/Shadows.glsllib"
 
 layout (R32F) uniform image2D Contribution;
 uniform sampler2D SceneDepthMap;
@@ -27,22 +27,15 @@ uniform bool Overwrite;
 
 uint evaluateShadow(inout ivec2 texel) {
     float depth = texelFetch(SceneDepthMap, texel, 0).r;
-    if (depth >= 1.0) {
+    if (depth >= 1.0) { // beyond light range
         return 1 << LightIndex;
     }
     vec2 texCoord = vec2(texel) / (gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
     vec3 worldPos = getPosition(texCoord, depth, CamViewProjectionInverse);
     #ifdef NORMALS
-        // triangles facing away from the light source are gauranteed to be in shadow
         vec3 normal = readNormals(SceneNormalsMap, texel);
-        vec3 lightDir;
-        if (LightType == 0) {
-            lightDir = LightPosition;
-        } else {
-            lightDir = normalize(worldPos - LightPosition);
-        }
-        if (dot(normal, lightDir) > 0.0) {
-            return 0;
+        if (dot(normal, LightType == 0 ? LightPosition : normalize(worldPos - LightPosition)) > 0.0) {
+            return 0; // normal facing away from light source
         }
     #endif
     vec4 lightViewPos = LightViewProjectionMatrix * vec4(worldPos, 1.0);
@@ -61,7 +54,7 @@ void main() {
     ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
     uint result = Overwrite ? 0 : floatBitsToUint(imageLoad(Contribution, texel).x);
     result |= evaluateShadow(texel);
-    imageStore(Contribution, texel, vec4(float(result), 0.0, 0.0, 0.0));
+    imageStore(Contribution, texel, vec4(uintBitsToFloat(result), 0.0, 0.0, 0.0));
 }
 
 

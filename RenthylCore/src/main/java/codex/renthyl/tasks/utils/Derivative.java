@@ -87,10 +87,12 @@ public abstract class Derivative<In, Out> extends AbstractTask implements Socket
      * Sets the upstream socket.
      *
      * @param upstream
+     * @return this derivative instance
      */
-    public void setUpstream(Socket<? extends In> upstream) {
+    public Derivative<In, Out> setUpstream(Socket<? extends In> upstream) {
         assertUnqueued();
         this.upstream = upstream;
+        return this;
     }
 
     /**
