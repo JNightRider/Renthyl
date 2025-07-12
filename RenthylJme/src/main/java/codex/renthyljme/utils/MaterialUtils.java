@@ -30,29 +30,36 @@ public class MaterialUtils {
      * @param factory creates the upgraded materials (not null)
      */
     public static void migrateMaterials(Spatial scene, Predicate<Material> filter, Supplier<Material> factory) {
-        record MaterialMap(Material original, Material upgrade) {}
-        Collection<MaterialMap> mappings = new ArrayList<>();
+        Collection<MaterialMapping> mappings = new ArrayList<>();
         graph: for (Spatial s : new SceneGraphIterator(scene)) {
             if (s instanceof Geometry) {
                 Material m = ((Geometry)s).getMaterial();
                 if (!filter.test(m)) {
                     continue;
                 }
-                for (MaterialMap map : mappings) {
-                    if (map.original() == m) {
-                        s.setMaterial(map.upgrade());
+                for (MaterialMapping map : mappings) {
+                    if (map.original == m) {
+                        s.setMaterial(map.upgrade);
                         continue graph;
                     }
                 }
-                MaterialMap map = new MaterialMap(m, factory.get());
+                MaterialMapping map = new MaterialMapping(m, factory.get());
                 for (MatParam p : m.getParams()) {
-                    if (map.upgrade().getMaterialDef().getMaterialParam(p.getName()) != null) {
-                        map.upgrade().setParam(p.getName(), p.getVarType(), p.getValue());
+                    if (map.upgrade.getMaterialDef().getMaterialParam(p.getName()) != null) {
+                        map.upgrade.setParam(p.getName(), p.getVarType(), p.getValue());
                     }
                 }
-                s.setMaterial(map.upgrade());
+                s.setMaterial(map.upgrade);
                 mappings.add(map);
             }
+        }
+    }
+
+    private static class MaterialMapping {
+        public final Material original, upgrade;
+        public MaterialMapping(Material original, Material upgrade) {
+            this.original = original;
+            this.upgrade = upgrade;
         }
     }
 
