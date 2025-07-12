@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector3f;
@@ -58,7 +59,7 @@ public class FilmicToneMapPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        whitePoint.acquireToMaterial(material, "WhitePoint");
+        MaterialUtils.acquireToMaterial(material, "WhitePoint", whitePoint);
     }
 
     public ArgumentSocket<Vector3f> getWhitePoint() {

@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -60,9 +61,9 @@ public class RadialBlurPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        distance.acquireToMaterial(material, "SampleDist");
-        strength.acquireToMaterial(material, "SampleStrength");
-        samples.acquireToMaterial(material, "Samples");
+        MaterialUtils.acquireToMaterial(material, "SampleDist", distance);
+        MaterialUtils.acquireToMaterial(material, "SampleStrength", strength);
+        MaterialUtils.acquireToMaterial(material, "Samples", samples);
     }
 
     public ArgumentSocket<Float> getDistance() {

@@ -37,6 +37,7 @@ import codex.renthyl.tasks.Frame;
 import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.filter.AbstractFilterTask;
 import codex.renthyljme.filter.PostProcessFilter;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
@@ -169,12 +170,13 @@ public class SSAOPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            material.setBoolean("ApproximateNormals", normals.acquireToMaterial(material, "Normals") == null);
-            radius.acquireToMaterial(material, "SampleRadius");
-            intensity.acquireToMaterial(material, "Intensity");
-            scale.acquireToMaterial(material, "Scale");
-            bias.acquireToMaterial(material, "Bias");
-            samples.acquireToMaterial(material, "Samples");
+            material.setBoolean("ApproximateNormals",
+                    MaterialUtils.acquireToMaterial(material, "Normals", normals) == null);
+            MaterialUtils.acquireToMaterial(material, "SampleRadius", radius);
+            MaterialUtils.acquireToMaterial(material, "Intensity", intensity);
+            MaterialUtils.acquireToMaterial(material, "Scale", scale);
+            MaterialUtils.acquireToMaterial(material, "Bias", bias);
+            MaterialUtils.acquireToMaterial(material, "Samples", samples);
             material.setVector3("FrustumCorner", frustumCorner);
             material.setVector2("FrustumNearFar", frustumNearFar.getValue());
         }
@@ -195,10 +197,10 @@ public class SSAOPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            ssao.acquireToMaterial(material, "SSAOMap");
-            useAo.acquireToMaterial(material, "UseAo");
-            onlyAo.acquireToMaterial(material, "UseOnlyAo");
-            frustumNearFar.acquireToMaterial(material, "FrustumNearFar");
+            MaterialUtils.acquireToMaterial(material, "SSAOMap", ssao);
+            MaterialUtils.acquireToMaterial(material, "UseAo", useAo);
+            MaterialUtils.acquireToMaterial(material, "UseOnlyAo", onlyAo);
+            MaterialUtils.acquireToMaterial(material, "FrustumNearFar", frustumNearFar);
             material.setFloat("XScale", 2f / getResultDef().getWidth());
             material.setFloat("YScale", 2f / getResultDef().getHeight());
         }

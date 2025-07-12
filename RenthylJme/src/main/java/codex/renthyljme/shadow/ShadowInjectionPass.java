@@ -4,8 +4,10 @@ import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
+import com.jme3.material.MaterialList;
 import com.jme3.math.ColorRGBA;
 import com.jme3.texture.Texture2D;
 
@@ -23,10 +25,10 @@ public class ShadowInjectionPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        contribution.acquireToMaterial(material, "LightContribution");
-        numLights.acquireToMaterial(material, "NumLights");
-        intensity.acquireToMaterial(material, "Intensity");
-        shadowColor.acquireToMaterial(material, "ShadowColor");
+        MaterialUtils.acquireToMaterial(material, "LightContribution", contribution);
+        MaterialUtils.acquireToMaterial(material, "NumLights", numLights);
+        MaterialUtils.acquireToMaterial(material, "Intensity", intensity);
+        MaterialUtils.acquireToMaterial(material, "ShadowColor", shadowColor);
     }
 
     public TransitiveSocket<Texture2D> getContribution() {

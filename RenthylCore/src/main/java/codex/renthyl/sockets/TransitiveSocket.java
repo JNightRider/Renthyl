@@ -7,7 +7,7 @@ import codex.renthyl.render.queue.RenderingQueue;
 /**
  * Basic {@link PointerSocket} implementation that is designed purely for
  * passing resources along. It has no default fallback in case the upstream
- * is null.
+ * resource is null.
  *
  * @param <T>
  * @author codex

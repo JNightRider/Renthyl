@@ -5,6 +5,7 @@ import codex.boost.material.ImmediateShader;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.shader.Shader;
@@ -49,8 +50,8 @@ public class ComparisonPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        compare.acquireToMaterial(material, "Texture2");
-        divide.acquireToMaterial(material, "Divide");
+        MaterialUtils.acquireToMaterial(material, "Texture2", compare);
+        MaterialUtils.acquireToMaterial(material, "Divide", divide);
     }
 
 }

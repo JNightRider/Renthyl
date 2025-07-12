@@ -1,7 +1,9 @@
 package codex.renthyljme.gbuffer;
 
+import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.Socket;
 import codex.renthyl.sockets.TransitiveSocket;
+import codex.renthyl.sockets.collections.SocketMap;
 import codex.renthyljme.FrameGraphContext;
 import codex.renthyljme.definitions.FrameBufferDef;
 import codex.renthyljme.definitions.TextureDef;
@@ -13,6 +15,7 @@ import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketList;
 import codex.renthyljme.RasterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.renderer.Camera;
@@ -23,6 +26,9 @@ import com.jme3.texture.Texture2D;
 import com.jme3.texture.image.ColorSpace;
 import org.lwjgl.opengl.GL40;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class GBufferPass extends RasterTask implements GeometryRenderHandler {
 
     public static final String TECHNIQUE = "GBuffer";
@@ -31,29 +37,31 @@ public class GBufferPass extends RasterTask implements GeometryRenderHandler {
     private final ResourceAllocator allocator;
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
     private final TransitiveSocket<Camera> camera = new TransitiveSocket<>(this);
+    private final Map<String, Object> parameterMap = new HashMap<>();
+    private final SocketMap<String, ArgumentSocket<Object>, Object> parameters = new SocketMap<>(this, parameterMap);
     private final SocketList<DefinedAllocationSocket<TextureDef<Texture2D>, Texture2D>, Texture2D> gbuffers = new SocketList<>(this);
     private final AllocationSocket<Texture2D> depth;
     private final AllocationSocket<FrameBuffer> frameBuffer;
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private final FrameBufferDef bufferDef = new FrameBufferDef();
-    private final RenderState forcedState = new RenderState();
 
     public GBufferPass(ResourceAllocator allocator) {
         this.allocator = allocator;
         addSockets(geometry, camera, gbuffers);
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         depth = addSocket(new DefinedAllocationSocket<>(this, allocator, depthDef));
-        forcedState.setBlendMode(RenderState.BlendMode.Off);
     }
 
     @Override
     protected void renderTask() {
 
+        // camera
         Camera cam = camera.acquireOrThrow("Camera required.");
         context.getCamera().pushValue(cam, false);
-        int w = context.getWidth();
-        int h = context.getHeight();
+        int w = cam.getWidth();
+        int h = cam.getHeight();
 
+        // color targets
         Texture2D[] colorTargets = new Texture2D[gbuffers.size()];
         int location = 0;
         for (DefinedAllocationSocket<TextureDef<Texture2D>, Texture2D> g : gbuffers) {
@@ -62,44 +70,39 @@ public class GBufferPass extends RasterTask implements GeometryRenderHandler {
         }
         bufferDef.setColorTargets(colorTargets);
 
+        // depth target
         depthDef.setSize(w, h);
         bufferDef.setDepthTarget(depth.acquire());
 
+        // framebuffer
         FrameBuffer fbo = frameBuffer.acquire();
         fbo.setMultiTarget(true);
         context.getFrameBuffer().pushValue(fbo);
         context.clearBuffers();
 
-        context.getAlphaToCoverage().setValue(false);
-        context.getForcedState().pushValue(forcedState);
-        GL40.glDisable(GL40.GL_ALPHA_TEST);
-        GL40.glDisable(GL40.GL_SAMPLE_ALPHA_TO_ONE);
+        // parameters
+        parameters.acquire(); // acquires to parameterMap
 
+        // render
         for (GeometryQueue q : geometry.acquire()) {
             q.applySettings(context);
             q.render(context, this);
             q.restoreSettings(context);
         }
 
+        // reset settings
         context.getCamera().pop();
         context.getFrameBuffer().pop();
-        context.getAlphaToCoverage().pop();
-        context.getForcedState().pop();
-        GL40.glEnable(GL40.GL_ALPHA_TEST);
 
     }
 
     @Override
     public void renderGeometry(FrameGraphContext context, Geometry geometry) {
         Material mat = geometry.getMaterial();
-        if (mat.getMaterialDef().getMaterialParam("UseGBuffers") != null) {
-            mat.setBoolean("UseGBuffers", true);
-        }
+        MaterialUtils.setIfExists(mat, "UseGBuffers", true);
+        MaterialUtils.setParameters(mat, parameterMap, o -> o);
         context.getRenderManager().renderGeometry(geometry);
-        // todo: this is not efficient
-        if (mat.getMaterialDef().getMaterialParam("UseGBuffers") != null) {
-            mat.setBoolean("UseGBuffers", false);
-        }
+        MaterialUtils.setIfExists(mat, "UseGBuffers", false);
     }
 
     public void addBuffer(TextureDef<Texture2D> def) {

@@ -42,6 +42,7 @@ import codex.renthyljme.definitions.TextureDef;
 import codex.renthyljme.filter.AbstractFilterTask;
 import codex.renthyljme.filter.PostProcessFilter;
 import codex.renthyl.tasks.Frame;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
@@ -224,16 +225,16 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            normals.acquireToMaterial(material, "Normals");
-            raySteps.acquireToMaterial(material, "RaySamples");
+            MaterialUtils.acquireToMaterial(material, "Normals", normals);
+            MaterialUtils.acquireToMaterial(material, "RaySamples", raySteps);
             material.setInt("NearbySamples", sampleNearby.acquireOrThrow() ? 4 : 0);
-            stepLength.acquireToMaterial(material, "StepLength");
-            reflectionFactor.acquireToMaterial(material, "ReflectionFactor");
-            glossinessPackedInNormals.acquireToMaterial(material, "GlossinessPackedInNormalB");
-            glossinessPackedInNormals.acquireToMaterial(material, "RGNormalMap");
-            approximateNormals.acquireToMaterial(material, "ApproximateNormals");
-            nearFade.acquireToMaterial(material, "NearReflectionsFade");
-            farFade.acquireToMaterial(material, "FarReflectionsFade");
+            MaterialUtils.acquireToMaterial(material, "StepLength", stepLength);
+            MaterialUtils.acquireToMaterial(material, "ReflectionFactor", reflectionFactor);
+            MaterialUtils.acquireToMaterial(material, "GlossinessPackedInNormalB", glossinessPackedInNormals);
+            MaterialUtils.acquireToMaterial(material, "RGNormalMap", glossinessPackedInNormals);
+            MaterialUtils.acquireToMaterial(material, "ApproximateNormals", approximateNormals);
+            MaterialUtils.acquireToMaterial(material, "NearReflectionsFade", nearFade);
+            MaterialUtils.acquireToMaterial(material, "FarReflectionsFade", farFade);
         }
 
     }
@@ -253,10 +254,10 @@ public class SSRPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            ssr.acquireToMaterial(material, "SSR");
-            fastBlur.acquireToMaterial(material, "FastBlur");
-            scale.acquireToMaterial(material, "BlurScale");
-            sigma.acquireToMaterial(material, "Sigma");
+            MaterialUtils.acquireToMaterial(material, "SSR", ssr);
+            MaterialUtils.acquireToMaterial(material, "FastBlur", fastBlur);
+            MaterialUtils.acquireToMaterial(material, "BlurScale", scale);
+            MaterialUtils.acquireToMaterial(material, "Sigma", sigma);
         }
 
     }

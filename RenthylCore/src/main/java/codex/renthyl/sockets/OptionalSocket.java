@@ -5,12 +5,14 @@ import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 
 /**
- * Socket which only operates when enabled.
+ * Socket which only operates when enabled. When disabled, this socket will
+ * never stage, reference, or release the upstream socket, always return {@code null}
+ * on acquire, and always interpret its upstream socket as available. When enabled,
+ * this socket behaves identically to {@link TransitiveSocket}.
  *
  * <p>This is particularly useful for tasks implementing interfaces that require
  * an additional input socket, but the task does not require it. A disabled
- * optional socket can be put in place to act as a fully-functional socket
- * to connect with, but it will only stage its upstream sockets if enabled.</p>
+ * optional socket can be put in place to act as a fully-functional socket.</p>
  *
  * @param <T>
  */
@@ -71,12 +73,7 @@ public class OptionalSocket <T> extends TransitiveSocket<T> {
     @Override
     public void release(int queuePosition) {
         if (enabled) {
-            if (--activeRefs < 0) {
-                throw new IllegalStateException("More releases than references.");
-            }
-            if (upstream != null) {
-                upstream.release(queuePosition);
-            }
+            super.release(queuePosition);
         }
     }
 

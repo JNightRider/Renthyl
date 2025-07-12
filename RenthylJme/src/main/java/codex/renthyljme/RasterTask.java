@@ -16,14 +16,14 @@ public abstract class RasterTask extends AbstractTask {
     @Override
     public void preStage(GlobalAttributes globals) {
         if (!prestaged && contextSocket.getUpstream() == null) {
-            contextSocket.setUpstream(globals.get(FrameGraphContext.CONTEXT_GLOBAL));
+            contextSocket.setUpstream(globals.getAttribute(FrameGraphContext.CONTEXT_GLOBAL));
         }
         super.preStage(globals);
     }
 
     @Override
     public void render() {
-        context = contextSocket.acquireOrThrow(getClass().getName() + " requires context.");
+        context = contextSocket.acquireOrThrow(getClass().getName() + " requires access to context.");
         super.render();
         context = null; // set back to null so that context is used at the expected time only
     }

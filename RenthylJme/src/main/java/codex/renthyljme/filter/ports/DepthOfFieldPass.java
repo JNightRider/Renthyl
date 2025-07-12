@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -56,10 +57,10 @@ public class DepthOfFieldPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        focusDistance.acquireToMaterial(material, "FocusDistance");
-        focusRange.acquireToMaterial(material, "FocusRange");
-        blurThreshold.acquireToMaterial(material, "BlurThreshold");
-        debugUnfocus.acquireToMaterial(material, "DebugUnfocus");
+        MaterialUtils.acquireToMaterial(material, "FocusDistance", focusDistance);
+        MaterialUtils.acquireToMaterial(material, "FocusRange", focusRange);
+        MaterialUtils.acquireToMaterial(material, "BlurThreshold", blurThreshold);
+        MaterialUtils.acquireToMaterial(material, "DebugUnfocus", debugUnfocus);
         float scale = blurScale.acquireOrThrow();
         material.setFloat("XScale", scale / getResultDef().getWidth());
         material.setFloat("YScale", scale / getResultDef().getHeight());

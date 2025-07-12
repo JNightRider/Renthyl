@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.FastMath;
@@ -74,9 +75,9 @@ public class LightScatteringPass extends AbstractFilterTask {
             float densityY = 1f - FastMath.clamp(FastMath.abs(screenLightPos.y - 0.5f), 0, 1);
             innerDensity *= densityX * densityY;
         }
-        samples.acquireToMaterial(material, "NbSamples");
-        blurStart.acquireToMaterial(material, "BlurStart");
-        blurWidth.acquireToMaterial(material, "BlurWidth");
+        MaterialUtils.acquireToMaterial(material, "NbSamples", samples);
+        MaterialUtils.acquireToMaterial(material, "BlurStart", blurStart);
+        MaterialUtils.acquireToMaterial(material, "BlurWidth", blurWidth);
         material.setVector3("LightPosition", screenLightPos);
         material.setFloat("LightDensity", innerDensity);
         material.setBoolean("Display", innerDensity != 0.0 && viewLightPos.z < 0);

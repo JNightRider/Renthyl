@@ -43,6 +43,7 @@ import codex.renthyl.sockets.macros.ArgumentMacro;
 import codex.renthyl.tasks.Frame;
 import codex.renthyljme.filter.PostProcessFilter;
 import codex.renthyljme.RasterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
@@ -231,8 +232,8 @@ public class SoftBloomPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            glow.acquireToMaterial(material, "GlowMap");
-            factor.acquireToMaterial(material, "GlowFactor");
+            MaterialUtils.acquireToMaterial(material, "GlowMap", glow);
+            MaterialUtils.acquireToMaterial(material, "GlowFactor", factor);
         }
 
     }

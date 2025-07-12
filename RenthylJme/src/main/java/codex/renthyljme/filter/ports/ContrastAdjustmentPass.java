@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -63,14 +64,14 @@ public class ContrastAdjustmentPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        redExponent.acquireToMaterial(material, "redChannelExponent");
-        greenExponent.acquireToMaterial(material, "greenChannelExponent");
-        blueExponent.acquireToMaterial(material, "blueChannelExponent");
-        redScale.acquireToMaterial(material, "redChannelScale");
-        greenScale.acquireToMaterial(material, "greenChannelScale");
-        blueScale.acquireToMaterial(material, "blueChannelScale");
-        lowerLimit.acquireToMaterial(material, "lowerLimit");
-        upperLimit.acquireToMaterial(material, "upperLimit");
+        MaterialUtils.acquireToMaterial(material, "redChannelExponent", redExponent);
+        MaterialUtils.acquireToMaterial(material, "greenChannelExponent", greenExponent);
+        MaterialUtils.acquireToMaterial(material, "blueChannelExponent", blueExponent);
+        MaterialUtils.acquireToMaterial(material, "redChannelScale", redScale);
+        MaterialUtils.acquireToMaterial(material, "greenChannelScale", greenScale);
+        MaterialUtils.acquireToMaterial(material, "blueChannelScale", blueScale);
+        MaterialUtils.acquireToMaterial(material, "lowerLimit", lowerLimit);
+        MaterialUtils.acquireToMaterial(material, "upperLimit", upperLimit);
     }
 
     public void setExponents(float red, float green, float blue) {

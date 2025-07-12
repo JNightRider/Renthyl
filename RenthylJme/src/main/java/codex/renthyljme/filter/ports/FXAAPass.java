@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -55,10 +56,10 @@ public class FXAAPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        subPixelShift.acquireToMaterial(material, "SubPixelShift");
-        vxOffset.acquireToMaterial(material, "VxOffset");
-        spanMax.acquireToMaterial(material, "SpanMax");
-        reduceMul.acquireToMaterial(material, "ReduceMul");
+        MaterialUtils.acquireToMaterial(material, "SubPixelShift", subPixelShift);
+        MaterialUtils.acquireToMaterial(material, "VxOffset", vxOffset);
+        MaterialUtils.acquireToMaterial(material, "SpanMax", spanMax);
+        MaterialUtils.acquireToMaterial(material, "ReduceMul", reduceMul);
     }
 
     public ArgumentSocket<Float> getSubPixelShift() {

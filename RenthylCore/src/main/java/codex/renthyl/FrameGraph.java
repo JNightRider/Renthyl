@@ -57,10 +57,11 @@ import java.util.concurrent.Executor;
  * RenderingQueue queue = ...
  * GlobalAttributes globals = ...
  * Collection&lt;Renderable&gt; tasksToRender = ...
+ * float timePerFrame = ...
  * for (Renderable r : tasksToRender) {
  *     r.stage(globals, queue);
  * }
- * queue.update(tpf);
+ * queue.update(timePerFrame);
  * queue.prepare();
  * queue.render();
  * queue.reset();
@@ -105,20 +106,17 @@ public class FrameGraph extends ArrayList<Renderable> {
     }
 
     /**
-     * Renders the FrameGraph.
+     * Renders this FrameGraph.
      *
      * @param globals global attributes
-     * @param tpf estimated time per frame
+     * @param tpf estimated time per frame, in seconds
      */
     public void render(GlobalAttributes globals, float tpf) {
         queue.pipeline(globals, this, tpf);
     }
 
     /**
-     * Adds a task to this FrameGraph and returns it.
-     *
-     * <p>Note that adding a task to the FrameGraph multiple times should have
-     * no visible impact.</p>
+     * {@link #add(Object) Adds} {@code task} to this FrameGraph and returns {@code task}.
      *
      * @param task task to add
      * @return

@@ -75,7 +75,7 @@ public class GlobalAccessor <T> extends Frame implements Socket<T> {
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUING) {
             position = QUEUING;
-            upstream = globals.get(name);
+            upstream = globals.getAttribute(name);
             if (upstream != null) {
                 upstream.stage(globals, queue);
             }

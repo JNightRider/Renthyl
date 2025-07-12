@@ -5,6 +5,7 @@ import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyl.sockets.PointerSocket;
 import codex.renthyl.sockets.TransitiveSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -28,14 +29,14 @@ public class CartoonEdgePass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        normals.acquireToMaterial(material, "NormalsTexture");
-        edgeWidth.acquireToMaterial(material, "EdgeWidth");
-        edgeIntensity.acquireToMaterial(material, "EdgeIntensity");
-        normalThreshold.acquireToMaterial(material, "NormalThreshold");
-        depthThreshold.acquireToMaterial(material, "DepthThreshold");
-        normalSensitivity.acquireToMaterial(material, "NormalSensitivity");
-        depthSensitivity.acquireToMaterial(material, "DepthSensitivity");
-        edgeColor.acquireToMaterial(material, "EdgeColor");
+        MaterialUtils.acquireToMaterial(material, "NormalsTexture", normals);
+        MaterialUtils.acquireToMaterial(material, "EdgeWidth", edgeWidth);
+        MaterialUtils.acquireToMaterial(material, "EdgeIntensity", edgeIntensity);
+        MaterialUtils.acquireToMaterial(material, "NormalThreshold", normalThreshold);
+        MaterialUtils.acquireToMaterial(material, "DepthThreshold", depthThreshold);
+        MaterialUtils.acquireToMaterial(material, "NormalSensitivity", normalSensitivity);
+        MaterialUtils.acquireToMaterial(material, "DepthSensitivity", depthSensitivity);
+        MaterialUtils.acquireToMaterial(material, "EdgeColor", edgeColor);
     }
 
     public PointerSocket<Texture> getNormals() {

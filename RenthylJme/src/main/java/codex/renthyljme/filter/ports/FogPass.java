@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -70,9 +71,9 @@ public class FogPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        color.acquireToMaterial(material, "FogColor");
-        density.acquireToMaterial(material, "FogDensity");
-        distance.acquireToMaterial(material, "FogDistance");
+        MaterialUtils.acquireToMaterial(material, "FogColor", color);
+        MaterialUtils.acquireToMaterial(material, "FogDensity", density);
+        MaterialUtils.acquireToMaterial(material, "FogDistance", distance);
     }
 
     public ArgumentSocket<ColorRGBA> getColor() {

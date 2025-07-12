@@ -6,6 +6,7 @@ import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.sockets.Socket;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -69,6 +70,7 @@ public class CollectorSocket <T> implements Socket<List<T>> {
 
     @Override
     public List<T> acquire() {
+        target.clear();
         for (Socket<? extends Collection<T>> s : collectionSources) {
             Collection<T> v = s.acquire();
             if (v != null) {
@@ -145,9 +147,11 @@ public class CollectorSocket <T> implements Socket<List<T>> {
         if (--activeRefs < 0) {
             throw new IllegalStateException("More releases than references.");
         }
-        collectionSources.forEach(s -> s.release(queuePosition));
-        mapSources.forEach(s -> s.release(queuePosition));
-        sources.forEach(s -> s.release(queuePosition));
+        Consumer<Socket> release = s -> s.release(queuePosition);
+        collectionSources.forEach(release);
+        arraySources.forEach(release);
+        mapSources.forEach(release);
+        sources.forEach(release);
     }
 
     @Override

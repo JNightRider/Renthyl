@@ -1,5 +1,6 @@
 package codex.renthyljme.utils;
 
+import codex.renthyl.sockets.Socket;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.MatParam;
 import com.jme3.material.Material;
@@ -80,6 +81,30 @@ public class MaterialUtils {
     }
 
     /**
+     * Sets the named parameter if it exists.
+     *
+     * @param material
+     * @param name
+     * @param value
+     * @return true if the parameter exists
+     */
+    public static boolean setIfExists(Material material, String name, Object value) {
+        if (parameterExists(material, name)) {
+            material.setParam(name, value);
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean clearIfExists(Material material, String name) {
+        if (parameterExists(material, name)) {
+            material.clearParam(name);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Sets material parameters according to the elements in {@code parameters} by name.
      * Parameters not defined in {@code parameters} are left untouched.
      *
@@ -103,6 +128,25 @@ public class MaterialUtils {
             }
         }
         return count;
+    }
+
+    /**
+     * {@link Socket#acquire() Acquires} directly to the named material parameter. If
+     * {@link Socket#acquire() acquire} returns null, the parameter is {@link Material#clearParam(String)
+     * cleared}.
+     *
+     * @param material
+     * @param name name of the material parameter
+     * @param socket
+     */
+    public static <T> T acquireToMaterial(Material material, String name, Socket<T> socket) {
+        T v = socket.acquire();
+        if (v != null) {
+            material.setParam(name, v);
+        } else {
+            material.clearParam(name);
+        }
+        return v;
     }
 
 }

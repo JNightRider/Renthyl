@@ -29,6 +29,7 @@
 package codex.renthyljme;
 
 import codex.boost.render.DepthRange;
+import codex.renthyl.BasicGlobalAttributes;
 import codex.renthyl.GlobalAttributes;
 import codex.renthyl.render.ContextSetting;
 import codex.renthyljme.render.CameraState;
@@ -88,7 +89,7 @@ public class FrameGraphContext implements PipelineContext {
     private final RenderSetting<Boolean> alphaToCoverage = new RenderSetting<>((rm, alpha) -> rm.getRenderer().setAlphaToCoverage(alpha), rm -> rm.getRenderer().getAlphaToCoverage());
     private final CameraSetting camera = new CameraSetting();
 
-    private final GlobalAttributes globals = new GlobalAttributes();
+    private final BasicGlobalAttributes globals = new BasicGlobalAttributes();
 
     public FrameGraphContext(AssetManager assetManager, RenderManager renderManager) {
         this.assetManager = assetManager;

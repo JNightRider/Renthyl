@@ -13,6 +13,7 @@ import codex.renthyljme.filter.PostProcessFilter;
 import codex.renthyl.tasks.utils.Multiplexor;
 import codex.renthyl.tasks.Frame;
 import codex.renthyljme.RasterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.post.filters.BloomFilter;
@@ -163,9 +164,9 @@ public class BloomPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            exposurePower.acquireToMaterial(material, "ExposurePow");
-            exposureCutoff.acquireToMaterial(material, "ExposureCutoff");
-            glow.acquireToMaterial(material, "GlowMap");
+            MaterialUtils.acquireToMaterial(material, "ExposurePow", exposurePower);
+            MaterialUtils.acquireToMaterial(material, "ExposureCutoff", exposureCutoff);
+            MaterialUtils.acquireToMaterial(material, "GlowMap", glow);
             BloomFilter.GlowMode m = mode.acquireOrThrow();
             material.setBoolean("Extract", m != BloomFilter.GlowMode.Objects);
         }
@@ -186,7 +187,7 @@ public class BloomPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            scale.acquireToMaterial(material, "Scale");
+            MaterialUtils.acquireToMaterial(material, "Scale", scale);
             material.setFloat("Size", Math.max(1f, (getDemension() / downSamplingFactor.acquire())));
         }
 
@@ -209,8 +210,8 @@ public class BloomPass extends Frame implements PostProcessFilter {
 
         @Override
         protected void configureMaterial(Material material) {
-            bloom.acquireToMaterial(material, "BloomTex");
-            intensity.acquireToMaterial(material, "BloomIntensity");
+            MaterialUtils.acquireToMaterial(material, "BloomTex", bloom);
+            MaterialUtils.acquireToMaterial(material, "BloomIntensity", intensity);
         }
 
     }

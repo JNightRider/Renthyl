@@ -4,12 +4,6 @@
  */
 package codex.renthyl.definitions.arrays;
 
-import codex.boost.export.SavableObject;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
-import java.io.IOException;
 import java.lang.reflect.Array;
 
 /**
@@ -49,18 +43,6 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
     @Override
     public T[] conformResource(Object resource) {
         return (T[])resource;
-    }
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule out = ex.getCapsule(this);
-        SavableObject.writeClass(out, type, "componentType", Float.class);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule in = im.getCapsule(this);
-        type = SavableObject.readClass(in, "componentType", Float.class);
     }
 
     /**

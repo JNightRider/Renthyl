@@ -5,7 +5,6 @@ import codex.renthyl.render.Renderable;
 import codex.renthyl.render.queue.RenderingQueue;
 import codex.renthyl.render.queue.Stageable;
 import codex.renthyl.render.Referenceable;
-import com.jme3.material.Material;
 
 import java.util.Objects;
 
@@ -115,25 +114,6 @@ public interface Socket <T> extends Stageable, Referenceable {
      */
     default T acquireOrThrow(String message) {
         return Objects.requireNonNull(acquire(), message);
-    }
-
-    /**
-     * Acquires the underlying resource directly into {@code material} as
-     * the named parameter. If the resource is null, the named parameter is
-     * {@link Material#clearParam(String) cleared}.
-     *
-     * @param material material to acquire the resource to
-     * @param param name of the parameter to acquire the resource to
-     * @return underlying resource
-     */
-    default T acquireToMaterial(Material material, String param) {
-        T v = acquire();
-        if (v != null) {
-            material.setParam(param, v);
-        } else {
-            material.clearParam(param);
-        }
-        return v;
     }
 
 }

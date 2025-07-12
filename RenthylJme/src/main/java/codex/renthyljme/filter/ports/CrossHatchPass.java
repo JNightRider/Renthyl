@@ -35,8 +35,10 @@ import codex.renthyl.render.Renderable;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
+import com.jme3.material.MaterialList;
 import com.jme3.math.ColorRGBA;
 
 /**
@@ -75,13 +77,13 @@ public class CrossHatchPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        lineColor.acquireToMaterial(material, "LineColor");
-        paperColor.acquireToMaterial(material, "PaperColor");
-        colorInfluenceLine.acquireToMaterial(material, "ColorInfluenceLine");
-        colorInfluencePaper.acquireToMaterial(material, "ColorInfluencePaper");
-        fillValue.acquireToMaterial(material, "FillValue");
-        lineThickness.acquireToMaterial(material, "LineThickness");
-        lineDistance.acquireToMaterial(material, "LineDistance");
+        MaterialUtils.acquireToMaterial(material, "LineColor", lineColor);
+        MaterialUtils.acquireToMaterial(material, "PaperColor", paperColor);
+        MaterialUtils.acquireToMaterial(material, "ColorInfluenceLine", colorInfluenceLine);
+        MaterialUtils.acquireToMaterial(material, "ColorInfluencePaper", colorInfluencePaper);
+        MaterialUtils.acquireToMaterial(material, "FillValue", fillValue);
+        MaterialUtils.acquireToMaterial(material, "LineThickness", lineThickness);
+        MaterialUtils.acquireToMaterial(material, "LineDistance", lineDistance);
         float[] lum = luminance.acquireOrThrow();
         material.setFloat("Luminance1", lum[0]);
         material.setFloat("Luminance2", lum[1]);
@@ -131,6 +133,7 @@ public class CrossHatchPass extends AbstractFilterTask {
 
         @Override
         public void setValue(float... values) {
+            assert values != null : "Luminance array must be non-null.";
             if (values.length != 6) {
                 throw new IllegalArgumentException("Luminance requires 5 values.");
             }

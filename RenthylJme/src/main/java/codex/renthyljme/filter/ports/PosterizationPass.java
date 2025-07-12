@@ -34,6 +34,7 @@ package codex.renthyljme.filter.ports;
 import codex.renthyl.resources.ResourceAllocator;
 import codex.renthyl.sockets.ArgumentSocket;
 import codex.renthyljme.filter.AbstractFilterTask;
+import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 
@@ -62,9 +63,9 @@ public class PosterizationPass extends AbstractFilterTask {
 
     @Override
     protected void configureMaterial(Material material) {
-        colors.acquireToMaterial(material, "NumColors");
-        gamma.acquireToMaterial(material, "Gamma");
-        strength.acquireToMaterial(material, "Strength");
+        MaterialUtils.acquireToMaterial(material, "NumColors", colors);
+        MaterialUtils.acquireToMaterial(material, "Gamma", gamma);
+        MaterialUtils.acquireToMaterial(material, "Strength", strength);
     }
 
     public ArgumentSocket<Integer> getColors() {
