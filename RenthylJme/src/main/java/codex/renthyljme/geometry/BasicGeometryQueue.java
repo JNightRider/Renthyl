@@ -2,6 +2,7 @@ package codex.renthyljme.geometry;
 
 import codex.renthyljme.FrameGraphContext;
 import codex.renthyljme.render.CameraState;
+import codex.renthyljme.utils.Sorter;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.Savable;
@@ -38,7 +39,7 @@ public class BasicGeometryQueue implements GeometryQueue {
      * Sorter using JMonkeyEngine's {@link ListSort} class, which is a variation of TimeSort that
      * is generally faster for a reasonable number of geometries.
      */
-    public static final Sorter<Integer> JME_SORT = new Sorter<>() {
+    public static final Sorter<Integer> JME_SORT = new Sorter<Integer>() {
         private final ListSort<Integer> sort = new ListSort<>();
         @Override
         public void sort(Integer[] array, int size, Comparator<Integer> comparator) {

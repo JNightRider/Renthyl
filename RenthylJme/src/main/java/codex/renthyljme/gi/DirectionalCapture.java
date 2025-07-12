@@ -121,7 +121,7 @@ public class DirectionalCapture extends RasterTask {
         } while (GL45.glGetQueryi(GL45.GL_ANY_SAMPLES_PASSED, fragmentQuery.getId()) != GL45.GL_FALSE);
         // remove targets that are unnecessary
         while (nextTarget >= targets.size()) {
-            targets.removeLast(); // resources were never fetched this frame, so no need to release them
+            targets.remove(targets.size() - 1); // resources were never fetched this frame, so no need to release them
         }
     }
 

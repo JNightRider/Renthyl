@@ -60,7 +60,7 @@ public class SpotShadowPass extends RasterTask implements Occlusion<SpotLight> {
         context.getForcedMaterial().pushValue(backupMat);
         context.getForcedState().pushValue(state);
 
-        ShadowMapSocket shadowMap = shadowMaps.getFirst();
+        ShadowMapSocket shadowMap = shadowMaps.get(0);
         ShadowMap map = shadowMap.acquire();
         map.setLight(sl);
         map.setProjection(camera.getCamera().getViewProjectionMatrix());

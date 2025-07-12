@@ -121,7 +121,8 @@ public class LightBuffer {
     }
 
     private FloatBuffer advance(int steps) {
-        return data.position(data.position() + steps);
+        data.position(data.position() + steps);
+        return data;
     }
 
     public void uploadProbes(Material material, int limit) {

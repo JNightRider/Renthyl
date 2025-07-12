@@ -1,4 +1,4 @@
-package codex.renthyljme.geometry;
+package codex.renthyljme.utils;
 
 import java.util.Comparator;
 

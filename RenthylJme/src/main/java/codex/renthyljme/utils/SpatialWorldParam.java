@@ -154,7 +154,7 @@ public abstract class SpatialWorldParam <T> {
     /**
      * Calculates the world render queue parameter.
      */
-    public static final SpatialWorldParam<String> RenderQueueParam = new SpatialWorldParam<>("RenderQueue", "Opaque", "Inherit") {
+    public static final SpatialWorldParam<String> RenderQueueParam = new SpatialWorldParam<String>("RenderQueue", "Opaque", "Inherit") {
         
         private static final String RESULT = "ResultRenderQueue";
 
