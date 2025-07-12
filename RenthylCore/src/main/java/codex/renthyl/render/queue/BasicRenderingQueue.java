@@ -59,7 +59,7 @@ public class BasicRenderingQueue implements RenderingQueue {
             }
         }
         // execute renders
-        Worker main = workers.getFirst();
+        Worker main = workers.get(0);
         if (service != null) for (Worker w : workers) {
             if (w != main) {
                 service.execute(w);
@@ -169,7 +169,7 @@ public class BasicRenderingQueue implements RenderingQueue {
             this.workers.add(new Worker());
         }
         while (this.workers.size() > workers) {
-            this.workers.removeLast();
+            this.workers.remove(this.workers.size() - 1);
         }
     }
 
