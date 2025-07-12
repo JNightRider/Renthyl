@@ -420,7 +420,7 @@ public class FrameGraphContext implements PipelineContext {
         @Override
         public void reset() {
             if (!values.isEmpty()) {
-                setValue(values.getFirst());
+                setValue(values.get(0));
                 values.clear();
             }
         }
@@ -440,7 +440,11 @@ public class FrameGraphContext implements PipelineContext {
 
         @Override
         public void push() {
-            cameras.push(Objects.requireNonNullElseGet(active, () -> new CameraState(renderManager.getCurrentCamera(), false)));
+            if (active != null) {
+                cameras.push(active);
+            } else {
+                cameras.push(new CameraState(renderManager.getCurrentCamera(), false));
+            }
         }
 
         @Override
@@ -463,7 +467,7 @@ public class FrameGraphContext implements PipelineContext {
         @Override
         public void reset() {
             if (!cameras.isEmpty()) {
-                (active = cameras.getFirst()).applyToContext(renderManager);
+                (active = cameras.get(0)).applyToContext(renderManager);
                 cameras.clear();
             }
         }
