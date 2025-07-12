@@ -5,6 +5,7 @@
 package codex.renthyl.definitions.arrays;
 
 /**
+ * Resource definition for float primitive arrays.
  *
  * @author codex
  */
@@ -20,14 +21,18 @@ public class FloatArrayDef extends AbstractArrayDef<float[]> {
         return new float[size + padding];
     }
     @Override
-    public float[] applyDirectResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (resource instanceof float[]) {
             float[] array = (float[])resource;
             if (array.length >= size) {
-                return array;
+                return 0f;
             }
         }
         return null;
+    }
+    @Override
+    public float[] conformResource(Object resource) {
+        return (float[])resource;
     }
     
 }

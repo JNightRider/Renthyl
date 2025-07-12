@@ -1,0 +1,20 @@
+MaterialDef ShadowInject {
+
+    MaterialParameters {
+
+        Texture2D Texture
+        Int NumSamples
+
+        Texture2D LightContribution
+        Int NumLights
+        Float Intensity
+        Color ShadowColor
+
+    }
+
+    Technique {
+        VertexShader   GLSL330 GLSL300 GLSL150 : RenthylCore/MatDefs/Fullscreen/Screen.vert
+        FragmentShader GLSL330 GLSL300 GLSL150 : RenthylPlus/MatDefs/Shadows/ShadowInject.frag
+    }
+
+}

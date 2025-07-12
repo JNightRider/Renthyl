@@ -1,7 +1,8 @@
 
 rootProject.name = 'Renthyl'
-include "RenthylCore", "RenthylPlus"
+include "RenthylCore", "RenthylJme"
 
-// debugging
+// debugging compute shaders
 //include "JMECompute"
 //project(":JMECompute").projectDir = file("../JMECompute/JMECompute")
+

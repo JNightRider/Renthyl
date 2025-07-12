@@ -4,18 +4,13 @@
  */
 package codex.renthyl.definitions.arrays;
 
-import codex.boost.export.SavableObject;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
-import java.io.IOException;
 import java.lang.reflect.Array;
 
 /**
+ * Resource definition for object arrays.
  *
  * @author codex
- * @param <T>
+ * @param <T> array component type
  */
 public class ArrayDef <T> extends AbstractArrayDef<T[]> {
     
@@ -35,29 +30,26 @@ public class ArrayDef <T> extends AbstractArrayDef<T[]> {
         return (T[])Array.newInstance(type, size + padding);
     }
     @Override
-    public T[] applyDirectResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         Class component = resource.getClass().getComponentType();
         if (component != null && type.isAssignableFrom(component)) {
             T[] array = (T[])resource;
             if (array.length >= size) {
-                return array;
+                return 0f;
             }
         }
         return null;
     }
     @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule out = ex.getCapsule(this);
-        SavableObject.writeClass(out, type, "componentType", Float.class);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule in = im.getCapsule(this);
-        type = SavableObject.readClass(in, "componentType", Float.class);
+    public T[] conformResource(Object resource) {
+        return (T[])resource;
     }
 
+    /**
+     * Gets the component type of arrays.
+     *
+     * @return
+     */
     public Class<T> getType() {
         return type;
     }

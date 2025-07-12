@@ -11,7 +11,7 @@ Renthyl is currently in alpha status: there may be bugs. If one is encountered, 
 
 ## Get Started
 
-1. Add Renthyl to your Gradle build script. Renthyl depends on Java 8 and JMonkeyEngine 3.8 minimum, along with some other libraries.
+Using basic Renthyl framegraphs are easy. First add Renthyl to the Gradle build script.
 
 ```groovy
 repositories {
@@ -20,19 +20,13 @@ repositories {
     }
 }
 dependencies {
-    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha"
-    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha:sources"
-    implementation "com.github.codex128:RenthylCore:v1.2.5-alpha:javadoc"
+    implementation "com.github.codex128:RenthylJme:2.0.0-alpha"
+    implementation "com.github.codex128:RenthylJme:2.0.0-alpha:sources"
+    implementation "com.github.codex128:RenthylJme:2.0.0-alpha:javadoc"
 }
 ```
 
-2. Initialize Renthyl in your JMonkeyEngine application.
-   
-```java
-Renthyl.initialize(application);
-```
-
-3. Create a FrameGraph and add it to the main ViewPort.
+Then create a FrameGraph and attach it to the main ViewPort.
 
 ```java
 FrameGraph fg = Renthyl.forward(assetManager);

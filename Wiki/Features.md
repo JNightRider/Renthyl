@@ -54,7 +54,7 @@ For example, MyCustomProtocol could define a method that returns a TicketSignatu
 ```java
 public interface MyCustomProtocol extends SignatureProtocol {
     
-    public TicketSignature getRenderedColor();
+    TicketSignature getRenderedColor();
     
 }
 ```
@@ -94,3 +94,16 @@ public class MyRenderHandler implements GeometryRenderHandler {
 
 Methods not shown are `evaluateSpatialVisibility` and `evaluateVolumeVisibility`, which may be overriden to customize when Spatials and BoundingVolumes are culled rendering.
 
+### Catching Missed Connections
+
+Missed connections, where a `makeInput` call results in no new connections being made, can be logged using `setMissedConnectionLogLevel`.
+
+```java
+Renthyl.getInstance().setMissedConnectionLogLevel(java.util.logging.Level.WARNING);
+```
+
+By default, such events are ignored, which can often lead to confusing bugs during development. Note that `makeInput` also returns the number of new connections that were made.
+
+```java
+assert group1.makeInput(group2, selector2, selector1) > 0;
+```

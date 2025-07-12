@@ -4,20 +4,16 @@
  */
 package codex.renthyl.definitions.arrays;
 
-import codex.renthyl.definitions.AbstractResourceDef;
-import com.jme3.export.InputCapsule;
-import com.jme3.export.JmeExporter;
-import com.jme3.export.JmeImporter;
-import com.jme3.export.OutputCapsule;
-import com.jme3.export.Savable;
+import codex.renthyl.definitions.ResourceDef;
 import java.io.IOException;
 
 /**
+ * Resource definition for arrays.
  *
  * @author codex
- * @param <T>
+ * @param <T> array type (i.e. {@code Integer[]})
  */
-public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implements Savable {
+public abstract class AbstractArrayDef <T> implements ResourceDef<T> {
 
     protected int size;
     protected int padding;
@@ -28,34 +24,27 @@ public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implem
     public AbstractArrayDef(int size) {
         this.size = size;
     }
-    
+
     @Override
-    public T applyIndirectResource(Object resource) {
-        return null;
-    }
-    @Override
-    public boolean isAllowIndirectResources() {
-        return false;
-    }
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        OutputCapsule out = ex.getCapsule(this);
-        out.write(size, "size", 1);
-        out.write(padding, "padding", 0);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        InputCapsule in = im.getCapsule(this);
-        size = in.readInt("size", 1);
-        padding = in.readInt("padding", 0);
-    }
-    
+    public void dispose(T array) {}
+
+    /**
+     * Sets the minimum size for arrays.
+     *
+     * @param size
+     */
     public void setSize(int size) {
         if (size <= 0) {
             throw new IllegalArgumentException("Array size must be greater than zero.");
         }
         this.size = size;
     }
+
+    /**
+     * Sets the length above {@link #getSize() size} at which arrays should be created.
+     *
+     * @param padding
+     */
     public void setPadding(int padding) {
         if (padding < 0) {
             throw new IllegalArgumentException("Array padding cannot be less than zero.");
@@ -63,9 +52,20 @@ public abstract class AbstractArrayDef <T> extends AbstractResourceDef<T> implem
         this.padding = padding;
     }
 
+    /**
+     * Gets the minimum size for arrays.
+     *
+     * @return
+     */
     public int getSize() {
         return size;
     }
+
+    /**
+     * Gets the length above {@link #getSize() size} at which arrays should be created.
+     *
+     * @return
+     */
     public int getPadding() {
         return padding;
     }

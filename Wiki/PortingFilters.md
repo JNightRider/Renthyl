@@ -20,7 +20,7 @@ private ColorRGBA fogColor;
 private float fogDensity, fogDistance;
 
 @Override
-protected void init(FrameGraph frameGraph) {
+private void init(FrameGraph frameGraph) {
     Material mat = new Material(frameGraph.getAssetManager(), 
             "Common/MatDefs/Post/Fog.j3md");
     Subpass myPass = add(new Subpass(mat, true, true) {
@@ -64,7 +64,7 @@ Some Filter implementations, such as BloomPass and CartoonEdgePass, render the s
 private ResourceTicket<Texture2D> normals;
 
 @Override
-protected void init(FrameGraph frameGraph) {
+private void init(FrameGraph frameGraph) {
     normals = addInput("Normals");
     Material mat = ...
     Subpass myPass = add(new Subpass(mat, true, true) {

@@ -28,182 +28,58 @@
  */
 package codex.renthyl.definitions;
 
-import java.util.Objects;
-import java.util.function.Consumer;
+import codex.renthyl.resources.Disposer;
 
 /**
- * Manages the behavior of a {@link ResourceView}, especially for creation,
- * reallocation, and disposal of related raw resources.
+ * Creates, evaluates, and disposes resources.
  * 
  * @author codex
  * @param <T>
  */
-public interface ResourceDef <T> {
+public interface ResourceDef <T> extends Disposer<T> {
     
     /**
-     * Creates a new resources from scratch.
+     * Creates a new resources exactly meeting the definition's criteria
+     * as defined by the implementor.
      * 
      * @return 
      */
-    public T createResource();
+    T createResource();
     
     /**
-     * Checks if the resource can be directly allocated to this definition's
-     * {@link ResourceView} as is.
-     * <p>
-     * For reallocation, direct "as is" resources are preferred over indirect
-     * resources. Usually because direct resources are specifically designed
-     * for whatever task.
+     * Checks if the resource can be allocated.
+     *
+     * <p>The returned score indicates how suited the resource is to criteria of the definition as defined
+     * by the implementor, where lower values represent better matches. Once all resources have been evaluated
+     * (or another terminating condition occurs), the resource with the lowest score is
+     * {@link #conformResource(Object) conformed} and used.</p>
+     *
+     * A score of <p>{@code 0f} or lower means the resource is perfect for the current parameters
+     * (thus terminating further evaluations). All scores {@code 0f} and lower are therefore considered
+     * equal. {@code null} means the resource is completely unsuited, and should not be considered
+     * further.</p>
      * 
      * @param resource
-     * @return the resource if approved, otherwise null
+     * @return evaluation score of the resource
      */
-    public T applyDirectResource(Object resource);
-    
+    Float evaluateResource(Object resource);
+
     /**
-     * Repurposes the given resource for allocation to this definition's
-     * {@link ResourceView}.
-     * <p>
-     * An indirect resource usually does not exactly match the type of this
-     * definition, but does contain the necessary components.
-     * 
-     * @param resource
-     * @return repurposed resource, or null if the given resource is not usable.
+     * Configures the resource exactly to the definition's criteria.
+     *
+     * @param resource conformed resource
      */
-    public T applyIndirectResource(Object resource);
-    
+    T conformResource(Object resource);
+
     /**
-     * Gets the tag object associated with the resource this definition represents.
-     * <p>
-     * The tag can be used to narrow reallocation scope. Only
-     * {@link codex.renthyl.resources.RenderObject RenderObjects} that have an
-     * {@link #isEquivalentTag(java.lang.Object) equivalent} tag to this can be reallocated.
-     * RenderObjects derive their tags from the resource definitions used to create them.
-     * 
-     * @return resource tag (may be null)
+     * Tests if the evaluation score is perfect. A perfect score is non-null and less than or equal to {@code 0f},
+     * and implies that evaluating further resources is unnecessary.
+     *
+     * @param score
+     * @return
      */
-    public default Object getResourceTag() {
-        return null;
-    }
-    
-    /**
-     * 
-     * 
-     * @param tag
-     * @return 
-     */
-    public default boolean isEquivalentTag(Object tag) {
-        Object t = getResourceTag();
-        return Objects.equals(t, tag);
-    }
-    
-    /**
-     * Returns the number of frames which the resource must be
-     * static (unused throughout rendering) before it is disposed.
-     * <p>
-     * If negative, the default timeout value will be used instead.
-     * 
-     * @return static timeout duration
-     */
-    public default int getStaticTimeout() {
-        return -1;
-    }
-    
-    /**
-     * Gets the Consumer used to dispose of a resource.
-     * 
-     * @return resource disposer, or null
-     */
-    public default Consumer<T> getDisposalMethod() {
-        return null;
-    }
-    
-    /**
-     * Returns true if resources can be reallocated to this definition.
-     * 
-     * @return 
-     */
-    public default boolean isUseExisting() {
-        return true;
-    }
-    
-    /**
-     * Returns true if reallocation of this definition's resource is allowed
-     * casually without a specific object id.
-     * 
-     * @return 
-     */
-    public default boolean isAllowCasualAllocation() {
-        return true;
-    }
-    
-    /**
-     * Returns true if reserving this definition's resource is allowed.
-     * 
-     * @return 
-     */
-    public default boolean isAllowReservations() {
-        return true;
-    }
-    
-    /**
-     * Returns true if the resource should be disposed after being
-     * released and having no users.
-     * 
-     * @return 
-     */
-    public default boolean isDisposeOnRelease() {
-        return false;
-    }
-    
-    /**
-     * Returns true if the resource can be read concurrently.
-     * 
-     * @return 
-     */
-    public default boolean isReadConcurrent() {
-        return true;
-    }
-    
-    /**
-     * Returns true if the definition allows allocation of
-     * indirect resources.
-     * <p>
-     * This has the same effect as always returning null for
-     * {@link #applyIndirectResource(java.lang.Object)}, but this method
-     * allows certain checks to be skipped if false is returned.
-     * <p>
-     * Note that this hint only applies to casual allocations.
-     * If a specific object id is presented, then applying an indirect
-     * resource will still be attempted if applying directly fails.
-     * However, those cases shuold be relatively rare.
-     * <p>
-     * default=false
-     * 
-     * @return 
-     */
-    public default boolean isAllowIndirectResources() {
-        return false;
-    }
-    
-    /**
-     * Returns true if console debugging should be enabled
-     * for this definition.
-     * 
-     * @return 
-     */
-    public default boolean isDebugEnabled() {
-        return false;
-    }
-    
-    /**
-     * Disposes the resource using the disposal method, if not null.
-     * 
-     * @param resource 
-     */
-    public default void dispose(T resource) {
-        Consumer<T> d = getDisposalMethod();
-        if (d != null) d.accept(resource);
+    static boolean isPerfectEvaluation(Float score) {
+        return score != null && score <= 0f;
     }
     
 }

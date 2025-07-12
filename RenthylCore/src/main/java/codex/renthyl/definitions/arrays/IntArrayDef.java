@@ -5,6 +5,7 @@
 package codex.renthyl.definitions.arrays;
 
 /**
+ * Resource definition for integer primitive arrays.
  *
  * @author codex
  */
@@ -20,14 +21,18 @@ public class IntArrayDef extends AbstractArrayDef<int[]> {
         return new int[size + padding];
     }
     @Override
-    public int[] applyDirectResource(Object resource) {
+    public Float evaluateResource(Object resource) {
         if (resource instanceof int[]) {
             int[] array = (int[])resource;
             if (array.length >= size) {
-                return array;
+                return 0f;
             }
         }
         return null;
+    }
+    @Override
+    public int[] conformResource(Object resource) {
+        return (int[])resource;
     }
     
 }

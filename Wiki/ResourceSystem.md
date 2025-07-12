@@ -6,20 +6,33 @@ ResourceList provides many methods named "optional" (i.e. referenceOptional). Su
 
 Note that `acquireOrElse` is an optional method, although it is not named "optional."
 
+### ResourceViews
+
+When declaring a resource, ResourceList creates a ResourceView internally to track references and timeframes. ResourceList operations are generally directed at a ResourceView and not resources directly. It is important to realize that ResourceViews are *not* resources. ResourceView only promises to represent a resource at a later time.
+
+For those familiar with general frame graph concepts, ResourceViews represent the transient nature of the FrameGraphs. The key difference is that Renthyl chooses to only destroy its ResourceViews every frame*, instead of all resources. This maintains the benefits of the transient system to dynamically adapt to layout changes, but avoid destroying the resources themselves which can often be expensive to recreate and rebind.
+
+*As temporal culling allows.
+
+### RenderObjectMap
+
+Beneath the ResourceList lies the RenderObjectMap, which is responsible for handling the concrete resources RenderModules will actually use. One RenderObjectMap instance is shared among all FrameGraphs via the FGPipelineContext so that all resources are shared among all FrameGraphs. This class is primarily responsible for simply storing the resources, but it also handles reallocation, reservations, deleting inactive resources, and other related operations.
+
+RenderObjectMap is not intended to be publically accessed. All operations can and should be performed through the ResourceList.
+
 ### Primitive ResourceViews
 
 Declaring a ResourceView as a primitive through `Resource#declarePrimitive` allows modules to directly assign the resource of the ResourceView instead of using a ResourceDef. This bypasses the RenderObjectMap and makes handling the resource much cheaper, so this state is suitable for resources that don't benefit much from RenderObjectMap (i.e. integers).
 
 ```java
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declarePrimitive(myTicket);
 }
 
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setPrimitive(myTicket, myValue);
-}
 ```
 
 Note that no ResourceDef is required to declare a primitive ResourceView. For primitive ResourceViews, `setPrimitive` should be called before acquiring, otherwise an exception will occur because no ResourceDef is defined.
@@ -33,17 +46,16 @@ private final ResourceTicket<Texture2D> tempTex = new ResourceTicket<>("tempTex"
 private final TextureDef<Texture2D> tempTexDef = ...
 
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declareTemporary(tempTexDef, tempTex);
 }
 
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     Texture2D temp = resources.acquire(tempTex);
     ...
     // after finished with "temp", manually release the resource
-    resources.release(temp);
-}
+    resources.release(tempTex);
 ```
 
 Note that the ResourceTicket corresponding to the temporary ResourceView should not be registered as either an input or output ticket. Also note that the resource must be manually released after the resource is used. This is done automatically for input and output resources, but not for temporary resources.
@@ -54,7 +66,7 @@ Sometimes, especially for textures, it is desirable to acquire the same resource
 
 ```java
 @Override
-protected void prepare(FGRenderContext context) {
+private void prepare(FGRenderContext context) {
     declare(myDef, myTicket);
     reserve(myTicket);
 }
@@ -64,11 +76,11 @@ ResourceTickets store the ID of the last used resource. `reserve` uses that ID t
 
 ### Undefined ResourceViews
 
-An undefined ResourceView can never be associated with a resource, and non-optional operations on it will result in an exception. This is mainly used when the declaring module is unable to fufill the ResourceView with a meaningful resource, and thus marking it as undefined will not allow other passes to accidentally create and use a garbage resource when they go to acquire it. For example, [Attribute](Modules.md#attribute) marks its output as undefined if a GraphSource is not provided.
+An undefined ResourceView can never be associated with a resource, and non-optional operations on it will result in an exception. This is mainly used when the declaring module is unable to fufill the ResourceView with a meaningful resource, and thus marking it as undefined will not allow other passes to accidentally create and happily use a garbage resource when they go to acquire it. For example, [Attribute](Modules.md#attribute) marks its output as undefined if a GraphSource is not provided.
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setUndefined(myTicket);
 }
 ```
@@ -81,7 +93,7 @@ When a resource is marked as constant, it cannot be reallocated to any ResourceV
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     resources.setConstant(myTicket);
 }
 ```
@@ -90,7 +102,7 @@ Note that this operation, unlike setting a ResoureView as undefined, alters a pr
 
 ### Virtual ResourceViews
 
-A ResourceView is virtual when it is not associated with a resource and it is not undefined. Being virtual is simply a state a ResourceView can be in.
+A ResourceView is virtual when it is not associated with a resource and it is not undefined. Being virtual is simply a state a ResourceView can be in, and starts in, for that matter.
 
 ### Modify
 
@@ -98,7 +110,7 @@ A ResourceView is virtual when it is not associated with a resource and it is no
 
 ```java
 @Override
-protected void execute(FGRenderContext context) {
+private void execute(FGRenderContext context) {
     Texture2D tex = resources.modify(inputTicket, outputTicket);
 }
 ```

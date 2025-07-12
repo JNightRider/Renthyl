@@ -6,18 +6,11 @@ plugins {
 
 repositories {
     mavenCentral()
-	maven { url "https://jitpack.io" }
-}
-
-project.ext {
-    jmeVer = '3.8.0-alpha2'
-    boostVer = 'dd2f4b856d'
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
-    implementation "org.jmonkeyengine:jme3-core:$jmeVer"
-    implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
-    implementation "com.github.codex128:Boost:$boostVer"
+
 }
 
 tasks.register('sourcesJar', Jar) {
