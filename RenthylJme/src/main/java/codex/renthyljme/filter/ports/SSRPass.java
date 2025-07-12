@@ -90,16 +90,17 @@ public class SSRPass extends Frame implements PostProcessFilter {
                         createBlur(0).ssr.setUpstream(reflection.getFilterResult());
                     }
                     while (blurPasses.size() < passes) {
-                        BlurPass b = blurPasses.getLast();
+                        BlurPass b = blurPasses.get(blurPasses.size() - 1);
                         BlurPass blur = createBlur(blurPasses.size());
                         blur.getSceneColor().setUpstream(b.getFilterResult());
                         blur.ssr.setUpstream(b.getFilterResult());
                     }
                     while (blurPasses.size() > passes) {
-                        blurPasses.removeLast();
+                        blurPasses.remove(blurPasses.size() - 1);
                     }
-                    result.setUpstream(blurPasses.getLast().getFilterResult());
-                    blurPasses.getLast().getSceneColor().setUpstream(color);
+                    BlurPass last = blurPasses.get(blurPasses.size() - 1);
+                    result.setUpstream(last.getFilterResult());
+                    last.getSceneColor().setUpstream(color);
                 } else {
                     result.setUpstream(reflection.getFilterResult());
                     blurPasses.clear();

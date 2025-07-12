@@ -48,7 +48,11 @@ public class Stopwatch {
     }
 
     private static String indent() {
-        return "  ".repeat(sessions.size());
+        StringBuilder indent = new StringBuilder();
+        for (int i = 0; i < sessions.size(); i++) {
+            indent.append("  ");
+        }
+        return indent.toString();
     }
 
 }

@@ -88,28 +88,28 @@ public class SoftBloomPass extends Frame implements PostProcessFilter {
             BlurPass blur = new BlurPass(allocator, downsampleMat, true);
             blur.bilinear.setUpstream(bilinear);
             if (!downsamples.isEmpty()) {
-                blur.color.setUpstream(downsamples.getLast().getFilterResult());
+                blur.color.setUpstream(downsamples.get(downsamples.size() - 1).getFilterResult());
             }
             downsamples.add(blur);
         }
         while (downsamples.size() > passes) {
-            downsamples.removeLast();
+            downsamples.remove(downsamples.size() - 1);
         }
         while (upsamples.size() < passes) {
             BlurPass blur = new BlurPass(allocator, upsampleMat, false);
             blur.bilinear.setUpstream(bilinear);
             if (!upsamples.isEmpty()) {
-                blur.color.setUpstream(upsamples.getLast().getFilterResult());
+                blur.color.setUpstream(upsamples.get(upsamples.size() - 1).getFilterResult());
             }
             upsamples.add(blur);
         }
         while (upsamples.size() > passes) {
-            upsamples.removeLast();
+            upsamples.remove(upsamples.size() - 1);
         }
         if (passes != 0) {
-            downsamples.getFirst().color.setUpstream(color);
-            upsamples.getFirst().color.setUpstream(downsamples.getLast().getFilterResult());
-            inject.glow.setUpstream(upsamples.getLast().getFilterResult());
+            downsamples.get(0).color.setUpstream(color);
+            upsamples.get(0).color.setUpstream(downsamples.get(downsamples.size() - 1).getFilterResult());
+            inject.glow.setUpstream(upsamples.get(upsamples.size() - 1).getFilterResult());
             result.setUpstream(inject.getFilterResult());
         } else {
             result.setUpstream(color);
