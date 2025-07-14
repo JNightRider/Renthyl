@@ -48,6 +48,7 @@ public class LightBuffer {
                 continue;
             }
             if (!data.hasRemaining()) {
+                System.out.println("Out of room in data buffer.");
                 break;
             }
             int id = l.getType().getId();

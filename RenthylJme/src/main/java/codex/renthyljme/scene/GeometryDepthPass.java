@@ -45,14 +45,14 @@ public class GeometryDepthPass extends RasterTask {
         context.clearBuffers();
 
         context.getForcedState().pushValue(forcedState);
-        context.getForcedTechnique().pushValue("Depth");
+        //context.getForcedTechnique().pushValue("Depth");
 
         for (GeometryQueue q : geometry.acquire()) {
             q.render(context);
         }
 
         context.getForcedState().pop();
-        context.getForcedTechnique().pop();
+        //context.getForcedTechnique().pop();
         context.getFrameBuffer().pop();
 
     }

@@ -32,6 +32,7 @@ import com.jme3.scene.Mesh;
 import com.jme3.scene.shape.Box;
 import com.jme3.system.AppSettings;
 import com.jme3.texture.Texture2D;
+import com.jme3.util.mikktspace.MikktspaceTangentGenerator;
 
 import java.util.Collection;
 
@@ -53,17 +54,18 @@ public class TestShadows extends SimpleApplication {
         GLRenderUtils.initialize(this);
         viewPort.setBackgroundColor(ColorRGBA.Blue);
         rootNode.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        flyCam.setMoveSpeed(10);
 
         createShape(new NormalQuad(Vector3f.UNIT_Y, Vector3f.UNIT_Z, 10f, 10f, 0.5f, 0.5f), ColorRGBA.White, 0f, 1f);
-        createShape(new Box(1f, 1f, 1f), ColorRGBA.Green, 0f, 1f).setLocalTranslation(0f, 2f, 0f);
+        createShape(new Box(1f, 1f, 1f), ColorRGBA.White, 0f, 1f).setLocalTranslation(0f, 2f, 0f);
 
         DirectionalLight dl = new DirectionalLight();
         dl.setDirection(new Vector3f(0.4f, -1f, 0.8f));
-        dl.setColor(ColorRGBA.White.mult(0.2f));
+        dl.setColor(ColorRGBA.White.mult(0.01f));
         rootNode.addLight(dl);
 
         PointLight pl = new PointLight();
-        pl.setPosition(new Vector3f(5f, 6f, 5f));
+        pl.setPosition(new Vector3f(3f, 4f, -4f));
         pl.setRadius(20f);
         pl.setColor(ColorRGBA.Red);
         rootNode.addLight(pl);
@@ -74,7 +76,7 @@ public class TestShadows extends SimpleApplication {
         sl.setSpotOuterAngle(FastMath.HALF_PI * 0.5f);
         sl.setSpotInnerAngle(FastMath.HALF_PI * 0.25f);
         sl.setSpotRange(20f);
-        sl.setColor(ColorRGBA.Blue);
+        sl.setColor(ColorRGBA.Green);
         rootNode.addLight(sl);
 
         ResourceAllocationState allocator = new ResourceAllocationState();
@@ -86,8 +88,8 @@ public class TestShadows extends SimpleApplication {
 
         ShadowManager shadows = new ShadowManager(assetManager, allocator);
         shadows.addDirectionalLightSource(new Attribute<>(dl), 1024, 1);
-        //shadows.addPointLightSource(new Attribute<>(pl), 1024);
-        //shadows.addSpotLightSource(new Attribute<>(sl), 1024);
+        shadows.addPointLightSource(new Attribute<>(pl), 1024);
+        shadows.addSpotLightSource(new Attribute<>(sl), 1024);
         ShadowComposerPass shadowComposer = new ShadowComposerPass(assetManager, allocator);
         shadowComposer.getShadowMaps().addCollectionSource(shadows.getShadowMaps());
 
@@ -116,12 +118,14 @@ public class TestShadows extends SimpleApplication {
         geometry.getParameter("NumLights").setUpstream(new Derivative<Collection<Light>, Integer>() {
             @Override
             public Integer apply(Collection<Light> lights) {
-                return lights.size() * 3;
+                return lights.size() * 12;
             }
         }.setUpstream(lightGather.getLights()));
 
         InputToggledMux<Texture2D> outChannel = new InputToggledMux<>();
         outChannel.addUpstream(geometry.getOutColor());
+        //outChannel.addUpstream(geometry.getOutDepth());
+        outChannel.addUpstream(depth.getDepth());
         outChannel.addUpstream(shadowComposer.getShadowMask());
         outChannel.addUpstream(new Derivative<Collection<ShadowMap>, Texture2D>() {
             @Override
@@ -144,6 +148,7 @@ public class TestShadows extends SimpleApplication {
         floorMat.setFloat("Metallic", metallic);
         floorMat.setFloat("Roughness", roughness);
         g.setMaterial(floorMat);
+        MikktspaceTangentGenerator.generate(g);
         rootNode.attachChild(g);
         return g;
     }

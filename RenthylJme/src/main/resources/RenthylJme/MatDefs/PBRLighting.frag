@@ -18,7 +18,7 @@
 
 #ifdef NUM_LIGHTS
     uniform int m_NumLights;
-    uniform vec4 m_LightData[NUM_LIGHTS];
+    uniform float m_LightData[NUM_LIGHTS];
 #endif
 uniform vec3 g_CameraPosition;
 
@@ -43,34 +43,33 @@ void main() {
     //Calculate necessary variables from pbr surface prior to applying lighting. Ensure all texture/param reading and blending occurrs prior to this being called!
     PBRLightingUtils_calculatePreLightingValues(surface);
 
+    #ifdef SHADOW_MASK
+        vec2 uv = vec2(gl_FragCoord.xy) / textureSize(m_ShadowMask, 0);
+    #endif
+
     // Calculate direct lights
     #ifdef NUM_LIGHTS
-    for (int i = 0; i < m_NumLights; i += 3) {
-        vec4 lightData0 = m_LightData[i];
-        int type = int(lightData0.x);
+    for (int i = 0; i < m_NumLights; i += 12) {
+        vec4 lightData0 = vec4(m_LightData[i], m_LightData[i + 1], m_LightData[i + 2], m_LightData[i + 3]);
+        int type = int(lightData0.w);
         #ifdef SHADOW_MASK
             int shadow = extractShadowIndex(type);
             if (shadow >= 0) {
-                vec2 uv = vec2(gl_FragCoord.xy) / textureSize(m_ShadowMask, 0);
                 uint mask = uint(texture(m_ShadowMask, uv).r);
                 if ((mask & (1u << shadow)) == 0u) {
-                    //continue;
+                    continue;
                 }
             }
-            //if (!isExposedToLight(shadow, m_LightContributionMap, uv)) {
-            //    continue;
-            //}
         #endif
-        lightData0.x = normalizeLightType(type);
-        vec4 lightData1 = m_LightData[i + 1];
-        vec4 lightData2 = m_LightData[i + 2];
+        lightData0.w = normalizeLightType(type);
+        vec4 lightData1 = vec4(m_LightData[i + 4], m_LightData[i + 5], m_LightData[i + 6], m_LightData[i + 7]);
+        vec4 lightData2 = vec4(m_LightData[i + 8], m_LightData[i + 9], m_LightData[i + 10], m_LightData[i + 11]);
         PBRLightingUtils_computeDirectLightContribution(
             lightData0, lightData1, lightData2,
             surface
         );
     }
     #endif
-
 
     // Calculate env probes
     PBRLightingUtils_computeProbesContribution(surface);
@@ -82,6 +81,10 @@ void main() {
     gl_FragColor.rgb += surface.envLightContribution;
     gl_FragColor.rgb += surface.emission;
     gl_FragColor.a = surface.alpha;
+
+    #ifdef SHADOW_MASK
+        //gl_FragColor.rgb = vec3(normalizeLightType(int(m_LightData[0])));
+    #endif
 
     #ifdef USE_FOG
     gl_FragColor = MaterialFog_calculateFogColor(vec4(gl_FragColor));

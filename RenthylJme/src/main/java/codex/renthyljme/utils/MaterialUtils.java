@@ -45,7 +45,7 @@ public class MaterialUtils {
                 }
                 MaterialMapping map = new MaterialMapping(m, factory.get());
                 for (MatParam p : m.getParams()) {
-                    if (map.upgrade.getMaterialDef().getMaterialParam(p.getName()) != null) {
+                    if (parameterExists(map.upgrade, p.getName())) {
                         map.upgrade.setParam(p.getName(), p.getVarType(), p.getValue());
                     }
                 }

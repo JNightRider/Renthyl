@@ -45,7 +45,7 @@ public class PointShadowPass extends RasterTask implements Occlusion<PointLight>
             shadowMaps.addSocket(new ShadowMapSocket(this, allocator)).setSize(size, size);
             Camera c = (cameras[i] = new CameraState(new Camera(size, size), false)).getCamera();
             c.lookAtDirection(DIRECTIONS[i], UPS[i]);
-            c.setFrustumPerspective(90f, 1f, 1f, 2f);
+            c.setFrustumPerspective(90f, 1f, 0.3f, 2f);
         }
         backupMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         state.setColorWrite(false);
@@ -84,7 +84,7 @@ public class PointShadowPass extends RasterTask implements Occlusion<PointLight>
 
             FrameBuffer fbo = socket.getFrameBuffer().acquire();
             context.getFrameBuffer().setValue(fbo);
-            context.clearBuffers();
+            context.clearBuffers(false, true, false);
 
             occluders.acquireOrThrow("Occluder queue required.").render(context);
 

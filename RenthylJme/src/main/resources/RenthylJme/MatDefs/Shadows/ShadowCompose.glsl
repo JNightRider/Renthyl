@@ -26,16 +26,18 @@ uniform bool Overwrite;
 #endif
 
 uint evaluateShadow(inout ivec2 texel) {
+    uint shadowed = 0;
+    uint unshadowed = 1 << LightIndex;
     float depth = texelFetch(SceneDepthMap, texel, 0).r;
     if (depth >= 1.0) { // beyond light range
-        return 1 << LightIndex;
+        //return unshadowed;
     }
     vec2 texCoord = vec2(texel) / (gl_NumWorkGroups.xy * gl_WorkGroupSize.xy);
     vec3 worldPos = getPosition(texCoord, depth, CamViewProjectionInverse);
     #ifdef NORMALS
         vec3 normal = readNormals(SceneNormalsMap, texel);
         if (dot(normal, LightType == 0 ? LightPosition : normalize(worldPos - LightPosition)) > 0.0) {
-            return 0; // normal facing away from light source
+            //return shadowed; // normal facing away from light source
         }
     #endif
     vec4 lightViewPos = LightViewProjectionMatrix * vec4(worldPos, 1.0);
@@ -44,17 +46,37 @@ uint evaluateShadow(inout ivec2 texel) {
     float shadow = textureLod(ShadowMap, lightUv.xy, 0.0).r;
     bool withinLightDist = dist >= 0.0 && dist <= 1.0;
     bool withinLightScreen = lightUv.x >= 0.0 && lightUv.x <= 1.0 && lightUv.y >= 0.0 && lightUv.y <= 1.0;
-    if ((withinLightDist && ((withinLightScreen && dist - 0.001 <= shadow) || (!withinLightScreen && LightType == 0))) || (!withinLightDist && shadow >= 1.0)) {
-        return 1 << LightIndex;
+    if (!withinLightScreen) {
+        return shadowed;
     }
-    return 0;
+    if (dist - 0.001 >= shadow) {
+        return shadowed;
+    }
+    return unshadowed;
+//    if (!withinLightScreen && withinLightDist) {
+//        return shadowed;
+//    } else {
+//        return unshadowed;
+//    }
+//    if (withinLightDist) {
+//        if (withinLightScreen && dist - 0.001 <= shadow) {
+//            return unshadowed;
+//        }
+//        // directional and point lights are unshadowed outside camera views
+//        if (!withinLightScreen && (LightType == 0 || LightType == 1)) {
+//            return unshadowed;
+//        }
+//    } else if (shadow >= 1.0) {
+//        return unshadowed;
+//    }
+//    return shadowed;
 }
 
 void main() {
     ivec2 texel = ivec2(gl_GlobalInvocationID.xy);
-    uint result = Overwrite ? 0 : floatBitsToUint(imageLoad(Contribution, texel).x);
-    result |= evaluateShadow(texel);
-    imageStore(Contribution, texel, vec4(uintBitsToFloat(result), 0.0, 0.0, 0.0));
+    uint mask = Overwrite ? 0 : uint(imageLoad(Contribution, texel).x);
+    mask |= evaluateShadow(texel);
+    imageStore(Contribution, texel, vec4(float(mask), 0.0, 0.0, 0.0));
 }
 
 
