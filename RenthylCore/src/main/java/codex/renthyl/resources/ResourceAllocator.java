@@ -32,4 +32,12 @@ public interface ResourceAllocator <T extends ResourceWrapper> {
      */
     T allocate(ResourceDef def, int start, int end);
 
+    /**
+     * Retrieves the wrapper of {@code resource} if the wrapper exists in this allocator.
+     *
+     * @param resource resource to acquire
+     * @return wrapper of {@code resource}
+     */
+    T getWrapperOf(Object resource);
+
 }

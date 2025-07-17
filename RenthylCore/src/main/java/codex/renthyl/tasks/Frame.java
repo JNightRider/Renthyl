@@ -30,6 +30,7 @@ public class Frame extends AbstractTask {
     @Override
     public void stage(GlobalAttributes globals, RenderingQueue queue) {
         if (position < QUEUED) {
+            preStage(globals);
             position = queue.stage(this);
         }
     }

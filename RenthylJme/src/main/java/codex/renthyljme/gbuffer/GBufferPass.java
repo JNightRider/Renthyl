@@ -15,6 +15,7 @@ import codex.renthyl.sockets.allocation.DefinedAllocationSocket;
 import codex.renthyl.sockets.collections.CollectorSocket;
 import codex.renthyl.sockets.collections.SocketList;
 import codex.renthyljme.RasterTask;
+import codex.renthyljme.render.RenderEnvironment;
 import codex.renthyljme.utils.MaterialUtils;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -24,19 +25,20 @@ import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 import com.jme3.texture.image.ColorSpace;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL40;
+import org.lwjgl.system.MemoryUtil;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class GBufferPass extends RasterTask implements GeometryRenderHandler {
 
-    public static final String TECHNIQUE = "GBuffer";
-    public static final String DEPTH = "DepthGBuffer";
-
     private final ResourceAllocator allocator;
     private final CollectorSocket<GeometryQueue> geometry = new CollectorSocket<>(this);
     private final TransitiveSocket<Camera> camera = new TransitiveSocket<>(this);
+    private final ArgumentSocket<RenderEnvironment> environment = new ArgumentSocket<>(this);
     private final Map<String, Object> parameterMap = new HashMap<>();
     private final SocketMap<String, ArgumentSocket<Object>, Object> parameters = new SocketMap<>(this, parameterMap);
     private final SocketList<DefinedAllocationSocket<TextureDef<Texture2D>, Texture2D>, Texture2D> gbuffers = new SocketList<>(this);
@@ -47,13 +49,16 @@ public class GBufferPass extends RasterTask implements GeometryRenderHandler {
 
     public GBufferPass(ResourceAllocator allocator) {
         this.allocator = allocator;
-        addSockets(geometry, camera, gbuffers);
+        addSockets(geometry, camera, environment, parameters, gbuffers);
         frameBuffer = addSocket(new AllocationSocket<>(this, allocator, bufferDef));
         depth = addSocket(new DefinedAllocationSocket<>(this, allocator, depthDef));
     }
 
     @Override
     protected void renderTask() {
+
+        RenderEnvironment env = environment.acquire();
+        if (env != null) env.applySettings(context);
 
         // camera
         Camera cam = camera.acquireOrThrow("Camera required.");
@@ -93,21 +98,29 @@ public class GBufferPass extends RasterTask implements GeometryRenderHandler {
         // reset settings
         context.getCamera().pop();
         context.getFrameBuffer().pop();
+        if (env != null) env.restoreSettings(context);
 
     }
 
     @Override
     public void renderGeometry(FrameGraphContext context, Geometry geometry) {
         Material mat = geometry.getMaterial();
-        MaterialUtils.setIfExists(mat, "UseGBuffers", true);
         MaterialUtils.setParameters(mat, parameterMap, o -> o);
         context.getRenderManager().renderGeometry(geometry);
-        MaterialUtils.setIfExists(mat, "UseGBuffers", false);
     }
 
     public void addBuffer(TextureDef<Texture2D> def) {
         gbuffers.add(new DefinedAllocationSocket<>(this, allocator, def));
         def.setColorSpace(ColorSpace.Linear);
+    }
+
+    public ArgumentSocket<Object> getParameter(String name) {
+        ArgumentSocket<Object> p = parameters.get(name);
+        if (p == null) {
+            p = new ArgumentSocket<>(this);
+            parameters.put(name, p);
+        }
+        return p;
     }
 
     public CollectorSocket<GeometryQueue> getGeometry() {
@@ -118,7 +131,11 @@ public class GBufferPass extends RasterTask implements GeometryRenderHandler {
         return camera;
     }
 
-    public SocketList<? extends Socket<Texture2D>, Texture2D> getGBuffers() {
+    public ArgumentSocket<RenderEnvironment> getEnvironment() {
+        return environment;
+    }
+
+    public Socket<? extends List<Texture2D>> getGBuffers() {
         return gbuffers;
     }
 

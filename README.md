@@ -3,46 +3,68 @@
 
 [![](https://jitpack.io/v/codex128/Renthyl.svg)](https://jitpack.io/#codex128/Renthyl)
 
+Renthyl is a modular, code-first, and completely customizable rendering graph.
+
 ![VXGI-demo](resources/VXGI-demo.png)
-
-Renthyl is a modular, code-first, and completely customizable rendering pipeline for [JMonkeyEngine](https://jmonkeyengine.org/) suitable for any game. It is designed to be as fast as possible by culling unnecessary render operations and minimizing resource creation.
-
-Renthyl is currently in alpha status: there may be bugs. If one is encountered, please open an issue with stacktraces, example code, and screenshots if applicable. Also note that many features within the RenthylPlus subproject are work-in-progress.
 
 ## Get Started
 
-Using basic Renthyl framegraphs are easy. First add Renthyl to the Gradle build script.
+Using basic Renthyl rendering graphs are easy. First add Renthyl to the Gradle build script.
 
 ```groovy
 repositories {
-    maven {
-        url "https://jitpack.io"
-    }
+    maven { url "https://jitpack.io" }
 }
 dependencies {
-    implementation "com.github.codex128:RenthylJme:2.0.0-alpha"
-    implementation "com.github.codex128:RenthylJme:2.0.0-alpha:sources"
-    implementation "com.github.codex128:RenthylJme:2.0.0-alpha:javadoc"
+    implementation "com.github.codex128.Renthyl:RenthylCore:2.0.0-alpha"
 }
 ```
 
-Then create a FrameGraph and attach it to the main ViewPort.
+Create a FrameGraph object, attach tasks to render to it, and render the graph.
 
 ```java
-FrameGraph fg = Renthyl.forward(assetManager);
-viewPort.setPipeline(fg);
+FrameGraph fg = new FrameGraph();
+fg.addTask(new MyCustomTask());
+fg.addTask(new SomeOtherTask());
+fg.render();
 ```
 
-### Renthyl Guide
+### Use with JMonkeyEngine 3.8+
 
-1. [Understanding Renthyl](Wiki/UnderstandingRenthyl.md)
-2. [Modules](Wiki/Modules.md)
-3. [Resource Definitions](Wiki/ResourceDefinitions.md)
-4. [Features](Wiki/Features.md)
-5. [Porting Filters](Wiki/PortingFilters.md)
-6. [Resource System](Wiki/ResourceSystem.md)
-7. [Multithreading](Wiki/Multithreading.md)
+Renthyl was originally a render pipeline implementation for [JMonkeyEngine](https://jmonkeyengine.org/). With Renthyl 2.0, the core library no longer depends on JMonkeyEngine. Engine-specific implementations have been moved to the "RenthylJme" subproject.
 
-## Contributing
+```groovy
+dependencies {
+    implementation "com.github.codex128.Renthyl:RenthylJme:2.0.0-alpha"
+}
+```
 
-Contributors are welcome and wanted! Please see the [contribution guidelines](Contribution.md) to get started. If you have the know-how, consider implementing a rendering technique in the RenthylPlus subproject.
+The following code creates and registers a very simple forward-style FrameGraph in a JMonkeyEngine 3.8+ application.
+
+```java
+// create and attach framegraph
+JmeFrameGraph fg = new JmeFrameGraph(assetManager);
+viewPort.setPipeline(fg);
+
+// create resource allocator
+ResourceAllocatorState allocator = new ResourceAllocatorState();
+stateManager.attach(allocator);
+
+// create tasks
+SceneEnqueuePass enqueue = SceneEnqueuePass.withSingleQueue();
+GeometryPass geometry = new GeometryTask(allocator);
+OutputPass out = fg.addTask(new OutputPass());
+
+// share task resources
+geometry.getGeometry().addMapSource(enqueue.getQueues());
+out.getColor().setUpstream(geometry.getOutColor());
+out.getDepth().setUpstream(geometry.getOutDepth());
+```
+
+It's not recommended to use this particular FrameGraph setup for serious rendering, as it doesn't handle queue buckets properly or render controls.
+
+## Tutorials
+
+* [How to use Renthyl]()
+* [How Renthyl Works]()
+* [Use Renthyl with JMonkeyEngine]()

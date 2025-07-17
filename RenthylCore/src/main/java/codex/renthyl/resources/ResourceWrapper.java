@@ -32,44 +32,11 @@ public interface ResourceWrapper <T> {
     void release();
 
     /**
-     * Reserves this wrapper at {@code queuePosition}.
-     *
-     * <p>The wrapper takes reservations into consideration when evaluating
-     * acquire requests. This is not guaranteed to make this wrapper available
-     * at the reserved position.</p>
-     *
-     * @param position
-     */
-    void reserve(int position);
-
-    /**
      * Returns true if this wrapper is not currently acquired.
      *
      * @return
      */
     boolean isAvailable();
-
-    /**
-     * Returns true if this wrapper is reserved at any point between
-     * {@code start} and {@code end} (inclusive).
-     *
-     * @param start
-     * @param end
-     * @return
-     */
-    boolean isReserved(int start, int end);
-
-    /**
-     * Returns true if this wrapper is both {@link #isAvailable()} and not reserved
-     * at any point between {@code start} and {@code end} (inclusive).
-     *
-     * @param start
-     * @param end
-     * @return
-     */
-    default boolean isAvailable(int start, int end) {
-        return isAvailable() && !isReserved(start, end);
-    }
 
     static <W extends ResourceWrapper<T>, T> ResourceWrapper<T> acquire(ResourceAllocator<W> allocator, W current, ResourceDef<T> def, int start, int end) {
         if (current == null || !current.isAvailable() || def.evaluateResource(current.get()) == null || !current.acquire(start, end)) {

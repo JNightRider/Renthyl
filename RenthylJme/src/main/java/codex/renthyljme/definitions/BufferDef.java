@@ -23,6 +23,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.system.CustomBuffer;
+import org.lwjgl.system.MemoryUtil;
 
 /**
  * Resource definition for Java {@link Buffer Buffers}.

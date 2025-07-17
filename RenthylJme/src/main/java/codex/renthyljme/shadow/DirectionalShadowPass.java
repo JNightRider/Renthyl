@@ -39,14 +39,14 @@ public class DirectionalShadowPass extends RasterTask implements Occlusion<Direc
     private final Material backupMat;
     private final RenderState state = new RenderState();
     
-    public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int splits) {
-        if ((shadowMapSize >> (splits - 1)) <= 1) {
-            throw new IllegalArgumentException("Base shadow map size must be greater than 2^splits.");
+    public DirectionalShadowPass(AssetManager assetManager, ResourceAllocator allocator, int shadowMapSize, int cascades) {
+        if ((shadowMapSize >> (cascades - 1)) <= 1) {
+            throw new IllegalArgumentException("Base shadow map size must be greater than 2^cascades.");
         }
         this.baseMapSize = shadowMapSize;
         this.backupMat = new Material(assetManager, "Common/MatDefs/Misc/Unshaded.j3md");
         addSockets(light, occluders, receivers, maxDistance, shadowMaps);
-        for (int i = 0; i < splits; i++) {
+        for (int i = 0; i < cascades; i++) {
             shadowMaps.add(new ShadowMapSocket(this, allocator));
         }
         camera.getCamera().setParallelProjection(true);

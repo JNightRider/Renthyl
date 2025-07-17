@@ -2,10 +2,7 @@ package codex.renthyl.resources;
 
 import codex.renthyl.definitions.ResourceDef;
 
-import java.util.BitSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -13,7 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Allocates resources with the intention of recycling them to meet
  * future allocation requests.
  */
-public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
+public class ShortTermAllocator implements ResourceAllocator<FreezeableWrapper> {
 
     private final Map<Long, AllocatedResource> resources = new ConcurrentHashMap<>();
     private long nextId = 0;
@@ -21,26 +18,24 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
     private int timeoutLength = 1;
 
     @Override
-    public ResourceWrapper allocate(ResourceDef def, int start, int end) {
+    public FreezeableWrapper allocate(ResourceDef def, int start, int end) {
         AllocatedResource target = null;
         float lowestEval = Float.MAX_VALUE;
         int selections = 0;
-        for (AllocatedResource res : resources.values()) {
-            if (res.isAvailable(start, end)) {
-                Float eval = def.evaluateResource(res.get());
-                if (eval == null) { // resource is completely unsuited
+        for (AllocatedResource res : resources.values()) if (res.isAvailable()) {
+            Float eval = def.evaluateResource(res.get());
+            if (eval == null) { // resource is completely unsuited
+                continue;
+            }
+            selections++;
+            if (ResourceDef.isPerfectEvaluation(eval)) {
+                if (!res.acquire(start, end)) { // resource is already acquired
                     continue;
                 }
-                selections++;
-                if (ResourceDef.isPerfectEvaluation(eval)) {
-                    if (!res.acquire(start, end)) { // resource is already acquired
-                        continue;
-                    }
-                    return res;
-                }
-                if (target == null || eval < lowestEval) {
-                    target = res;
-                }
+                return res;
+            }
+            if (target == null || eval < lowestEval) {
+                target = res;
             }
         }
         if (target != null && target.acquire(start, end)) {
@@ -55,6 +50,11 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
         }
         resources.put(target.getId(), target);
         return target;
+    }
+
+    @Override
+    public FreezeableWrapper getWrapperOf(Object resource) {
+        return resources.values().stream().filter(w -> w.get() == resource).findAny().orElse(null);
     }
 
     /**
@@ -121,15 +121,15 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
         return timeoutLength;
     }
 
-    private static class AllocatedResource <T> implements ResourceWrapper<T> {
+    private static class AllocatedResource <T> implements FreezeableWrapper<T> {
 
         private final long id;
         private final Disposer<T> disposer;
         private final AtomicBoolean acquired = new AtomicBoolean(false);
-        private final BitSet reservedPositions = new BitSet();
         private final int timeoutLength;
         private T resource;
         private int timeout;
+        private boolean frozen = false;
 
         public AllocatedResource(long id, int timeout, T resource, Disposer<T> disposer) {
             this.id = id;
@@ -140,10 +140,7 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
 
         @Override
         public boolean acquire(int start, int end) {
-            if (isAvailable() && !isReserved(start, end) && !acquired.getAndSet(true)) {
-                return true;
-            }
-            return false;
+            return isAvailable() && !acquired.getAndSet(true);
         }
 
         @Override
@@ -160,22 +157,13 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
         }
 
         @Override
-        public void reserve(int position) {
-            reservedPositions.set(position);
-        }
-
-        @Override
         public boolean isAvailable() {
-            return resource != null && !acquired.get();
+            return resource != null && !frozen && !acquired.get();
         }
 
         @Override
-        public boolean isReserved(int start, int end) {
-            if (reservedPositions.get(start)) {
-                return false;
-            }
-            int i = reservedPositions.nextSetBit(start + 1);
-            return i > start && i <= end;
+        public void freeze(boolean freeze) {
+            this.frozen = freeze;
         }
 
         public void dispose() {
@@ -184,8 +172,7 @@ public class ShortTermAllocator implements ResourceAllocator<ResourceWrapper> {
         }
 
         public boolean cycle() {
-            reservedPositions.clear();
-            return timeout-- > 0;
+            return resource != null && (frozen || acquired.get() || timeout-- > 0);
         }
 
         public long getId() {
