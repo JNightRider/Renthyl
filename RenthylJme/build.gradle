@@ -2,9 +2,6 @@ plugins {
     id 'java'
 }
 
-group = 'codex.swordgame'
-version = 'unspecified'
-
 repositories {
     mavenCentral()
     maven {
