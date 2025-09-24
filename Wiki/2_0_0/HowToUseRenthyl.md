@@ -1,3 +1,4 @@
+
 # Introduction to Renthyl
 
 Renthyl FrameGraphs are composed of interconnected [Renderables](). At render, all Renderables are staged into a [RenderQueue](), and then rendered in order. The following class is a simple Renderable implementation using [AbstractTask]() that outputs some text when rendered.
@@ -684,7 +685,7 @@ public IntBuffer createResource() {
 }
 ```
 
-Next is `evaluateResource`, which is responsible for assigning a Float score to the resource. The resource that receives the lowest score is chosen for allocation. If a resource is assigned a score than or equal to `0f`, it considered "perfect", and is immediately allocated (skipping further evaluations). `null` score means the resource is completely unsuitable and cannot be allocated.
+Next is `evaluateResource`, which is responsible for assigning a Float score to the resource. The resource that receives the lowest score is chosen for allocation. If a resource is assigned a score less than or equal to `0f`, it considered "perfect", and is immediately allocated (skipping further evaluations). `null` score means the resource is completely unsuitable and cannot be allocated.
 
 For this implementation, we will stick with either `0f` for acceptance or `null` for rejection.
 
@@ -692,7 +693,7 @@ For this implementation, we will stick with either `0f` for acceptance or `null`
 @Override
 public Float evaluateResource(Object resource) {
     if (!(resource instanceof IntBuffer)) {
-        return null; // not a IntBuffer, cannot be used at all
+        return null; // not an IntBuffer, cannot be used at all
     }
     IntBuffer buffer = (IntBuffer)resource;
     if (buffer.capacity() >= minimumSize) {
