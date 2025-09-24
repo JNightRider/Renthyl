@@ -16,7 +16,7 @@ repositories {
     maven { url "https://jitpack.io" }
 }
 dependencies {
-    implementation "com.github.codex128.Renthyl:RenthylCore:2.0.0-alpha"
+    implementation "com.github.codex128.Renthyl:RenthylCore:2.0.1-alpha"
 }
 ```
 
@@ -35,7 +35,7 @@ Renthyl was originally a render pipeline implementation for [JMonkeyEngine](http
 
 ```groovy
 dependencies {
-    implementation "com.github.codex128.Renthyl:RenthylJme:2.0.0-alpha"
+    implementation "com.github.codex128.Renthyl:RenthylJme:2.0.1-alpha"
 }
 ```
 
@@ -65,6 +65,5 @@ It's not recommended to use this particular FrameGraph setup for serious renderi
 
 ## Tutorials
 
-* [How to use Renthyl]()
-* [How Renthyl Works]()
-* [Use Renthyl with JMonkeyEngine]()
+* [How to use Renthyl](Wiki/2_0_0/HowToUseRenthyl.md)
+* [Renthyl with JME](Wiki/2_0_0/RenthylWithJme.md)
