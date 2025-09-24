@@ -284,6 +284,108 @@ protected void configureMaterial(Material material) {
 }
 ```
 
+### Multi-pass Filters
+
+Multi-pass filters are constructed using "child" tasks. There is nothing special about child tasks; their only distinction is that they happen to be managed by a parent task. An excellent example of a multi-pass filter is a two-pass gaussian blur filter.
+
+```java
+public class MyBlurFilter extends Frame implements PostProcessFilter {
+
+    @Override
+    public PointerSocket<Texture2D> getSceneColor() {}
+
+    @Override
+    public PointerSocket<Texture2D> getSceneDepth() {}
+
+    @Override
+    public Socket<Texture2D> getFilterResult() {}
+    
+}
+```
+
+The first obvious difference from the single-pass filter is that MyBlurFilter does not extend AbstractFilterTask. Instead it extends Frame and implements PostProcessFilter. This is because MyBlurFilter doesn't actually perform any filtering itself; it instead delegates to the child tasks, which we will create shortly.
+
+Frame is a special Renderable implementation in that it avoids nasty errors that occur in "child-parent" relationships (i.e. task 1 depends on task 2, and task 2 depends on task 1). Suffice it to say that Frames cannot perform any rendering, but can wrap delegate (or "child") tasks in ways regular Renderables cannot. However, we don't technically need to extend Frame for this particular implementation, but it is good practice to in this situation anyway.
+
+Here is the gaussian-blur pass as an inner-class in MyBlurFilter. It is set up exactly like a single-pass filter would be (in fact, it *is* a single-pass filter). I'll save you having to suffer through an explanation of gaussian blur implementation, but just note the `vertical` boolean controlling whether the blur is vertical or horizontal.
+
+```java
+private static class GaussianBlurPass extends AbstractFilterTask {
+
+    private final boolean vertical;
+    private final ArgumentSocket<Float> scale = new ArgumentSocket<>(this);
+    private final ArgumentSocket<Float> downSamplingFactor = new ArgumentSocket<>(this);
+
+    public GaussianBlurPass(AssetManager assetManager, ResourceAllocator allocator, boolean vertical) {
+        super(allocator, new Material(assetManager, "Common/MatDefs/Blur/" + (vertical ? 'V' : 'H') + "GaussianBlur.j3md"), false);
+        this.vertical = vertical;
+        addSockets(scale, downSamplingFactor);
+    }
+
+    @Override
+    protected void configureMaterial(Material material) {
+        MaterialUtils.acquireToMaterial(material, "Scale", scale);
+        material.setFloat("Size", Math.max(1f, (getDemension() / downSamplingFactor.acquire())));
+    }
+
+    private int getDemension() {
+        Image colorImg = getSceneColor().acquireOrThrow("Scene color required.").getImage();
+        return vertical ? colorImg.getHeight() : colorImg.getWidth();
+    }
+
+}
+```
+
+Now here is where the magic occurs. In the constructor of MyBlurPass, we create two GaussianBlurPasses for vertical and horizontal blur.
+
+```java
+private final GaussianBlurPass vertical, horizontal;
+
+public MyBlurFilter(AssetManager assetManager, ResourceAllocator allocator) {
+    vertical = new GaussianBlurPass(assetManager, allocator, true);
+    horizontal = new GaussianBlurPass(assetManager, allocator, false);
+}
+```
+
+Now connect both the output from `vertical` into the input of `horizontal`.
+
+```java
+public MyBlurFilter(AssetManager assetManager, ResourceAllocator allocator) {
+    ...
+    horizontal.getSceneColor().setUpstream(vertical.getFilterResult());
+}
+```
+
+Neither gaussian-blur passes need the scene depth, so we won't bother connecting the depth sockets. We do, however, need an OptionalSocket as a placeholder for depth texture coming into MyBlurFilter.
+
+```java
+private final OptionalSocket<Texture2D> sceneDepth = new OptionalSocket<>(this, false);
+
+public MyBlurFilter(AssetManager assetManager, ResourceAllocator allocator) {
+    ...
+    addSocket(sceneDepth);
+}
+```
+
+Now everything is connected internally. We just need to implement the methods from PostProcessFilter, which is really simple since the input scene color socket is just the vertical blur's input color socket, and the filter result socket is just the horizontal blur's result socket.
+
+```java
+@Override
+public PointerSocket<Texture2D> getSceneColor() {
+    return vertical.getSceneColor();
+}
+
+@Override
+public PointerSocket<Texture2D> getSceneDepth() {
+    return sceneDepth;
+}
+
+@Override
+public Socket<Texture2D> getFilterResult() {
+    return horizontal.getFilterResult();
+}
+```
+
 ## TextureDef 
 
 TextureDef is a ResourceDef implementation that defines textures. It is able to work with any type of texture, but includes helper methods for Texture2D and Texture3D in particular.
